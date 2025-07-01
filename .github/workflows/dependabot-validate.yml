@@ -1,0 +1,15 @@
+name: Validate Dependabot Config
+
+on:
+  pull_request:
+    paths:
+      - ".github/dependabot.yml"
+      - ".github/workflows/dependabot-validate.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Dependabot Config
+        run: npx -y @bugron/validate-dependabot-yaml@latest
