@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import {
   ImageBackground,
   KeyboardAvoidingView,
@@ -11,19 +13,43 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import * as yup from 'yup';
+
+const schema = yup.object().shape({
+  firstName: yup.string().required('First name is required'),
+  dob: yup.string().required('Date of birth is required'),
+  email: yup.string().email('Email is invalid').required('Email is required'),
+  password: yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
+  confirmPassword: yup
+    .string()
+    .oneOf([yup.ref('password')], 'Passwords do not match')
+    .required('Confirm password is required'),
+});
+
+type RegisterForm = {
+  firstName: string;
+  dob: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+};
 
 export default function Register() {
   const router = useRouter();
-  const [form, setForm] = useState({
-    firstName: '',
-    dob: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+  const { control, handleSubmit, formState: { errors } } = useForm<RegisterForm>({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      firstName: '',
+      dob: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
   });
 
-  const handleChange = (key: keyof typeof form, value: string) => {
-    setForm({ ...form, [key]: value });
+  const onSubmit = (data: RegisterForm) => {
+    // TODO: Implement form submission logic
+    console.log('Form is valid. Submit the data.', data);
   };
 
   return (
@@ -41,59 +67,94 @@ export default function Register() {
           <Text style={styles.subtitle}>Welcome to Growing Together</Text>
 
           <View style={styles.inputGroup}>
-            <TextInput
-              style={styles.input}
-              placeholder="First name"
-              placeholderTextColor="#fff"
-              value={form.firstName}
-              onChangeText={text => handleChange('firstName', text)}
+            <Controller
+              control={control}
+              name="firstName"
+              render={({ field: { onChange, value } }: { field: { onChange: (value: string) => void; value: string } }) => (
+                <TextInput
+                  style={styles.input}
+                  placeholder="First name"
+                  placeholderTextColor="#fff"
+                  value={value}
+                  onChangeText={onChange}
+                />
+              )}
             />
+            {errors.firstName && <Text style={styles.errorText}>{errors.firstName.message}</Text>}
           </View>
           <View style={styles.inputGroup}>
-            <TextInput
-              style={styles.input}
-              placeholder="Date of birth"
-              placeholderTextColor="#fff"
-              value={form.dob}
-              onChangeText={text => handleChange('dob', text)}
+            <Controller
+              control={control}
+              name="dob"
+              render={({ field: { onChange, value } }: { field: { onChange: (value: string) => void; value: string } }) => (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Date of birth"
+                  placeholderTextColor="#fff"
+                  value={value}
+                  onChangeText={onChange}
+                />
+              )}
             />
+            {errors.dob && <Text style={styles.errorText}>{errors.dob.message}</Text>}
           </View>
           <View style={styles.inputGroup}>
             <Ionicons name="mail-outline" size={22} color="#fff" style={styles.icon} />
-            <TextInput
-              style={[styles.input, { paddingLeft: 36 }]}
-              placeholder="Email address"
-              placeholderTextColor="#fff"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={form.email}
-              onChangeText={text => handleChange('email', text)}
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { onChange, value } }: { field: { onChange: (value: string) => void; value: string } }) => (
+                <TextInput
+                  style={[styles.input, { paddingLeft: 36 }]}
+                  placeholder="Email address"
+                  placeholderTextColor="#fff"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={value}
+                  onChangeText={onChange}
+                />
+              )}
             />
+            {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
           </View>
           <View style={styles.inputGroup}>
             <Ionicons name="lock-closed-outline" size={22} color="#fff" style={styles.icon} />
-            <TextInput
-              style={[styles.input, { paddingLeft: 36 }]}
-              placeholder="Password"
-              placeholderTextColor="#fff"
-              secureTextEntry
-              value={form.password}
-              onChangeText={text => handleChange('password', text)}
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onChange, value } }: { field: { onChange: (value: string) => void; value: string } }) => (
+                <TextInput
+                  style={[styles.input, { paddingLeft: 36 }]}
+                  placeholder="Password"
+                  placeholderTextColor="#fff"
+                  secureTextEntry
+                  value={value}
+                  onChangeText={onChange}
+                />
+              )}
             />
+            {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
           </View>
           <View style={styles.inputGroup}>
             <Ionicons name="lock-closed-outline" size={22} color="#fff" style={styles.icon} />
-            <TextInput
-              style={[styles.input, { paddingLeft: 36 }]}
-              placeholder="Confirm password"
-              placeholderTextColor="#fff"
-              secureTextEntry
-              value={form.confirmPassword}
-              onChangeText={text => handleChange('confirmPassword', text)}
+            <Controller
+              control={control}
+              name="confirmPassword"
+              render={({ field: { onChange, value } }: { field: { onChange: (value: string) => void; value: string } }) => (
+                <TextInput
+                  style={[styles.input, { paddingLeft: 36 }]}
+                  placeholder="Confirm password"
+                  placeholderTextColor="#fff"
+                  secureTextEntry
+                  value={value}
+                  onChangeText={onChange}
+                />
+              )}
             />
+            {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword.message}</Text>}
           </View>
 
-          <TouchableOpacity style={styles.button}>
+          <TouchableOpacity style={styles.button} onPress={handleSubmit(onSubmit)}>
             <Text style={styles.buttonText}>Sign Up</Text>
           </TouchableOpacity>
 
@@ -208,5 +269,12 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     color: '#fff',
     fontWeight: 'bold',
+  },
+  errorText: {
+    color: '#FF6B6B',
+    fontSize: 14,
+    marginTop: 4,
+    marginLeft: 4,
+    alignSelf: 'flex-start',
   },
 }); 
