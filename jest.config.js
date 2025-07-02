@@ -22,5 +22,6 @@ module.exports = {
   testEnvironment: "node",
   moduleNameMapper: {
     "^expo($|/.+)": "<rootDir>/mocks/expo-winter.js",
+    "^app/\\(tabs\\)/(.*)$": "<rootDir>/app/(tabs)/$1",
   },
 };
