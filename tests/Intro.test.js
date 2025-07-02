@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react-native";
-import Intro from "app/(tabs)/intro";
+import { Intro } from "app/(tabs)";
 import React from "react";
 
 
