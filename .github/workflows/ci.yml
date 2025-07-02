@@ -1,0 +1,47 @@
+name: 🔍 CI - Kiểm tra code tự động
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Lấy code từ GitHub
+        uses: actions/checkout@v3
+
+      - name: 💾 Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: 🧱 Cài Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: 📦 Cài các gói npm
+        run: npm ci
+
+      - name: 📏 Chạy eslint kiểm tra code
+        run: npx eslint . --ext .js,.jsx,.ts,.tsx
+
+      # (Tùy chọn) kiểm tra cấu hình Expo
+      - name: 📋 Kiểm tra Expo config (nếu dùng Expo)
+        run: |
+          if [ -f app.json ]; then
+            npx expo config --type public
+          else
+            echo "app.json not found, skipping Expo config check."
+          fi
+
+      # (Tùy chọn) chạy unit test nếu có
+      # - name: 🧪 Chạy test
+      #   run: npm test
