@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
 
 interface RecordingControlsProps {
   isRecording: boolean;
@@ -13,7 +13,7 @@ interface RecordingControlsProps {
   onPlayPause: () => void;
   onDelete: () => void;
   onUpload: () => void;
-  style?: any;
+  style?: ViewStyle;
 }
 
 const RecordingControls: React.FC<RecordingControlsProps> = ({
