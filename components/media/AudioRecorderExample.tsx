@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { sanitizeLog } from '../../utils/logUtils';
 import AudioRecorder from './AudioRecorder';
 import { RecordingMetadata, RecordingStorage } from './RecordingStorage';
 
@@ -25,7 +26,7 @@ const AudioRecorderExample: React.FC = () => {
   };
 
   const handleRecordingUpload = (recording: RecordingMetadata) => {
-    console.log('Recording uploaded:', recording);
+    console.log('Recording uploaded:', sanitizeLog(JSON.stringify(recording)));
     Alert.alert('Uploaded', `Recording uploaded: ${recording.fileName}`);
   };
 

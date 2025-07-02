@@ -49,22 +49,27 @@ const ImagePicker: React.FC<ImagePickerProps> = ({ onImagePicked }) => {
   const [image, setImage] = useState<string | null>(null);
 
   const pickImage = async () => {
-    const result = await ExpoImagePicker.launchImageLibraryAsync({
-      mediaTypes: ExpoImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
+    try {
+      const result = await ExpoImagePicker.launchImageLibraryAsync({
+        mediaTypes: ExpoImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const uri = result.assets[0].uri;
-      setImage(uri);
-      onImagePicked(uri);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const uri = result.assets[0].uri;
+        setImage(uri);
+        onImagePicked(uri);
 
-      // ✅ TODO: Upload image to backend or Cloudinary here
-      // create a helper function like uploadToCloudinary(uri)
-      // const uploadedUrl = await uploadToCloudinary(uri);
-      // console.log('Uploaded image URL:', uploadedUrl);
+        // ✅ TODO: Upload image to backend or Cloudinary here
+        // create a helper function like uploadToCloudinary(uri)
+        // const uploadedUrl = await uploadToCloudinary(uri);
+        // console.log('Uploaded image URL:', uploadedUrl);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      // TODO: Show user-friendly error message (e.g., using a Toast or Alert)
     }
   };
 

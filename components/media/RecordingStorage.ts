@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isValidRecordingId } from '../../utils/validation';
 
 export interface RecordingMetadata {
   id: string;
@@ -73,6 +74,9 @@ export class RecordingStorage {
    */
   static async getRecording(id: string): Promise<RecordingMetadata | null> {
     try {
+      if (!isValidRecordingId(id)) {
+        return null;
+      }
       const recordings = await this.getAllRecordings();
       return recordings.find(recording => recording.id === id) || null;
     } catch (error) {
