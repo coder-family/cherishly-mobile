@@ -31,7 +31,7 @@
 
 ## 📁 Project Structure
 
-/growing-together-mobile
+growing-together-mobile
 ├── app/                        # Pages and routing (expo-router)
 │   ├── index.tsx              # Intro / Home screen depending on auth state
 │   ├── register.tsx           # Register screen
