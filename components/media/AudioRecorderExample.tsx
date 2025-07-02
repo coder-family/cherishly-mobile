@@ -12,7 +12,7 @@ const AudioRecorderExample: React.FC = () => {
   }>({ totalRecordings: 0, totalSize: 0 });
 
   const handleRecordingComplete = (recording: RecordingMetadata) => {
-    console.log('Recording completed:', recording);
+    console.log('Recording completed:', sanitizeLog(JSON.stringify(recording)));
     setLastRecording(recording);
     updateStorageStats();
     Alert.alert('Success', `Recording saved: ${recording.fileName}`);
