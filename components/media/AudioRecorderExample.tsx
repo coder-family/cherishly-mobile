@@ -19,7 +19,7 @@ const AudioRecorderExample: React.FC = () => {
   };
 
   const handleRecordingDelete = (id: string) => {
-    console.log('Recording deleted:', id);
+    console.log('Recording deleted:', sanitizeLog(id));
     setLastRecording(null);
     updateStorageStats();
     Alert.alert('Deleted', 'Recording has been deleted');
