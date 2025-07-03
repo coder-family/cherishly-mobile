@@ -1,6 +1,6 @@
 # 📱 Growing Together – Mobile App
 
-**Growing Together** is a mobile application designed to help families document, cherish, and share a child’s growth journey. Parents can record memories, track health, ask questions, and create private family groups – all in one beautifully crafted mobile experience.
+**Growing Together** is a mobile application designed to help families document, cherish, and share a child's growth journey. Parents can record memories, track health, ask questions, and create private family groups – all in one beautifully crafted mobile experience.
 
 ---
 
@@ -31,60 +31,88 @@
 
 ## 📁 Project Structure
 
-growing-together-mobile
-├── app/                        # Pages and routing (expo-router)
-│   ├── index.tsx              # Intro / Home screen depending on auth state
-│   ├── register.tsx           # Register screen
-│   ├── login.tsx              # Login screen
-│   ├── children/              # Screens for each child
-│   │   └── [childId]/         # Dynamic route for a specific child
-│   │       ├── _layout.tsx    # Tab layout for child screen
-│   │       ├── index.tsx      # Timeline tab
-│   │       ├── profile.tsx    # Profile tab
-│   │       ├── health.tsx     # Health tab
-│   │       ├── qa.tsx         # Q&A tab
-│   │       └── memories.tsx   # Memory tab
-│   ├── family/                # Family group screen
-│   │   ├── index.tsx          # Group list screen
-│   │   └── [groupId].tsx      # Group detail screen
-│   └── settings.tsx           # User settings page
-│
-├── assets/                    # Images, fonts, icons, splash screen, etc.
-│
-├── components/                # Reusable components
-│   ├── ui/                    # Buttons, cards, typography, layout components
-│   ├── form/                  # Form elements: InputField, DatePicker, etc.
-│   ├── layout/                # Header, TabBar, etc.
-│   └── child/                 # Components specific to child pages
-│
-├── constants/                 # Global constants (colors, fonts, regex, etc.)
-│
-├── hooks/                     # Custom hooks (e.g., useAuth, useFetch)
-│
-├── redux/                     # Redux store and slices
-│   ├── store.ts               # Main Redux store configuration
-│   ├── rootReducer.ts         # Combine all reducers
-│   └── slices/
-│       ├── authSlice.ts       # Authentication logic
-│       ├── childSlice.ts      # Children data
-│       ├── memorySlice.ts     # Memory posts
-│       ├── healthSlice.ts     # Health tracking
-│       └── groupSlice.ts      # Family group
-│
-├── services/                  # API service layer
-│   ├── apiService.ts          # Axios base instance
-│   ├── authService.ts         # Auth-related APIs
-│   ├── childService.ts        # Child CRUD APIs
-│   ├── memoryService.ts       # Memory/Media APIs
-│   └── groupService.ts        # Family group APIs
-│
-├── utils/                     # Utility functions (e.g., formatDate, validators)
-│
-├── types/                     # TypeScript types (User, Child, Group, etc.)
-│
-├── .env                       # Environment variables (e.g., API_URL)
-├── app.config.ts              # Expo app configuration
-└── README.md
+growing-together-mobile/
+├── app/
+│   ├── assets/
+│   │   ├── fonts/
+│   │   │   └── SpaceMono-Regular.ttf
+│   │   └── images/
+│   │       ├── background2.png
+│   │       ├── backgroundMb.png
+│   │       └── logo1.png
+│   ├── components/
+│   │   ├── child/
+│   │   │   ├── ChildProfileCard.tsx
+│   │   │   ├── GrowthChart.tsx
+│   │   │   ├── HealthRecordItem.tsx
+│   │   │   └── QAMemoryItem.tsx
+│   │   ├── form/
+│   │   │   ├── ErrorText.tsx
+│   │   │   ├── FormWrapper.tsx
+│   │   │   ├── InputField.tsx
+│   │   │   ├── LabelText.tsx
+│   │   │   ├── PasswordInput.tsx
+│   │   │   └── PrimaryButton.tsx
+│   │   ├── layout/
+│   │   │   ├── AppHeader.tsx
+│   │   │   └── ScreenWrapper.tsx
+│   │   ├── media/
+│   │   │   ├── AudioRecorder.tsx
+│   │   │   ├── AudioRecorderExample.tsx
+│   │   │   ├── AvatarUpload.tsx
+│   │   │   ├── ErrorBox.tsx
+│   │   │   ├── ImagePicker.tsx
+│   │   │   ├── RecordingControls.tsx
+│   │   │   ├── RecordingDuration.tsx
+│   │   │   ├── RecordingInfo.tsx
+│   │   │   ├── RecordingStorage.ts
+│   │   │   ├── RecordingsList.tsx
+│   │   │   ├── UploadProgressBar.tsx
+│   │   │   ├── VideoPreview.tsx
+│   │   │   ├── VideoPreviewWithRedux.tsx
+│   │   │   └── VideoUploadExample.tsx
+│   │   └── ui/
+│   │       ├── Divider.tsx
+│   │       ├── EmptyState.tsx
+│   │       ├── ModalConfirm.tsx
+│   │       ├── SectionCard.tsx
+│   │       └── ThemedText.tsx
+│   ├── constants/
+│   │   └── Colors.ts
+│   ├── hooks/
+│   │   ├── useColorScheme.ts
+│   │   ├── useColorScheme.web.ts
+│   │   └── useThemeColor.ts
+│   ├── redux/
+│   │   ├── store.ts
+│   │   ├── hooks.ts
+│   │   ├── rootReducer.ts
+│   │   └── slices/
+│   ├── screens/
+│   │   ├── Auth/
+│   │   │   └── register.tsx
+│   │   ├── Intro/
+│   │   │   └── intro.tsx
+│   │   ├── Login/
+│   │   └── index.js
+│   ├── services/
+│   ├── tabs/
+│   ├── types/
+│   └── utils/
+│       ├── logUtils.ts
+│       └── validation.ts
+├── app.json
+├── babel.config.js
+├── eslint.config.js
+├── jest.config.js
+├── jest.setup.js
+├── mocks/
+├── package-lock.json
+├── package.json
+├── README.md
+├── scripts/
+├── tests/
+└── tsconfig.json
 
 
 ## Get started
