@@ -254,7 +254,7 @@ class AuthService {
       return data ? JSON.parse(data) : null;
     } catch (error) {
       console.error("Error getting user data:", error);
-      return null;
+      throw new Error("Failed to retrieve user data");
     }
   }
 
