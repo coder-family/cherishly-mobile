@@ -117,9 +117,25 @@ class AuthService {
       this.currentUser = user;
 
       return { user, tokens: { accessToken, refreshToken, expiresIn } };
-    } catch (error) {
-      console.error("Login error:", error);
-      throw error;
+    } catch (error: any) {
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        if (error.response.status === 401) {
+          console.error("Authentication failed: Invalid email or password.", error.response.data);
+          throw new Error("Authentication failed: Invalid email or password.");
+        } else {
+          console.error(`Server error (${error.response.status}):`, error.response.data);
+          throw new Error(`Server error (${error.response.status}): ${error.response.data?.message || "Unknown error"}`);
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error("Network error: No response received from server.", error.request);
+        throw new Error("Network error: No response received from server.");
+      } else {
+        // Something else happened
+        console.error("Unexpected login error:", error.message);
+        throw new Error(`Unexpected login error: ${error.message}`);
+      }
     }
   }
 
