@@ -271,6 +271,7 @@ class AuthService {
       ]);
     } catch (error) {
       console.error("Error clearing tokens:", error);
+      throw error;
     }
   }
 
