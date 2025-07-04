@@ -13,7 +13,7 @@ export default function Intro() {
 
   return (
     <ImageBackground
-      source={require("../../assets/images/backgroundMb.png")}
+      source={require("./assets/images/backgroundMb.png")}
       style={styles.background}
       resizeMode="cover"
     >
@@ -125,4 +125,4 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-});
+}); 

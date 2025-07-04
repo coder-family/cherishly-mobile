@@ -7,7 +7,9 @@ jest.mock("expo-router", () => ({
   }),
 }));
 jest.mock("expo-constants", () => ({}));
-jest.mock("expo-font", () => ({}));
+jest.mock("expo-font", () => ({
+  isLoaded: jest.fn(() => true),
+}));
 jest.mock("expo-image", () => ({}));
 jest.mock("expo-image-picker", () => ({}));
 jest.mock("expo-linking", () => ({}));
@@ -19,3 +21,8 @@ jest.mock("expo-av", () => ({}));
 jest.mock("expo-blur", () => ({}));
 jest.mock("expo-haptics", () => ({}));
 jest.mock("expo-symbols", () => ({}));
+
+// Mock @expo/vector-icons
+jest.mock("@expo/vector-icons", () => ({
+  Ionicons: "Ionicons",
+}));
