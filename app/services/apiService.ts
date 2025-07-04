@@ -44,7 +44,31 @@ apiService.interceptors.request.use(
 // Response interceptor
 apiService.interceptors.response.use(
     (res) => res.data,
-    (error) => Promise.reject(error) 
+    (error) => {
+      let formattedError: ApiError = {
+        message: 'An unknown error occurred.',
+      };
+      if (error.response) {
+        // Server responded with a status code outside 2xx
+        formattedError = {
+          message: error.response.data?.message || error.response.statusText || 'API Error',
+          status: error.response.status,
+          statusText: error.response.statusText,
+          url: error.response.config?.url,
+        };
+      } else if (error.request) {
+        // Request was made but no response received
+        formattedError = {
+          message: 'No response received from server.',
+        };
+      } else if (error.message) {
+        // Something happened in setting up the request
+        formattedError = {
+          message: error.message,
+        };
+      }
+      return Promise.reject(formattedError);
+    }
   );
 
 export default apiService;
