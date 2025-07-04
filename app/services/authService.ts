@@ -129,15 +129,15 @@ class AuthService {
   async register(
     data: RegisterData
   ): Promise<{ user: User; tokens: AuthTokens }> {
-    console.log("Sending register data:", data);
     try {
       const response = await apiService.post("/users/", data);
 
       // Try to destructure from response.data if needed
       const { user, accessToken, refreshToken, expiresIn } = response.data;
       if (!user || !accessToken || !refreshToken || !expiresIn) {
-        console.error("Registration response missing fields:", response);
-        throw new Error("Registration response missing required fields (user, accessToken, refreshToken, expiresIn)");
+        throw new Error(
+          "Registration response missing required fields (user, accessToken, refreshToken, expiresIn)"
+        );
       }
 
       // Store tokens and user data
@@ -152,10 +152,6 @@ class AuthService {
 
       return { user, tokens: { accessToken, refreshToken, expiresIn } };
     } catch (error: any) {
-      console.error("FULL ERROR:", error);
-      console.error("RESPONSE:", error.response);
-      console.error("DATA:", error.response?.data);
-
       throw error;
     }
   }

@@ -53,7 +53,6 @@ export default function Register() {
   }, [isAuthenticated, router]);
 
   const onSubmit = (data: RegisterForm) => {
-    console.log('onSubmit called with data:', data);
     dispatch(registerUser({
       firstName: data.firstName,
       lastName: data.lastName,
