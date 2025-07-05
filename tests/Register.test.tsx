@@ -148,12 +148,12 @@ describe('Register Component', () => {
 
       // Check if title and subtitle are rendered
       expect(getByText('Welcome to Growing Together')).toBeTruthy();
-      expect(getByText('Login')).toBeTruthy();
+      expect(getByText('Sign In')).toBeTruthy();
     });
 
     it('renders sign up button', () => {
       const { getAllByText } = renderWithStore();
-      const signUpElements = getAllByText('Sign Up');
+      const signUpElements = getAllByText('Create Account');
       expect(signUpElements.length).toBeGreaterThan(0);
     });
   });
@@ -163,8 +163,7 @@ describe('Register Component', () => {
       const { getByText, getByPlaceholderText, getAllByText } = renderWithStore();
 
       // Try to submit empty form
-      const signUpElements = getAllByText('Sign Up');
-      const signUpButton = signUpElements[1]; // Get the button (second element)
+      const signUpButton = getByText('Create Account');
       fireEvent.press(signUpButton);
 
       // Wait for validation errors to appear
@@ -186,8 +185,7 @@ describe('Register Component', () => {
       fireEvent.changeText(emailInput, 'invalid-email');
 
       // Try to submit form
-      const signUpElements = getAllByText('Sign Up');
-      const signUpButton = signUpElements[1]; // Get the button (second element)
+      const signUpButton = getByText('Create Account');
       fireEvent.press(signUpButton);
 
       await waitFor(() => {
@@ -203,8 +201,7 @@ describe('Register Component', () => {
       fireEvent.changeText(passwordInput, '123');
 
       // Try to submit form
-      const signUpElements = getAllByText('Sign Up');
-      const signUpButton = signUpElements[1]; // Get the button (second element)
+      const signUpButton = getByText('Create Account');
       fireEvent.press(signUpButton);
 
       await waitFor(() => {
@@ -223,8 +220,7 @@ describe('Register Component', () => {
       fireEvent.changeText(confirmPasswordInput, 'differentpassword');
 
       // Try to submit form
-      const signUpElements = getAllByText('Sign Up');
-      const signUpButton = signUpElements[1]; // Get the button (second element)
+      const signUpButton = getByText('Create Account');
       fireEvent.press(signUpButton);
 
       await waitFor(() => {
@@ -244,8 +240,7 @@ describe('Register Component', () => {
       fireEvent.changeText(getByPlaceholderText('Confirm password'), 'Password123@');
 
       // Submit form
-      const signUpElements = getAllByText('Sign Up');
-      const signUpButton = signUpElements[1]; // Get the button (second element)
+      const signUpButton = getByText('Create Account');
       fireEvent.press(signUpButton);
 
       // Wait a bit and check that no validation errors are shown
@@ -283,10 +278,10 @@ describe('Register Component', () => {
     it('navigates to login page when login link is pressed', () => {
       const { getByText } = renderWithStore();
 
-      const loginLink = getByText('Login');
+      const loginLink = getByText('Sign In');
       fireEvent.press(loginLink);
 
-      expect(mockRouter.replace).toHaveBeenCalledWith('/');
+      expect(mockRouter.push).toHaveBeenCalledWith('/login');
     });
   });
 
@@ -305,8 +300,7 @@ describe('Register Component', () => {
       console.log('Before pressing button - mockRegister calls:', mockRegister.mock.calls.length);
       
       // Submit form
-      const signUpElements = getAllByText('Sign Up');
-      const signUpButton = signUpElements[1];
+      const signUpButton = getByText('Create Account');
       fireEvent.press(signUpButton);
 
       console.log('After pressing button - mockRegister calls:', mockRegister.mock.calls.length);
@@ -330,8 +324,7 @@ describe('Register Component', () => {
       fireEvent.changeText(getByPlaceholderText('Password'), 'Password123@');
       fireEvent.changeText(getByPlaceholderText('Confirm password'), 'Password123@');
 
-      const signUpElements = getAllByText('Sign Up');
-      const signUpButton = signUpElements[1];
+      const signUpButton = getByText('Create Account');
       fireEvent.press(signUpButton);
 
       // Check that registration completes and user is set
@@ -362,7 +355,7 @@ describe('Register Component', () => {
         fireEvent.changeText(getByPlaceholderText('Password'), 'Password123@');
         fireEvent.changeText(getByPlaceholderText('Confirm password'), 'Password123@');
     
-        const signUpButton = getAllByText('Sign Up')[1];
+        const signUpButton = getByText('Create Account');
         fireEvent.press(signUpButton);
       });
     
@@ -385,8 +378,7 @@ describe('Register Component', () => {
       fireEvent.changeText(getByPlaceholderText('Password'), 'Password123@');
       fireEvent.changeText(getByPlaceholderText('Confirm password'), 'Password123@');
 
-      const signUpElements = getAllByText('Sign Up');
-      const signUpButton = signUpElements[1];
+      const signUpButton = getByText('Create Account');
       fireEvent.press(signUpButton);
 
       // Wait for navigation to be called
@@ -408,8 +400,7 @@ describe('Register Component', () => {
       fireEvent.changeText(getByPlaceholderText('Password'), 'Password123@');
       fireEvent.changeText(getByPlaceholderText('Confirm password'), 'Password123@');
 
-      const signUpElements = getAllByText('Sign Up');
-      const signUpButton = signUpElements[1];
+      const signUpButton = getByText('Create Account');
       fireEvent.press(signUpButton);
 
       await waitFor(() => {
@@ -464,8 +455,7 @@ describe('Register Component', () => {
       fireEvent.changeText(getByPlaceholderText('Confirm password'), 'Password123@');
 
       // Submit form
-      const signUpElements = getAllByText('Sign Up');
-      const signUpButton = signUpElements[1]; // Get the button (second element)
+      const signUpButton = getByText('Create Account');
       fireEvent.press(signUpButton);
 
       // Wait for the action to be dispatched and check the payload
@@ -493,11 +483,10 @@ describe('Register Component', () => {
     });
 
     it('has accessible buttons', () => {
-      const { getByText, getAllByText } = renderWithStore();
+      const { getByText } = renderWithStore();
 
-      const signUpElements = getAllByText('Sign Up');
-      const signUpButton = signUpElements[1]; // Get the button (second element)
-      const loginLink = getByText('Login');
+      const signUpButton = getByText('Create Account');
+      const loginLink = getByText('Sign In');
 
       expect(signUpButton).toBeTruthy();
       expect(loginLink).toBeTruthy();

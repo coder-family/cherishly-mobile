@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   ImageBackground,
@@ -22,6 +22,8 @@ export default function Register() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { loading, error, isAuthenticated } = useAppSelector((state) => state.auth);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [hasAttemptedRegister, setHasAttemptedRegister] = useState(false);
 
   const {
     control,
@@ -45,14 +47,21 @@ export default function Register() {
     dispatch(clearError());
   }, [dispatch]);
 
-  // Navigate to main app if authenticated
+  // Navigate to login page after successful registration
   useEffect(() => {
-    if (isAuthenticated) {
-      router.replace("/home");
+    if (isAuthenticated && hasAttemptedRegister) {
+      // User just completed a registration action, show success message
+      setShowSuccessMessage(true);
+      setTimeout(() => {
+        router.push("/login");
+      }, 1500);
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, hasAttemptedRegister, router]);
 
   const onSubmit = (data: RegisterForm) => {
+    // Clear any previous success message and mark that user is attempting registration
+    setShowSuccessMessage(false);
+    setHasAttemptedRegister(true);
     dispatch(registerUser({
       firstName: data.firstName,
       lastName: data.lastName,
@@ -77,11 +86,24 @@ export default function Register() {
           <Text style={styles.title}>Sign Up</Text>
           <Text style={styles.subtitle}>Welcome to Growing Together</Text>
 
+          {/* Success message */}
+          {showSuccessMessage && (
+            <View style={styles.messageContainer}>
+              <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+              <Text style={styles.successText} accessibilityRole="alert">
+                Registration successful! Redirecting to login...
+              </Text>
+            </View>
+          )}
+
           {/* Redux error display */}
           {error && (
-            <Text style={{ color: 'red', marginBottom: 8 }} accessibilityRole="alert">
-              {error}
-            </Text>
+            <View style={styles.messageContainer}>
+              <Ionicons name="alert-circle" size={24} color="#ff6b6b" />
+              <Text style={styles.errorText} accessibilityRole="alert">
+                {error}
+              </Text>
+            </View>
           )}
 
           <View style={styles.inputGroup}>
@@ -245,15 +267,15 @@ export default function Register() {
             style={styles.button}
             onPress={handleSubmit(onSubmit)}
           >
-            <Text style={styles.buttonText}>Sign Up</Text>
+            <Text style={styles.buttonText}>Create Account</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => router.replace("/")}>
-            <Text style={styles.footerText}>
-              Already have an account?{" "}
-              <Text style={styles.loginLink}>Login</Text>
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => router.push("/login")}>
+              <Text style={styles.loginLink}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </ImageBackground>
@@ -320,6 +342,23 @@ const styles = StyleSheet.create({
     top: 12,
     zIndex: 1,
   },
+  messageContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    width: "100%",
+  },
+  successText: {
+    color: "#4CAF50",
+    fontSize: 14,
+    marginLeft: 8,
+    fontWeight: "500",
+  },
   errorText: {
     color: "#FF6B6B",
     fontSize: 14,
@@ -344,11 +383,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
   },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 12,
+  },
   footerText: {
     color: "#fff",
     fontSize: 16,
-    marginTop: 12,
-    textAlign: "center",
   },
   loginLink: {
     color: "#2176FF",

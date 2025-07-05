@@ -4,6 +4,11 @@ export function isValidRecordingId(id: string): boolean {
   return typeof id === "string" && /^recording_\d+_[a-z0-9]+$/.test(id);
 }
 
+export const loginSchema = yup.object().shape({
+  email: yup.string().email("Email is invalid").required("Email is required"),
+  password: yup.string().required("Password is required"),
+});
+
 export const registerSchema = yup.object().shape({
   firstName: yup.string().required("First name is required"),
   lastName: yup.string().required("Last name is required"),
@@ -20,4 +25,5 @@ export const registerSchema = yup.object().shape({
   role: yup.string().required("Role is required"),
 });
 
+export type LoginForm = yup.InferType<typeof loginSchema>;
 export type RegisterForm = yup.InferType<typeof registerSchema>;

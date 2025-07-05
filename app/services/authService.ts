@@ -97,14 +97,48 @@ class AuthService {
     credentials: LoginCredentials
   ): Promise<{ user: User; tokens: AuthTokens }> {
     try {
-      const response = (await apiService.post("/users/login", credentials)) as {
-        user: User;
-        accessToken: string;
-        refreshToken: string;
-        expiresIn: number;
-      };
+      const response = await apiService.post("/users/login", credentials);
+      
+      console.log("Login response:", response); // Debug log
 
-      const { user, accessToken, refreshToken, expiresIn } = response;
+      // Handle different possible response structures
+      let user: User;
+      let accessToken: string;
+      let refreshToken: string;
+      let expiresIn: number;
+
+      // Check if response has data property (common API pattern)
+      if (response.data) {
+        user = response.data.user;
+        accessToken = response.data.accessToken || response.data.token;
+        refreshToken = response.data.refreshToken;
+        expiresIn = response.data.expiresIn || response.data.expires_in || 3600; // Default to 1 hour
+      } else {
+        // Direct response structure
+        user = (response as any).user;
+        accessToken = (response as any).accessToken || (response as any).token;
+        refreshToken = (response as any).refreshToken;
+        expiresIn = (response as any).expiresIn || (response as any).expires_in || 3600;
+      }
+
+      // Validate required fields
+      if (!user || !accessToken || !refreshToken) {
+        console.error("Invalid login response structure:", response);
+        throw new Error("Invalid response from server: missing required authentication data");
+      }
+
+      // Validate token values
+      if (typeof accessToken !== 'string' || accessToken.trim() === '') {
+        throw new Error("Invalid access token received from server");
+      }
+
+      if (typeof refreshToken !== 'string' || refreshToken.trim() === '') {
+        throw new Error("Invalid refresh token received from server");
+      }
+
+      if (typeof expiresIn !== 'number' || expiresIn <= 0) {
+        expiresIn = 3600; // Default to 1 hour if invalid
+      }
 
       // Store tokens and user data
       await this.storeTokens({
@@ -118,6 +152,8 @@ class AuthService {
 
       return { user, tokens: { accessToken, refreshToken, expiresIn } };
     } catch (error: any) {
+      console.error("Login error details:", error);
+      
       if (error.response) {
         // The request was made and the server responded with a status code
         if (error.response.status === 401) {
@@ -147,13 +183,46 @@ class AuthService {
   ): Promise<{ user: User; tokens: AuthTokens }> {
     try {
       const response = await apiService.post("/users/", data);
+      
+      console.log("Register response:", response); // Debug log
 
-      // Try to destructure from response.data if needed
-      const { user, accessToken, refreshToken, expiresIn } = response.data;
-      if (!user || !accessToken || !refreshToken || !expiresIn) {
-        throw new Error(
-          "Registration response missing required fields (user, accessToken, refreshToken, expiresIn)"
-        );
+      // Handle different possible response structures
+      let user: User;
+      let accessToken: string;
+      let refreshToken: string;
+      let expiresIn: number;
+
+      // Check if response has data property (common API pattern)
+      if (response.data) {
+        user = response.data.user;
+        accessToken = response.data.accessToken || response.data.token;
+        refreshToken = response.data.refreshToken;
+        expiresIn = response.data.expiresIn || response.data.expires_in || 3600; // Default to 1 hour
+      } else {
+        // Direct response structure
+        user = (response as any).user;
+        accessToken = (response as any).accessToken || (response as any).token;
+        refreshToken = (response as any).refreshToken;
+        expiresIn = (response as any).expiresIn || (response as any).expires_in || 3600;
+      }
+
+      // Validate required fields
+      if (!user || !accessToken || !refreshToken) {
+        console.error("Invalid register response structure:", response);
+        throw new Error("Invalid response from server: missing required authentication data");
+      }
+
+      // Validate token values
+      if (typeof accessToken !== 'string' || accessToken.trim() === '') {
+        throw new Error("Invalid access token received from server");
+      }
+
+      if (typeof refreshToken !== 'string' || refreshToken.trim() === '') {
+        throw new Error("Invalid refresh token received from server");
+      }
+
+      if (typeof expiresIn !== 'number' || expiresIn <= 0) {
+        expiresIn = 3600; // Default to 1 hour if invalid
       }
 
       // Store tokens and user data
@@ -168,6 +237,7 @@ class AuthService {
 
       return { user, tokens: { accessToken, refreshToken, expiresIn } };
     } catch (error: any) {
+      console.error("Register error details:", error);
       throw error;
     }
   }
