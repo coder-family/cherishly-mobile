@@ -58,18 +58,28 @@ export default function Register() {
     }
   }, [isAuthenticated, hasAttemptedRegister, router]);
 
-  const onSubmit = (data: RegisterForm) => {
-    // Clear any previous success message and mark that user is attempting registration
-    setShowSuccessMessage(false);
-    setHasAttemptedRegister(true);
-    dispatch(registerUser({
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      password: data.password,
-      dateOfBirth: data.dateOfBirth,
-      role: data.role,
-    }));
+  const onSubmit = async (data: RegisterForm) => {
+    try {
+      // Clear any previous success message and mark that user is attempting registration
+      setShowSuccessMessage(false);
+      setHasAttemptedRegister(true);
+      
+      await dispatch(registerUser({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
+        dateOfBirth: data.dateOfBirth,
+        role: data.role,
+      })).unwrap();
+      
+      // If we reach here, registration was successful
+      // The useEffect will handle navigation to login
+    } catch (error) {
+      // Error is already handled by Redux slice and displayed in the UI
+      // We can add additional error handling here if needed
+      console.error('Registration error:', error);
+    }
   };
 
   return (
