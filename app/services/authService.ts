@@ -9,6 +9,30 @@ const STORAGE_KEYS = {
   TOKEN_EXPIRY: "token_expiry",
 } as const;
 
+// Utility function to safely sanitize logs
+function sanitizeForLogging(data: any): string {
+  if (data === null || data === undefined) {
+    return "null/undefined";
+  }
+  
+  if (typeof data === "string") {
+    // Remove newlines and other potentially dangerous characters
+    return data.replace(/[\r\n\t]/g, " ").substring(0, 200);
+  }
+  
+  if (typeof data === "object") {
+    try {
+      // Convert to string and sanitize
+      const stringified = JSON.stringify(data);
+      return stringified.replace(/[\r\n\t]/g, " ").substring(0, 500);
+    } catch {
+      return "[Object - cannot stringify]";
+    }
+  }
+  
+  return String(data).replace(/[\r\n\t]/g, " ").substring(0, 200);
+}
+
 // Types
 export interface User {
   id: string;
@@ -83,7 +107,7 @@ class AuthService {
       this.isInitialized = true;
       return false;
     } catch (error) {
-      console.error("Auth initialization error:", error);
+      console.error("Auth initialization error:", sanitizeForLogging(error));
       await this.clearTokens();
       this.isInitialized = true;
       return false;
@@ -99,7 +123,7 @@ class AuthService {
     try {
       const response = await apiService.post("/users/login", credentials);
       
-      console.log("Login response:", response); // Debug log
+      console.log("Login response:", sanitizeForLogging(response)); // Debug log
 
       // Handle different possible response structures
       let user: User;
@@ -123,7 +147,7 @@ class AuthService {
 
       // Validate required fields
       if (!user || !accessToken || !refreshToken) {
-        console.error("Invalid login response structure:", response);
+        console.error("Invalid login response structure:", sanitizeForLogging(response));
         throw new Error("Invalid response from server: missing required authentication data");
       }
 
@@ -152,24 +176,24 @@ class AuthService {
 
       return { user, tokens: { accessToken, refreshToken, expiresIn } };
     } catch (error: any) {
-      console.error("Login error details:", error);
+      console.error("Login error details:", sanitizeForLogging(error));
       
       if (error.response) {
         // The request was made and the server responded with a status code
         if (error.response.status === 401) {
-          console.error("Authentication failed: Invalid email or password.", error.response.data);
+          console.error("Authentication failed: Invalid email or password.", sanitizeForLogging(error.response.data));
           throw new Error("Authentication failed: Invalid email or password.");
         } else {
-          console.error(`Server error (${error.response.status}):`, error.response.data);
-          throw new Error(`Server error (${error.response.status}): ${error.response.data?.message || "Unknown error"}`);
+          console.error(`Server error (${error.response.status}):`, sanitizeForLogging(error.response.data));
+          throw new Error(`Server error (${error.response.status}): ${sanitizeForLogging(error.response.data?.message) || "Unknown error"}`);
         }
       } else if (error.request) {
         // The request was made but no response was received
-        console.error("Network error: No response received from server.", error.request);
+        console.error("Network error: No response received from server.", sanitizeForLogging(error.request));
         throw new Error("Network error: No response received from server.");
       } else {
         // Something else happened
-        console.error("Unexpected login error:", error.message);
+        console.error("Unexpected login error:", sanitizeForLogging(error.message));
         throw new Error(`Unexpected login error: ${error.message}`);
       }
     }
@@ -184,7 +208,7 @@ class AuthService {
     try {
       const response = await apiService.post("/users/", data);
       
-      console.log("Register response:", response); // Debug log
+      console.log("Register response:", sanitizeForLogging(response)); // Debug log
 
       // Handle different possible response structures
       let user: User;
@@ -208,7 +232,7 @@ class AuthService {
 
       // Validate required fields
       if (!user || !accessToken || !refreshToken) {
-        console.error("Invalid register response structure:", response);
+        console.error("Invalid register response structure:", sanitizeForLogging(response));
         throw new Error("Invalid response from server: missing required authentication data");
       }
 
@@ -237,8 +261,29 @@ class AuthService {
 
       return { user, tokens: { accessToken, refreshToken, expiresIn } };
     } catch (error: any) {
-      console.error("Register error details:", error);
-      throw error;
+      console.error("Register error details:", sanitizeForLogging(error));
+      
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        if (error.response.status === 400) {
+          console.error("Registration failed: Invalid data provided.", sanitizeForLogging(error.response.data));
+          throw new Error("Registration failed: Invalid data provided.");
+        } else if (error.response.status === 409) {
+          console.error("Registration failed: User already exists.", sanitizeForLogging(error.response.data));
+          throw new Error("Registration failed: User already exists.");
+        } else {
+          console.error(`Server error (${error.response.status}):`, sanitizeForLogging(error.response.data));
+          throw new Error(`Server error (${error.response.status}): ${sanitizeForLogging(error.response.data?.message) || "Unknown error"}`);
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error("Network error: No response received from server.", sanitizeForLogging(error.request));
+        throw new Error("Network error: No response received from server.");
+      } else {
+        // Something else happened
+        console.error("Unexpected registration error:", sanitizeForLogging(error.message));
+        throw new Error(`Unexpected registration error: ${error.message}`);
+      }
     }
   }
 
@@ -249,7 +294,7 @@ class AuthService {
     try {
       // No API call needed if there's no logout endpoint
     } catch (error) {
-      console.warn("Logout error:", error);
+      console.warn("Logout error:", sanitizeForLogging(error));
     } finally {
       await this.clearTokens();
       this.currentUser = null;
@@ -284,7 +329,7 @@ class AuthService {
     try {
       return await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
     } catch (error) {
-      console.error("Error getting access token:", error);
+      console.error("Error getting access token:", sanitizeForLogging(error));
       return null;
     }
   }
@@ -296,7 +341,7 @@ class AuthService {
     try {
       return await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
     } catch (error) {
-      console.error("Error getting refresh token:", error);
+      console.error("Error getting refresh token:", sanitizeForLogging(error));
       return null;
     }
   }
@@ -314,7 +359,7 @@ class AuthService {
         AsyncStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, expiryTime.toString()),
       ]);
     } catch (error) {
-      console.error("Error storing tokens:", error);
+      console.error("Error storing tokens:", sanitizeForLogging(error));
       throw new Error("Failed to store authentication tokens");
     }
   }
@@ -326,7 +371,7 @@ class AuthService {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
     } catch (error) {
-      console.error("Error storing user data:", error);
+      console.error("Error storing user data:", sanitizeForLogging(error));
       throw new Error("Failed to store user data");
     }
   }
@@ -339,7 +384,7 @@ class AuthService {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error("Error getting user data:", error);
+      console.error("Error getting user data:", sanitizeForLogging(error));
       throw new Error("Failed to retrieve user data");
     }
   }
@@ -356,7 +401,7 @@ class AuthService {
         AsyncStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRY),
       ]);
     } catch (error) {
-      console.error("Error clearing tokens:", error);
+      console.error("Error clearing tokens:", sanitizeForLogging(error));
       throw error;
     }
   }
@@ -376,7 +421,7 @@ class AuthService {
       // await apiService.get('/auth/verify');
       return true;
     } catch (error) {
-      console.error("Token validation error:", error);
+      console.error("Token validation error:", sanitizeForLogging(error));
       return false;
     }
   }
@@ -408,7 +453,7 @@ class AuthService {
 
       return true;
     } catch (error) {
-      console.error("Token refresh error:", error);
+      console.error("Token refresh error:", sanitizeForLogging(error));
       await this.clearTokens();
       return false;
     }
