@@ -37,7 +37,7 @@ describe('Login Component', () => {
   it('renders login form correctly', () => {
     const store = createTestStore();
     
-    const { getByPlaceholderText, getByText } = render(
+    const { getByText, getByPlaceholderText } = render(
       <Provider store={store}>
         <Login />
       </Provider>
@@ -55,7 +55,7 @@ describe('Login Component', () => {
   it('shows validation errors for empty fields', async () => {
     const store = createTestStore();
     
-    const { getByText, getByPlaceholderText } = render(
+    const { getByText } = render(
       <Provider store={store}>
         <Login />
       </Provider>
@@ -120,7 +120,7 @@ describe('Login Component', () => {
   it('toggles password visibility', () => {
     const store = createTestStore();
     
-    const { getByPlaceholderText, getByTestId } = render(
+    const { getByPlaceholderText } = render(
       <Provider store={store}>
         <Login />
       </Provider>

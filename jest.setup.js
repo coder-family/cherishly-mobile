@@ -34,3 +34,13 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   removeItem: jest.fn(),
   clear: jest.fn(),
 }));
+
+// Global cleanup after each test
+afterEach(() => {
+  jest.clearAllMocks();
+});
+
+// Global cleanup after all tests
+afterAll(() => {
+  jest.clearAllMocks();
+});

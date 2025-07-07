@@ -21,7 +21,7 @@ import { RegisterForm, registerSchema } from "./utils/validation";
 export default function Register() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { loading, error, isAuthenticated } = useAppSelector((state) => state.auth);
+  const { error, isAuthenticated } = useAppSelector((state) => state.auth);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [hasAttemptedRegister, setHasAttemptedRegister] = useState(false);
 

@@ -1,3 +1,5 @@
+import { registerSchema } from '../app/utils/validation';
+
 const mockRegister = jest.fn();
 jest.mock('../app/services/authService', () => ({
   __esModule: true,
@@ -6,8 +8,6 @@ jest.mock('../app/services/authService', () => ({
     getCurrentUser: jest.fn(),
   },
 }));
-
-import { registerSchema } from '../app/utils/validation';
 
 describe('Register Validation Schema', () => {
   beforeEach(() => {

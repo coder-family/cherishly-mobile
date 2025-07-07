@@ -19,8 +19,9 @@ module.exports = {
   moduleDirectories: ["node_modules", "app", "<rootDir>"],
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
   roots: ["<rootDir>/app", "<rootDir>/tests"],
-  testEnvironment: "node",
+  testEnvironment: "jsdom",
   moduleNameMapper: {
     "^expo($|/.+)": "<rootDir>/mocks/expo-winter.js",
   },
+  testTimeout: 10000,
 };
