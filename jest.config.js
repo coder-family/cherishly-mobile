@@ -1,27 +1,40 @@
-// jest.config.js
 module.exports = {
-  preset: "jest-expo",
-  transform: {
-    "^.+\\.[jt]sx?$": "babel-jest",
-  },
-  setupFilesAfterEnv: ["<rootDir>/jest.setup.js", "@testing-library/jest-native/extend-expect"],
-  testPathIgnorePatterns: ["/node_modules/", "/android/", "/ios/"],
+  preset: 'jest-expo',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   transformIgnorePatterns: [
-    "node_modules/(?!(jest-)?react-native" +
-      "|@react-native" +
-      "|@react-navigation" +
-      "|expo(nent)?" +
-      "|@expo" +
-      "|@unimodules" +
-      "|@react-native/js-polyfills" +
-      ")",
+    'node_modules/(?!(react-redux|@react-redux|expo|expo-modules-core|react-native-reanimated|@react-native|react-native|@expo)/)',
   ],
-  moduleDirectories: ["node_modules", "app", "<rootDir>"],
-  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
-  roots: ["<rootDir>/app", "<rootDir>/tests"],
-  testEnvironment: "jsdom",
   moduleNameMapper: {
-    "^expo($|/.+)": "<rootDir>/mocks/expo-winter.js",
+    '^react-native/Libraries/Modal/Modal$': '<rootDir>/mocks/ModalMock.js',
+    '^react-native/Libraries/Animated/NativeAnimatedHelper$': '<rootDir>/mocks/NativeAnimatedHelper.js',
   },
-  testTimeout: 10000,
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  testEnvironment: 'jsdom',
+  collectCoverageFrom: [
+    'app/**/*.{ts,tsx}',
+    '!app/**/*.d.ts',
+    '!app/**/index.tsx',
+    '!app/**/_layout.tsx',
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 70,
+      lines: 70,
+      statements: 70,
+    },
+  },
+  // Timer and cleanup settings
+  fakeTimers: {
+    enableGlobally: true,
+    legacyFakeTimers: false,
+  },
+  // Handle worker process cleanup
+  maxWorkers: 1,
+  // Increase timeout for async operations
+  testTimeout: 15000,
+  // Detect open handles to help with cleanup
+  detectOpenHandles: true,
+  // Force exit after tests complete
+  forceExit: true,
 };

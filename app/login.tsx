@@ -4,18 +4,20 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
-    ImageBackground,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ImageBackground,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { useAppDispatch, useAppSelector } from "./redux/hooks";
 import { clearError, loginUser } from "./redux/slices/authSlice";
+import authService from "./services/authService";
 import { LoginForm, loginSchema } from "./utils/validation";
 
 export default function Login() {
@@ -25,6 +27,11 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [hasAttemptedLogin, setHasAttemptedLogin] = useState(false);
+  const [forgotModalVisible, setForgotModalVisible] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState<string | null>(null);
+  const [forgotError, setForgotError] = useState<string | null>(null);
 
   const {
     control,
@@ -45,18 +52,25 @@ export default function Login() {
 
   // Navigate to main app if authenticated
   useEffect(() => {
-    if (isAuthenticated && hasAttemptedLogin) {
-      // User just completed a login action, show success message
+    if (isAuthenticated && hasAttemptedLogin && !error) {
       setShowSuccessMessage(true);
       setTimeout(() => {
         router.replace("/tabs/home");
+        setHasAttemptedLogin(false); // Reset after navigation
       }, 1500);
     }
-  }, [isAuthenticated, hasAttemptedLogin, router]);
+  }, [isAuthenticated, hasAttemptedLogin, error, router]);
+
+  // Reset hasAttemptedLogin and showSuccessMessage on error
+  useEffect(() => {
+    if (error) {
+      setHasAttemptedLogin(false);
+      setShowSuccessMessage(false); // Hide success on error
+    }
+  }, [error]);
 
   const onSubmit = (data: LoginForm) => {
-    // Clear any previous success message and mark that user is attempting login
-    setShowSuccessMessage(false);
+    setShowSuccessMessage(false); // Always clear previous success
     setHasAttemptedLogin(true);
     dispatch(loginUser({
       email: data.email,
@@ -66,6 +80,22 @@ export default function Login() {
 
   const navigateToRegister = () => {
     router.push("/register");
+  };
+
+  const handleForgotPassword = async () => {
+    setForgotLoading(true);
+    setForgotMessage(null);
+    setForgotError(null);
+    try {
+      await authService.requestPasswordReset(forgotEmail);
+      setForgotMessage("If this email is registered, a reset link has been sent.");
+    } catch (err: any) {
+      console.log('Forgot password error:', err);
+      // Show more detailed error if available
+      setForgotError(err?.message || JSON.stringify(err) || "Failed to send reset email.");
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   return (
@@ -126,6 +156,7 @@ export default function Login() {
                   autoComplete="email"
                   value={value}
                   onChangeText={onChange}
+                  testID="login-email-input"
                 />
               )}
             />
@@ -177,6 +208,11 @@ export default function Login() {
             )}
           </View>
 
+          {/* Forgot Password link */}
+          <TouchableOpacity onPress={() => setForgotModalVisible(true)} style={{ alignSelf: "flex-end", marginBottom: 8 }}>
+            <Text style={{ color: "#4CAF50", fontWeight: "600" }}>Forgot Password?</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleSubmit(onSubmit)}
@@ -200,6 +236,44 @@ export default function Login() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Forgot Password Modal */}
+      <Modal
+        visible={forgotModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setForgotModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Reset Password</Text>
+            <Text style={styles.modalSubtitle}>Enter your email to receive a reset link.</Text>
+            <TextInput
+              style={[styles.input, { color: '#222' }]}
+              placeholder="Email address"
+              placeholderTextColor="#666"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={forgotEmail}
+              onChangeText={setForgotEmail}
+              editable={!forgotLoading}
+              testID="forgot-email-input"
+            />
+            {forgotError && <Text style={styles.errorText}>{forgotError}</Text>}
+            {forgotMessage && <Text style={styles.successText}>{forgotMessage}</Text>}
+            <TouchableOpacity
+              style={[styles.button, forgotLoading && styles.buttonDisabled]}
+              onPress={handleForgotPassword}
+              disabled={forgotLoading || !forgotEmail}
+            >
+              <Text style={styles.buttonText}>{forgotLoading ? "Sending..." : "Send Reset Link"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setForgotModalVisible(false)}>
+              <Text style={styles.linkText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ImageBackground>
   );
 }
@@ -324,5 +398,30 @@ const styles = StyleSheet.create({
     color: "#4CAF50",
     fontSize: 14,
     fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    width: "85%",
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 8,
+    color: "#222",
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#444",
+    marginBottom: 16,
+    textAlign: "center",
   },
 }); 

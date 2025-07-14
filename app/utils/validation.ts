@@ -25,5 +25,16 @@ export const registerSchema = yup.object().shape({
   role: yup.string().required("Role is required"),
 });
 
+export const resetPasswordSchema = yup.object().shape({
+  password: yup
+    .string()
+    .min(6, "Password must be at least 6 characters")
+    .required("Password is required"),
+  confirmPassword: yup
+    .string()
+    .oneOf([yup.ref("password")], "Passwords do not match")
+    .required("Confirm password is required"),
+});
+
 export type LoginForm = yup.InferType<typeof loginSchema>;
 export type RegisterForm = yup.InferType<typeof registerSchema>;
