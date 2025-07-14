@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect } from "react";
 import {
   ImageBackground,
   StyleSheet,
@@ -7,13 +7,32 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useAppSelector } from "./redux/hooks";
 
 export default function Intro() {
   const router = useRouter();
+  const { isAuthenticated, loading } = useAppSelector((state) => state.auth);
+
+  // Redirect to home if user is already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !loading) {
+      router.replace("/tabs/home");
+    }
+  }, [isAuthenticated, loading, router]);
+
+  // Show loading or don't render anything while checking auth state
+  if (loading) {
+    return null; // or a loading spinner
+  }
+
+  // Don't render the intro screen if user is authenticated
+  if (isAuthenticated) {
+    return null;
+  }
 
   return (
     <ImageBackground
-      source={require("../../assets/images/backgroundMb.png")}
+      source={require("./assets/images/backgroundMb.png")}
       style={styles.background}
       resizeMode="cover"
     >
@@ -25,12 +44,20 @@ export default function Intro() {
             child&apos;s development journey.
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => router.push("/register")}
-        >
-          <Text style={styles.buttonText}>Get Started</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => router.push("/register")}
+          >
+            <Text style={styles.buttonText}>Create Account</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => router.push("/login")}
+          >
+            <Text style={styles.secondaryButtonText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.bottomSection}>
           <Text style={styles.sectionTitle}>About Growing Together</Text>
           <Text style={styles.description}>
@@ -83,13 +110,16 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 4,
   },
+  buttonContainer: {
+    marginBottom: 40,
+    gap: 16,
+  },
   button: {
     backgroundColor: "#2176FF",
     borderRadius: 24,
     paddingVertical: 16,
     paddingHorizontal: 48,
     alignItems: "center",
-    marginBottom: 40,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -97,6 +127,20 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   buttonText: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "bold",
+  },
+  secondaryButton: {
+    backgroundColor: "transparent",
+    borderRadius: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 48,
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  secondaryButtonText: {
     color: "#fff",
     fontSize: 22,
     fontWeight: "bold",
@@ -125,4 +169,4 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-});
+}); 
