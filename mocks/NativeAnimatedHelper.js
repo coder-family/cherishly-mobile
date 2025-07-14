@@ -23,8 +23,6 @@ module.exports = {
       extractAnimatedNodeOffset: jest.fn(),
       connectAnimatedNodeToView: jest.fn(),
       disconnectAnimatedNodeFromView: jest.fn(),
-      addAnimatedEventToView: jest.fn(),
-      removeAnimatedEventFromView: jest.fn(),
     },
     addWhitelistedStyleProp: jest.fn(),
     addWhitelistedTransformProp: jest.fn(),
