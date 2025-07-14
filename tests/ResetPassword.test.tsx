@@ -138,7 +138,7 @@ describe('ResetPassword Component', () => {
     });
 
     it('does not show validation errors when form is valid', async () => {
-      const { getByText, getByPlaceholderText, queryByText } = renderWithStore();
+      const { getByPlaceholderText, queryByText } = renderWithStore();
 
       const passwordInput = getByPlaceholderText('New password');
       const confirmPasswordInput = getByPlaceholderText('Confirm new password');
@@ -210,6 +210,7 @@ describe('ResetPassword Component', () => {
 
   describe('API Integration', () => {
     it('calls authService.resetPassword with correct parameters', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const mockResetPassword = require('../app/services/authService').default.resetPassword;
       mockResetPassword.mockResolvedValue(undefined);
 
@@ -232,6 +233,7 @@ describe('ResetPassword Component', () => {
     });
 
     it('shows loading state during API call', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const mockResetPassword = require('../app/services/authService').default.resetPassword;
       let resolvePromise: () => void;
       const promise = new Promise<void>((resolve) => {
@@ -266,6 +268,7 @@ describe('ResetPassword Component', () => {
     });
 
     it('shows success state after successful password reset', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const mockResetPassword = require('../app/services/authService').default.resetPassword;
       mockResetPassword.mockResolvedValue(undefined);
 
@@ -290,6 +293,7 @@ describe('ResetPassword Component', () => {
     });
 
     it('navigates to login when Go to Login button is pressed in success state', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const mockResetPassword = require('../app/services/authService').default.resetPassword;
       mockResetPassword.mockResolvedValue(undefined);
 
@@ -319,6 +323,7 @@ describe('ResetPassword Component', () => {
     });
 
     it('shows error message for expired/invalid token', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const mockResetPassword = require('../app/services/authService').default.resetPassword;
       mockResetPassword.mockRejectedValue({ response: { data: { message: 'Token expired' } } });
 
@@ -341,6 +346,7 @@ describe('ResetPassword Component', () => {
     });
 
     it('shows error message for same password', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const mockResetPassword = require('../app/services/authService').default.resetPassword;
       mockResetPassword.mockRejectedValue({ response: { data: { message: 'Password trùng lặp' } } });
 
@@ -363,6 +369,7 @@ describe('ResetPassword Component', () => {
     });
 
     it('shows generic error message for other errors', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const mockResetPassword = require('../app/services/authService').default.resetPassword;
       mockResetPassword.mockRejectedValue({ response: { data: { message: 'Server error' } } });
 

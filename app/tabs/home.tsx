@@ -109,7 +109,6 @@ export default function HomeScreen() {
   const hasChildren = ChildUtils.hasChildren(children);
   const childrenCount = ChildUtils.getChildrenCount(children);
   const isChildrenStillLoading = ChildUtils.isChildrenLoading(childrenLoading, children);
-  const shouldShowAddChildButton = ChildUtils.shouldShowAddChildButton(hasChildren);
   const addChildButtonText = ChildUtils.getAddChildButtonText(hasChildren);
   const welcomeMessage = ChildUtils.getWelcomeMessage(hasChildren);
 
@@ -393,7 +392,7 @@ export default function HomeScreen() {
         </Text>
         
         <Text style={styles.welcomeSubtitle}>
-          Ready to track your family's precious moments
+          Ready to track your family&apos;s precious moments
         </Text>
 
         {/* Children Section */}

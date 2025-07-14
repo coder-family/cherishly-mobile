@@ -65,6 +65,7 @@ jest.mock('@expo/vector-icons', () => ({
 jest.mock('../app/components/child/ChildProfileCard', () => ({ 
   __esModule: true, 
   default: ({ name }: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const React = require('react');
     return React.createElement('Text', { testID: `child-profile-card-${name}` }, `ChildProfileCard-${name}`);
   }
@@ -72,6 +73,7 @@ jest.mock('../app/components/child/ChildProfileCard', () => ({
 jest.mock('../app/components/child/AddChildModal', () => ({
   __esModule: true,
   default: ({ visible, onClose }: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const React = require('react');
     return visible ? React.createElement('Text', { testID: 'add-child-modal' }, 'AddChildModal') : null;
   }
@@ -79,6 +81,7 @@ jest.mock('../app/components/child/AddChildModal', () => ({
 jest.mock('../app/components/family/FamilyGroupCard', () => ({
   __esModule: true,
   default: ({ name }: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const React = require('react');
     return React.createElement('Text', { testID: `family-group-card-${name}` }, `FamilyGroupCard-${name}`);
   }
