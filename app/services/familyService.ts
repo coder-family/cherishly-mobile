@@ -1,5 +1,31 @@
 import apiService from './apiService';
 
+// Utility function to transform API response to FamilyGroup interface
+function transformFamilyGroupData(group: any): FamilyGroup {
+  return {
+    id: group._id || group.id,
+    name: group.name,
+    description: group.description,
+    avatarUrl: group.avatar || group.avatarUrl,
+    ownerId: group.createdBy || group.ownerId,
+    members: group.members?.map((member: any) => ({
+      id: member._id || member.id,
+      userId: member.userId?._id || member.userId?.id || member.userId,
+      groupId: group._id || group.id,
+      role: member.role === 'admin' ? 'admin' : member.role === 'owner' ? 'owner' : 'member',
+      joinedAt: member.joinedAt,
+      user: member.userId ? {
+        id: member.userId._id || member.userId.id,
+        firstName: member.userId.firstName,
+        lastName: member.userId.lastName,
+        avatarUrl: member.userId.avatar || member.userId.avatarUrl,
+      } : undefined,
+    })) || [],
+    createdAt: group.createdAt,
+    updatedAt: group.updatedAt,
+  };
+}
+
 // Type definitions
 export interface FamilyGroup {
   id: string;
@@ -40,23 +66,85 @@ export interface UpdateFamilyGroupData {
 
 // API functions
 export async function getFamilyGroups(): Promise<FamilyGroup[]> {
-  const response = await apiService.get('/family-groups');
-  return response.data || response;
+  try {
+    // Get all family groups the current user is a member of
+    const response = await apiService.get('/family-groups/my-groups');
+    
+    // Handle nested response structure: response.data.groups or response.groups
+    const responseData = response.data || response;
+    const groups = responseData.groups || responseData;
+    
+    console.log('Family groups API response:', { groups, response, responseData });
+    
+    // If no groups exist, return empty array
+    if (!groups || !Array.isArray(groups)) {
+      console.log('No family groups found, returning empty array');
+      return [];
+    }
+    
+    // Transform and return all groups
+    const transformed = groups.map(group => transformFamilyGroupData(group));
+    console.log('Transformed family groups:', transformed);
+    return transformed;
+  } catch (error: any) {
+    console.log('Family groups API error:', error);
+    // If the error is 404 (no family groups found), return empty array instead of throwing
+    if (error.status === 404 || error.message?.includes('not found') || error.message?.includes('No family group')) {
+      console.log('404 error for family groups, returning empty array');
+      return [];
+    }
+    // For other errors, re-throw to maintain error handling
+    throw error;
+  }
+}
+
+// Get the user's primary/first family group (for backward compatibility)
+export async function getPrimaryFamilyGroup(): Promise<FamilyGroup | null> {
+  try {
+    // Get the current user's primary family group (first group for backward compatibility)
+    const response = await apiService.get('/family-groups/my-group');
+    const group = response.data || response;
+    
+    console.log('Primary family group API response:', { group, response });
+    
+    // If no group exists, return null
+    if (!group || (!group.id && !group._id)) {
+      console.log('No primary family group found, returning null');
+      return null;
+    }
+    
+    // Transform and return single group
+    const transformed = transformFamilyGroupData(group);
+    console.log('Transformed primary family group:', transformed);
+    return transformed;
+  } catch (error: any) {
+    console.log('Primary family group API error:', error);
+    // If the error is 404 (no family group found), return null instead of throwing
+    if (error.status === 404 || error.message?.includes('not found') || error.message?.includes('No family group')) {
+      console.log('404 error for primary family group, returning null');
+      return null;
+    }
+    // For other errors, re-throw to maintain error handling
+    throw error;
+  }
 }
 
 export async function getFamilyGroup(groupId: string): Promise<FamilyGroup> {
   const response = await apiService.get(`/family-groups/${groupId}`);
-  return response.data || response;
+  const group = response.data || response;
+  return transformFamilyGroupData(group);
 }
 
 export async function createFamilyGroup(data: CreateFamilyGroupData): Promise<FamilyGroup> {
   const response = await apiService.post('/family-groups', data);
-  return response.data || response;
+  const group = response.data || response;
+  return transformFamilyGroupData(group);
 }
 
 export async function updateFamilyGroup(groupId: string, data: UpdateFamilyGroupData): Promise<FamilyGroup> {
   const response = await apiService.patch(`/family-groups/${groupId}`, data);
-  return response.data || response;
+  const group = response.data || response;
+  return transformFamilyGroupData(group);
 }
 
 export async function deleteFamilyGroup(groupId: string): Promise<void> {
@@ -65,7 +153,8 @@ export async function deleteFamilyGroup(groupId: string): Promise<void> {
 
 export async function joinFamilyGroup(groupId: string, inviteCode?: string): Promise<FamilyGroup> {
   const response = await apiService.post(`/family-groups/${groupId}/join`, { inviteCode });
-  return response.data || response;
+  const group = response.data || response;
+  return transformFamilyGroupData(group);
 }
 
 export async function leaveFamilyGroup(groupId: string): Promise<void> {

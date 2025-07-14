@@ -1,11 +1,9 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,18 +11,17 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Dropdown } from "react-native-paper-dropdown";
+import AddChildModal from "../components/child/AddChildModal";
 import ChildProfileCard from "../components/child/ChildProfileCard";
-import InputField from "../components/form/InputField";
-import AvatarUpload from "../components/media/AvatarUpload";
+import FamilyGroupCard from "../components/family/FamilyGroupCard";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
+import UserProfileCard from "../components/user/UserProfileCard";
+import UserProfileEditModal from "../components/user/UserProfileEditModal";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
-import {
-  fetchCurrentUser,
-  updateUser,
-  uploadUserAvatar,
-} from "../redux/slices/userSlice";
 import { fetchChildren } from "../redux/slices/childSlice";
+import { fetchFamilyGroups } from "../redux/slices/familySlice";
+import { fetchCurrentUser } from "../redux/slices/userSlice";
+import { ChildUtils } from "../utils/childUtils";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -38,272 +35,317 @@ export default function HomeScreen() {
   const { children, loading: childrenLoading, error: childrenError } = useAppSelector(
     (state) => state.children
   );
-  const { familyGroups, error: familyError } = useAppSelector(
+  const { familyGroups, loading: familyLoading, error: familyError } = useAppSelector(
     (state) => state.family
   );
 
-  const [name, setName] = useState(user?.firstName || "");
-  const [lastName, setLastName] = useState(user?.lastName || "");
-  const [gender, setGender] = useState(
-    user && "gender" in user && (user as any).gender
-      ? (user as any).gender
-      : "other"
-  );
-  const [dateOfBirth, setDateOfBirth] = useState(user?.dateOfBirth || "");
-  const [password, setPassword] = useState("");
-  const [avatar, setAvatar] = useState<string | undefined>(undefined);
-  const [pendingAvatar, setPendingAvatar] = useState<string | undefined>(
-    undefined
-  ); // for local preview
-  const [error, setError] = useState<string | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const genderOptions = [
-    { label: "Male", value: "male" },
-    { label: "Female", value: "female" },
-    { label: "Other", value: "other" },
-  ];
+  const [showAddChildModal, setShowAddChildModal] = useState(false);
+  const [childrenExpanded, setChildrenExpanded] = useState(false);
+  const [familyGroupsExpanded, setFamilyGroupsExpanded] = useState(false);
 
   // Fetch current user data on component mount
   useEffect(() => {
     if (user) {
       dispatch(fetchCurrentUser(user.id));
       dispatch(fetchChildren());
-      // Temporarily disabled to avoid API errors while testing family service
-      // dispatch(fetchFamilyGroups());
+      dispatch(fetchFamilyGroups());
     }
   }, [dispatch, user]);
 
-  // Update form fields when currentUser is loaded
+  // Handle children errors using the shared utility
   useEffect(() => {
-    if (currentUser) {
-      setName(currentUser.firstName || "");
-      setLastName(currentUser.lastName || "");
-      setDateOfBirth(currentUser.dateOfBirth || "");
-      setAvatar(currentUser.avatar);
-      setPendingAvatar(undefined); // reset pending avatar on load
-    }
-  }, [currentUser]);
+    ChildUtils.handleChildrenError(childrenError, dispatch);
+  }, [childrenError, dispatch]);
 
-  // Show error alerts
+  // Show error alerts for other errors
   useEffect(() => {
-    if (childrenError) {
-      Alert.alert('Error', childrenError);
+    if (familyError) {
+      Alert.alert('Error', familyError);
     }
-    // Temporarily disabled since we're not calling family API
-    // if (familyError) {
-    //   Alert.alert('Error', familyError);
-    // }
     if (userError) {
       Alert.alert("Error", userError);
     }
-  }, [childrenError, familyError, userError]);
+  }, [familyError, userError]);
 
-  const handleSave = async () => {
-    if (!user) return;
-    setError(null);
-    try {
-      let avatarUrl = avatar;
-      // If a new avatar is selected (pendingAvatar is set and is a local file)
-      if (pendingAvatar && (!avatar || !pendingAvatar.startsWith("http"))) {
-        const uploadResult = await dispatch(
-          uploadUserAvatar({ userId: user.id, imageUri: pendingAvatar })
-        ).unwrap();
-        avatarUrl = uploadResult.avatar;
-        setAvatar(avatarUrl);
-        setPendingAvatar(undefined);
-      }
-      await dispatch(
-        updateUser({
-          userId: user.id,
-          data: {
-            firstName: name,
-            lastName: lastName,
-            dateOfBirth: dateOfBirth,
-            avatar: avatarUrl,
-          },
-        })
-      ).unwrap();
-      Alert.alert("Success", "Profile updated successfully!");
-      setShowEditModal(false); // Close modal on success
-    } catch (err: any) {
-      setError(err?.message || "Update failed");
-    }
-  };
+  // Add debugging for family groups
+  useEffect(() => {
+    console.log('Family groups state debug:', {
+      familyGroups,
+      familyGroupsCount: familyGroups?.length || 0,
+      familyError,
+      hasFamilyGroups: familyGroups && familyGroups.length > 0
+    });
+  }, [familyGroups, familyError]);
 
-  const handleAddChild = () => {
-    // Navigate to add child screen (you'll need to create this)
-    router.push("/children/add");
-  };
-
-  const handleChildPress = (childId: string) => {
-    // Navigate to child profile screen
-    router.push(`/children/${childId}/profile`);
-  };
-
-  const handleFamilyGroupPress = () => {
-    if (familyGroups.length > 0) {
-      // Navigate to family group detail
-      router.push(`/family/${familyGroups[0].id}`);
-    } else {
-      // Navigate to create/join family group screen
-      router.push("/family/create");
-    }
-  };
-
-  // Check if user has children
-  const hasChildren = children && children.length > 0;
-  
-  // Debug log for children data
-  React.useEffect(() => {
+  // Debug log for children data using utility
+  useEffect(() => {
+    const validChildren = ChildUtils.getValidChildren(children);
+    const hasChildren = ChildUtils.hasChildren(children);
     console.log('Children state debug:', {
       children,
-      childrenCount: children?.length || 0,
+      childrenCount: ChildUtils.getChildrenCount(children),
+      validChildren,
+      validChildrenCount: validChildren.length,
       childrenLoading,
       childrenError,
-      hasChildren: children && children.length > 0
+      hasChildren
     });
   }, [children, childrenLoading, childrenError]);
+
+  // Refresh children when add child modal closes (in case a child was added)
+  useEffect(() => {
+    if (!showAddChildModal && user) {
+      // Small delay to ensure the modal animation completes
+      const timer = setTimeout(() => {
+        dispatch(fetchChildren());
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showAddChildModal, dispatch, user]);
+
+  // Use utility functions for child-related logic
+  const validChildren = ChildUtils.getValidChildren(children);
+  const hasChildren = ChildUtils.hasChildren(children);
+  const childrenCount = ChildUtils.getChildrenCount(children);
+  const isChildrenStillLoading = ChildUtils.isChildrenLoading(childrenLoading, children);
+  const shouldShowAddChildButton = ChildUtils.shouldShowAddChildButton(hasChildren);
+  const addChildButtonText = ChildUtils.getAddChildButtonText(hasChildren);
+  const welcomeMessage = ChildUtils.getWelcomeMessage(hasChildren);
+
+  // Family groups logic
+  const hasFamilyGroups = familyGroups && familyGroups.length > 0;
+  const familyGroupsCount = familyGroups?.length || 0;
 
   // Show loading spinner while fetching user data
   if (userLoading && !currentUser) {
     return <LoadingSpinner message="Loading your profile..." />;
   }
 
-  // UI for profile card
-  const renderProfileCard = () => (
-    <View style={styles.profileCard}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <AvatarUpload
-          userId={user?.id ?? ''}
-          initialUri={avatar}
-          onAvatarPicked={() => {}}
-        />
-        <View style={{ marginLeft: 16 }}>
-          <Text style={styles.profileName}>
-            {currentUser?.firstName || user?.firstName || ''} {currentUser?.lastName || user?.lastName || ''}
-          </Text>
+  // UI for children section
+  const renderChildrenSection = () => {
+    // Show loading state
+    if (isChildrenStillLoading) {
+      return (
+        <View style={styles.childrenSection}>
+          <Text style={styles.sectionTitle}>Your Babies</Text>
+          <Text style={styles.loadingText}>Loading your children...</Text>
+        </View>
+      );
+    }
+
+    // Show error state with retry button
+    if (childrenError) {
+      return (
+        <View style={styles.childrenSection}>
+          <Text style={styles.sectionTitle}>Your Babies</Text>
+          <TouchableOpacity
+            style={[styles.groupButton, { backgroundColor: '#fef2f2' }]}
+            onPress={() => {
+              console.log('Retrying children fetch...');
+              dispatch(fetchChildren());
+            }}
+          >
+            <Text style={[styles.groupButtonText, { color: '#dc2626' }]}>
+              Error loading children. Tap to retry.
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Calculate displayed children (max 2 unless expanded)
+    const displayedChildren = childrenExpanded ? validChildren : validChildren.slice(0, 2);
+    const hasMoreChildren = validChildren.length > 2;
+
+    // Show children section (with or without children)
+    return (
+      <View style={styles.childrenSection}>
+        <Text style={styles.sectionTitle}>Your Babies {hasChildren ? `(${childrenCount})` : ''}</Text>
+        
+        {/* Show children if any exist */}
+        {hasChildren && (
+          <>
+            {displayedChildren.map((child, index) => (
+              <TouchableOpacity
+                key={`child-${child.id}-${index}`}
+                style={styles.childCard}
+                onPress={() => ChildUtils.handleChildCardPress(child.id, child.name)}
+              >
+                <ChildProfileCard
+                  avatarUrl={child.avatarUrl}
+                  name={child.name}
+                  birthdate={child.birthdate}
+                  bio={child.bio}
+                />
+              </TouchableOpacity>
+            ))}
+            
+            {/* Show expand/collapse button if there are more than 2 children */}
+            {hasMoreChildren && (
+              <TouchableOpacity
+                style={styles.seeMoreButton}
+                onPress={() => setChildrenExpanded(!childrenExpanded)}
+              >
+                <MaterialIcons 
+                  name={childrenExpanded ? "expand-less" : "expand-more"} 
+                  size={24} 
+                  color="#3b4cca" 
+                />
+                <Text style={styles.seeMoreText}>
+                  {childrenExpanded 
+                    ? 'Show Less' 
+                    : `${validChildren.length - 2} more`
+                  }
+                </Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+        
+        {/* Show welcome message when no children */}
+        {!hasChildren && (
+          <Text style={styles.emptyStateText}>{welcomeMessage}</Text>
+        )}
+        
+        {/* Action buttons */}
+        <View style={styles.quickActions}>
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={() => ChildUtils.handleAddChildPress(dispatch, hasChildren, () => setShowAddChildModal(true))}
+          >
+            <Text style={styles.quickActionText}>{addChildButtonText}</Text>
+          </TouchableOpacity>
         </View>
       </View>
-      <TouchableOpacity style={styles.editButton} onPress={() => setShowEditModal(true)}>
-        <MaterialIcons name="edit" size={20} color="#4f8cff" />
-        <Text style={styles.editButtonText}>Edit</Text>
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
-  // UI for updating personal info (now in modal)
-  const renderProfileUpdate = () => (
-    <Modal
-      visible={showEditModal}
-      animationType="slide"
-      transparent
-      onRequestClose={() => setShowEditModal(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.sectionTitle}>Update Your Info</Text>
-          <Text style={styles.inputLabel}>Avatar</Text>
-          <AvatarUpload
-            userId={user?.id ?? ''}
-            initialUri={pendingAvatar ?? avatar}
-            onAvatarPicked={(uri) => {
-              setPendingAvatar(uri);
-            }}
-          />
-          <Text style={styles.inputLabel}>First Name</Text>
-          <InputField
-            value={name}
-            onChangeText={setName}
-            placeholder="Enter your first name"
-          />
-          <Text style={styles.inputLabel}>Last Name</Text>
-          <InputField
-            value={lastName}
-            onChangeText={setLastName}
-            placeholder="Enter your last name"
-          />
-          <Text style={styles.inputLabel}>Gender</Text>
-          <Dropdown
-            label={"Gender"}
-            mode={"outlined"}
-            value={gender}
-            onSelect={setGender}
-            options={genderOptions}
-          />
-          <Text style={styles.inputLabel}>Date of Birth</Text>
+  // UI for family groups section
+  const renderFamilyGroupsSection = () => {
+    // Show loading state
+    if (familyLoading) {
+      return (
+        <View style={styles.familyGroupsSection}>
+          <Text style={styles.sectionTitle}>Your Family Groups</Text>
+          <Text style={styles.loadingText}>Loading family groups...</Text>
+        </View>
+      );
+    }
+
+    // Show error state with retry button
+    if (familyError) {
+      return (
+        <View style={styles.familyGroupsSection}>
+          <Text style={styles.sectionTitle}>Your Family Groups</Text>
           <TouchableOpacity
-            onPress={() => setShowDatePicker(true)}
-            style={[styles.inputField, { justifyContent: "center" }]}
-          >
-            <Text>{dateOfBirth ? dateOfBirth.slice(0, 10) : "YYYY-MM-DD"}</Text>
-          </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={dateOfBirth ? new Date(dateOfBirth) : new Date()}
-              mode="date"
-              display="default"
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(false);
-                if (selectedDate) {
-                  const iso = selectedDate.toISOString();
-                  setDateOfBirth(iso.slice(0, 10));
-                }
-              }}
-              maximumDate={new Date()}
-            />
-          )}
-          {/* Change Password Button */}
-          <TouchableOpacity
-            style={[styles.saveButton, { marginTop: 8, marginBottom: 0 }]}
+            style={[styles.groupButton, { backgroundColor: '#fee' }]}
             onPress={() => {
-              setShowEditModal(false);
-              router.push("/change-password");
+              console.log('Retrying family groups fetch...');
+              dispatch(fetchFamilyGroups());
             }}
           >
-            <Text style={styles.saveButtonText}>Change Password</Text>
+            <Text style={[styles.groupButtonText, { color: '#c00' }]}>
+              Error loading family groups. Tap to retry.
+            </Text>
           </TouchableOpacity>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
+        </View>
+      );
+    }
+
+    // Show family groups if any exist
+    if (hasFamilyGroups) {
+      // Calculate displayed family groups (max 2 unless expanded)
+      const displayedGroups = familyGroupsExpanded ? familyGroups : familyGroups.slice(0, 2);
+      const hasMoreGroups = familyGroups.length > 2;
+
+      return (
+        <View style={styles.familyGroupsSection}>
+          <Text style={styles.sectionTitle}>Your Family Groups ({familyGroupsCount})</Text>
+          
+          {displayedGroups.map((group, index) => (
             <TouchableOpacity
-              style={[styles.saveButton, { flex: 1, marginRight: 8 }]}
-              onPress={handleSave}
-              disabled={userLoading}
+              key={`family-group-${group.id}-${index}`}
+              onPress={() => {
+                // For now, just show an alert since the family detail page doesn't exist yet
+                // You can replace this with actual navigation once you create the family detail page
+                Alert.alert(
+                  group.name,
+                  `Family Group Details\n\nMembers: ${group.members?.length || 0}\nDescription: ${group.description || 'No description'}\n\nFamily group detail page coming soon!`,
+                  [
+                    { text: "OK" },
+                    { 
+                      text: "Edit Group", 
+                      onPress: () => router.push(`/family/edit/${group.id}`) 
+                    }
+                  ]
+                );
+              }}
             >
-              <Text style={styles.saveButtonText}>
-                {userLoading ? "Saving..." : "Save Changes"}
+              <FamilyGroupCard
+                name={group.name}
+                avatarUrl={group.avatarUrl}
+                description={group.description}
+                memberCount={group.members?.length}
+                subtitle={index === 0 ? "Primary Family Group" : "Family Group"}
+              />
+            </TouchableOpacity>
+          ))}
+          
+          {/* Show expand/collapse button if there are more than 2 groups */}
+          {hasMoreGroups && (
+            <TouchableOpacity
+              style={styles.seeMoreButton}
+              onPress={() => setFamilyGroupsExpanded(!familyGroupsExpanded)}
+            >
+              <MaterialIcons 
+                name={familyGroupsExpanded ? "expand-less" : "expand-more"} 
+                size={24} 
+                color="#3b4cca" 
+              />
+              <Text style={styles.seeMoreText}>
+                {familyGroupsExpanded 
+                  ? 'Show Less' 
+                  : `${familyGroups.length - 2} more`
+                }
               </Text>
             </TouchableOpacity>
+          )}
+          
+          {/* Action buttons */}
+          <View style={styles.quickActions}>
             <TouchableOpacity
-              style={[styles.cancelButton, { flex: 1, marginLeft: 8 }]}
-              onPress={() => setShowEditModal(false)}
+              style={styles.quickActionButton}
+              onPress={() => router.push("/family/create")}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.quickActionText}>+ Add Group</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => router.push("/family/invite-join")}
+            >
+              <Text style={styles.quickActionText}>Invite & Join</Text>
             </TouchableOpacity>
           </View>
-          {(error || userError) && (
-            <Text style={{ color: "red", marginTop: 8 }}>
-              {error || userError}
-            </Text>
-          )}
         </View>
-      </View>
-    </Modal>
-  );
+      );
+    }
 
-  // UI for family group button
-  const renderFamilyGroupButton = () => (
-    <TouchableOpacity
-      style={styles.groupButton}
-      onPress={handleFamilyGroupPress}
-    >
-      <Text style={styles.groupButtonText}>
-        {familyGroups.length > 0
-          ? "Your Family Group"
-          : "Create or Join Family Group"}
-      </Text>
-    </TouchableOpacity>
-  );
+    // Show create/join button when no family groups
+    return (
+      <View style={styles.familyGroupsSection}>
+        <Text style={styles.sectionTitle}>Your Family Groups</Text>
+        <TouchableOpacity
+          style={styles.groupButton}
+          onPress={() => router.push("/family/create")}
+        >
+          <Text style={styles.groupButtonText}>
+            Create or Join Family Group
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   // Single UI that works for both cases - with and without children
   return (
@@ -317,8 +359,31 @@ export default function HomeScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {renderProfileCard()}
-        {renderProfileUpdate()}
+        {/* User Profile Card */}
+        <UserProfileCard
+          userId={user?.id ?? ''}
+          firstName={currentUser?.firstName || user?.firstName}
+          lastName={currentUser?.lastName || user?.lastName}
+          avatar={currentUser?.avatar}
+          onEditPress={() => setShowEditModal(true)}
+        />
+
+        {/* User Profile Edit Modal */}
+        <UserProfileEditModal
+          visible={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          user={user as any}
+          currentUser={currentUser || undefined}
+          loading={userLoading}
+          error={userError}
+        />
+
+        {/* Add Child Modal */}
+        <AddChildModal
+          visible={showAddChildModal}
+          onClose={() => setShowAddChildModal(false)}
+        />
+
         <Text style={styles.welcomeTitle}>
           Welcome
           {currentUser?.firstName || user?.firstName
@@ -327,55 +392,15 @@ export default function HomeScreen() {
           !
         </Text>
         
-        {!hasChildren && (
-          <Text style={styles.welcomeSubtitle}>
-            Let&apos;s get started on your family&apos;s journey.
-          </Text>
-        )}
+        <Text style={styles.welcomeSubtitle}>
+          Ready to track your family's precious moments
+        </Text>
 
-        {/* Show loading state for children */}
-        {childrenLoading && (
-          <Text style={styles.welcomeSubtitle}>Loading your children...</Text>
-        )}
-
-        {/* Show children if any exist */}
-        {hasChildren && !childrenLoading && (
-          <>
-            <Text style={styles.sectionTitle}>Your Babies</Text>
-            {children.filter(child => child && child.id).map((child, index) => (
-              <TouchableOpacity
-                key={`child-${child.id}-${index}`}
-                style={styles.childCard}
-                onPress={() => handleChildPress(child.id)}
-              >
-                <ChildProfileCard
-                  avatarUrl={child.avatarUrl}
-                  name={child.name}
-                  birthdate={child.birthdate}
-                  bio={child.bio}
-                />
-              </TouchableOpacity>
-            ))}
-          </>
-        )}
-
-        {/* Debug information (remove in production) */}
-        {/* {__DEV__ && (
-          <Text style={{fontSize: 12, color: 'gray', marginTop: 10}}>
-            Debug: {children?.length || 0} children | Loading: {childrenLoading ? 'Yes' : 'No'} | Error: {childrenError || 'None'}
-          </Text>
-        )} */}
-
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={handleAddChild}
-        >
-          <Text style={styles.primaryButtonText}>
-            {hasChildren ? "Add Another Baby" : "Add Your Baby"}
-          </Text>
-        </TouchableOpacity>
+        {/* Children Section */}
+        {renderChildrenSection()}
         
-        {renderFamilyGroupButton()}
+        {/* Family Groups Section */}
+        {renderFamilyGroupsSection()}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -402,17 +427,34 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: "center",
   },
-  section: {
-    width: "100%",
-    marginTop: 32,
-    padding: 16,
-    backgroundColor: "#f7f7f7",
-    borderRadius: 12,
-  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "600",
     marginBottom: 12,
+  },
+  childrenSection: {
+    width: "100%",
+    backgroundColor: "#f9f9f9",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  familyGroupsSection: {
+    width: "100%",
+    backgroundColor: "#f0f7ff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#e0e7ff",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    padding: 16,
   },
   primaryButton: {
     backgroundColor: "#4f8cff",
@@ -434,8 +476,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
-    marginTop: 10,
-    marginBottom: 8,
+    marginTop: 4,
+    marginBottom: 4,
     alignItems: "center",
     width: "100%",
   },
@@ -444,103 +486,47 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-  saveButton: {
-    backgroundColor: "#4f8cff",
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 16,
-    alignItems: "center",
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
   childCard: {
     width: "100%",
     marginBottom: 16,
   },
-  inputLabel: {
-    fontSize: 15,
-    fontWeight: "500",
-    marginBottom: 4,
-    marginTop: 12,
-    color: "#333",
-  },
-  inputField: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    backgroundColor: "#fff",
-  },
-  pickerWrapper: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: "#fff",
-  },
-  picker: {
-    height: 44,
-    width: "100%",
-  },
-  profileCard: {
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 16,
     width: '100%',
-    backgroundColor: '#eaf0fb',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
-  profileName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#222',
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  quickActionButton: {
     backgroundColor: '#e0e7ff',
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  editButtonText: {
-    color: '#4f8cff',
-    fontWeight: 'bold',
-    marginLeft: 4,
-    fontSize: 15,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: '90%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  cancelButton: {
-    backgroundColor: '#eee',
     paddingVertical: 12,
+    paddingHorizontal: 24,
     borderRadius: 8,
-    alignItems: 'center',
   },
-  cancelButtonText: {
-    color: '#333',
-    fontSize: 16,
+  quickActionText: {
+    color: '#3b4cca',
+    fontSize: 14,
     fontWeight: 'bold',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    padding: 16,
+  },
+  seeMoreButton: {
+    backgroundColor: '#e0e7ff',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginTop: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  seeMoreText: {
+    color: '#3b4cca',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });

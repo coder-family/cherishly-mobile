@@ -39,6 +39,13 @@ export const deleteChild = createAsyncThunk(
   }
 );
 
+export const uploadChildAvatar = createAsyncThunk(
+  'children/uploadAvatar',
+  async ({ childId, imageUri }: { childId: string; imageUri: string }) => {
+    return await childService.uploadAvatar(childId, imageUri);
+  }
+);
+
 // Slice
 interface ChildState {
   children: Child[];
@@ -143,6 +150,18 @@ const childSlice = createSlice({
       .addCase(deleteChild.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to delete child';
+      })
+      // Upload child avatar
+      .addCase(uploadChildAvatar.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(uploadChildAvatar.fulfilled, (state, action) => {
+        state.loading = false;
+      })
+      .addCase(uploadChildAvatar.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to upload avatar';
       });
   },
 });

@@ -1,4 +1,6 @@
+import { API_BASE_URL } from '@env';
 import apiService from './apiService';
+import authService from './authService';
 
 // Type definitions matching API response
 export interface ApiChild {
@@ -104,4 +106,39 @@ export async function updateChild(childId: string, data: UpdateChildData): Promi
 
 export async function deleteChild(childId: string): Promise<void> {
   await apiService.delete(`/children/${childId}`);
+}
+
+export async function uploadAvatar(childId: string, imageUri: string): Promise<{ avatar: string }> {
+  // Create FormData for file upload
+  const formData = new FormData();
+  
+  // Get file name from URI
+  const fileName = imageUri.split('/').pop() || 'avatar.jpg';
+  
+  // Append the file to FormData
+  formData.append('avatar', {
+    uri: imageUri,
+    type: 'image/jpeg', // You might want to detect this dynamically
+    name: fileName,
+  } as any);
+
+  // Use a separate axios instance for file uploads to avoid JSON content-type issues
+  const token = await authService.getAccessToken();
+  
+  const response = await fetch(`${API_BASE_URL}/children/${childId}/avatar`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'multipart/form-data',
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to upload avatar');
+  }
+
+  const data = await response.json();
+  return data;
 } 
