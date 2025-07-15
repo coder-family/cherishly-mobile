@@ -13,7 +13,7 @@ const ChildProfileCard: React.FC<ChildProfileCardProps> = ({ avatarUrl, name, bi
     {avatarUrl && <Image source={{ uri: avatarUrl }} style={styles.avatar} />}
     <View style={styles.info}>
       <Text style={styles.name}>{name}</Text>
-      <Text style={styles.birthdate}>Born: {birthdate}</Text>
+      {/* <Text style={styles.birthdate}>Born: {birthdate}</Text> */}
       {bio && <Text style={styles.bio}>{bio}</Text>}
     </View>
   </View>

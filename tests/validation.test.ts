@@ -322,7 +322,7 @@ describe('Register Validation Schema', () => {
 
       try {
         await registerSchema.validate(invalidData);
-        fail('Should have thrown validation error');
+        throw new Error('Should have thrown validation error');
       } catch (error: any) {
         expect(error.message).toContain('Passwords do not match');
       }

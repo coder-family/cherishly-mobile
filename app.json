@@ -2,6 +2,47 @@
   "expo": {
     "name": "Growing Together",
     "slug": "growing-together",
-    "scheme": "growing-together"
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "platforms": ["ios", "android", "web"],
+    "scheme": "growing-together",
+    "web": {
+      "bundler": "metro"
+    },
+    "ios": {
+      "bundleIdentifier": "com.growingtogether.app",
+      "associatedDomains": [
+        "applinks:growing-together.com"
+      ]
+    },
+    "android": {
+      "package": "com.growingtogether.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "growing-together"
+            },
+            {
+              "scheme": "https",
+              "host": "growing-together.com"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "plugins": [
+      "expo-router"
+    ]
   }
-} 
+}

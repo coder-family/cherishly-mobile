@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import React from "react";
 import {
   ImageBackground,
   StyleSheet,
@@ -11,23 +11,11 @@ import { useAppSelector } from "./redux/hooks";
 
 export default function Intro() {
   const router = useRouter();
-  const { isAuthenticated, loading } = useAppSelector((state) => state.auth);
-
-  // Redirect to home if user is already authenticated
-  useEffect(() => {
-    if (isAuthenticated && !loading) {
-      router.replace("/tabs/home");
-    }
-  }, [isAuthenticated, loading, router]);
+  const { loading } = useAppSelector((state) => state.auth);
 
   // Show loading or don't render anything while checking auth state
   if (loading) {
     return null; // or a loading spinner
-  }
-
-  // Don't render the intro screen if user is authenticated
-  if (isAuthenticated) {
-    return null;
   }
 
   return (

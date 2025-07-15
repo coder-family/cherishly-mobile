@@ -1,16 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
 import { yupResolver } from "@hookform/resolvers/yup";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   ImageBackground,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 
@@ -24,6 +27,10 @@ export default function Register() {
   const { error, isAuthenticated } = useAppSelector((state) => state.auth);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [hasAttemptedRegister, setHasAttemptedRegister] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const {
     control,
@@ -31,6 +38,7 @@ export default function Register() {
     formState: { errors },
   } = useForm<RegisterForm>({
     resolver: yupResolver(registerSchema),
+    mode: "onChange",
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -38,7 +46,7 @@ export default function Register() {
       email: "",
       password: "",
       confirmPassword: "",
-      role: "parent"
+      role: "parent",
     },
   });
 
@@ -53,7 +61,7 @@ export default function Register() {
       // User just completed a registration action, show success message
       setShowSuccessMessage(true);
       setTimeout(() => {
-        router.push("/login");
+        router.replace("/tabs/home");
       }, 1500);
     }
   }, [isAuthenticated, hasAttemptedRegister, router]);
@@ -63,22 +71,24 @@ export default function Register() {
       // Clear any previous success message and mark that user is attempting registration
       setShowSuccessMessage(false);
       setHasAttemptedRegister(true);
-      
-      await dispatch(registerUser({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        password: data.password,
-        dateOfBirth: data.dateOfBirth,
-        role: data.role,
-      })).unwrap();
-      
+
+      await dispatch(
+        registerUser({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          password: data.password,
+          dateOfBirth: data.dateOfBirth,
+          role: data.role,
+        })
+      ).unwrap();
+
       // If we reach here, registration was successful
       // The useEffect will handle navigation to login
     } catch (error) {
       // Error is already handled by Redux slice and displayed in the UI
       // We can add additional error handling here if needed
-      console.error('Registration error:', error);
+      console.error("Registration error:", error);
     }
   };
 
@@ -169,13 +179,59 @@ export default function Register() {
               }: {
                 field: { onChange: (value: string) => void; value: string };
               }) => (
-                <TextInput
-                  style={styles.input}
-                  placeholder="Date of birth"
-                  placeholderTextColor="#fff"
-                  value={value}
-                  onChangeText={onChange}
-                />
+                <View style={{ position: "relative" }}>
+                  <TextInput
+                    style={[styles.input, { paddingRight: 44 }]}
+                    placeholder="Date of birth (YYYY-MM-DD)"
+                    placeholderTextColor="#fff"
+                    value={value}
+                    onChangeText={onChange}
+                  />
+                  <TouchableOpacity
+                    style={styles.calendarIcon}
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Ionicons name="calendar-outline" size={22} color="#fff" />
+                  </TouchableOpacity>
+                  <Modal
+                    visible={showDatePicker}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setShowDatePicker(false)}
+                  >
+                    <TouchableWithoutFeedback
+                      onPress={() => setShowDatePicker(false)}
+                    >
+                      <View style={styles.datePickerOverlay}>
+                        <TouchableWithoutFeedback>
+                          <View style={styles.datePickerContainer}>
+                            <DateTimePicker
+                              value={selectedDate || new Date(2000, 0, 1)}
+                              mode="date"
+                              display={
+                                Platform.OS === "ios" ? "spinner" : "default"
+                              }
+                              maximumDate={new Date()}
+                              themeVariant="dark"
+                              onChange={(event, date) => {
+                                if (event.type === "set" && date) {
+                                  // Format date in local time (YYYY-MM-DD)
+                                  const year = date.getFullYear();
+                                  const month = String(date.getMonth() + 1).padStart(2, "0");
+                                  const day = String(date.getDate()).padStart(2, "0");
+                                  const formatted = `${year}-${month}-${day}`;
+                                  onChange(formatted);
+                                  setSelectedDate(date);
+                                }
+                                // KHÔNG đóng Modal ở đây, chờ người dùng tap ra ngoài
+                              }}
+                            />
+                          </View>
+                        </TouchableWithoutFeedback>
+                      </View>
+                    </TouchableWithoutFeedback>
+                  </Modal>
+                </View>
               )}
             />
             {errors.dateOfBirth && (
@@ -227,14 +283,30 @@ export default function Register() {
               }: {
                 field: { onChange: (value: string) => void; value: string };
               }) => (
-                <TextInput
-                  style={[styles.input, { paddingLeft: 36 }]}
-                  placeholder="Password"
-                  placeholderTextColor="#fff"
-                  secureTextEntry
-                  value={value}
-                  onChangeText={onChange}
-                />
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      { paddingLeft: 36, paddingRight: 50 },
+                    ]}
+                    placeholder="Password"
+                    placeholderTextColor="#fff"
+                    secureTextEntry={!showPassword}
+                    textContentType="oneTimeCode"
+                    value={value}
+                    onChangeText={onChange}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <Ionicons
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
+                      size={22}
+                      color="#fff"
+                    />
+                  </TouchableOpacity>
+                </View>
               )}
             />
             {errors.password && (
@@ -256,14 +328,32 @@ export default function Register() {
               }: {
                 field: { onChange: (value: string) => void; value: string };
               }) => (
-                <TextInput
-                  style={[styles.input, { paddingLeft: 36 }]}
-                  placeholder="Confirm password"
-                  placeholderTextColor="#fff"
-                  secureTextEntry
-                  value={value}
-                  onChangeText={onChange}
-                />
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      { paddingLeft: 36, paddingRight: 50 },
+                    ]}
+                    placeholder="Confirm password"
+                    placeholderTextColor="#fff"
+                    secureTextEntry={!showConfirmPassword}
+                    textContentType="oneTimeCode"
+                    value={value}
+                    onChangeText={onChange}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    <Ionicons
+                      name={
+                        showConfirmPassword ? "eye-off-outline" : "eye-outline"
+                      }
+                      size={22}
+                      color="#fff"
+                    />
+                  </TouchableOpacity>
+                </View>
               )}
             />
             {errors.confirmPassword && (
@@ -407,4 +497,34 @@ const styles = StyleSheet.create({
     color: "#2176FF",
     fontWeight: "bold",
   },
-}); 
+  passwordContainer: {
+    position: "relative",
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: 12,
+    top: 12,
+    zIndex: 1,
+  },
+  datePickerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  datePickerContainer: {
+    backgroundColor: "#222",
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 320,
+  },
+  calendarIcon: {
+    position: "absolute",
+    right: 12,
+    top: 14,
+    zIndex: 2,
+  },
+});

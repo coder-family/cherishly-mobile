@@ -1,11 +1,10 @@
 // https://docs.expo.dev/guides/using-eslint/
-const { defineConfig } = require('eslint/config');
 const expoConfig = require('eslint-config-expo/flat');
 
-module.exports = defineConfig([
-  expoConfig,
+module.exports = [
+  ...expoConfig,
   {
-    ignores: ['dist/*'],
+    ignores: ['dist/*', 'node_modules/*'],
   },
   {
     files: ['**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx'],
@@ -25,6 +24,14 @@ module.exports = defineConfig([
     },
     rules: {
       'import/no-unresolved': 'off', // Disable this rule as it can be problematic with React Native/Expo
+      'import/no-named-as-default': 'off', // Common pattern in React Native services
+      'no-unused-vars': 'warn', // Change to warning instead of error
     },
   },
-]);
+  {
+    files: ['**/*.test.{js,jsx,ts,tsx}', '**/mocks/**', '**/tests/**', 'jest.setup.js'],
+    rules: {
+      'no-unused-vars': 'off', // More lenient for test files
+    },
+  },
+];

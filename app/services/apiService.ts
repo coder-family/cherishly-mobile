@@ -1,5 +1,5 @@
+import { API_BASE_URL } from '@env';
 import axios from "axios";
-
 // Type definitions
 interface ApiError {
   message: string;
@@ -15,17 +15,25 @@ interface ApiResponse<T = any> {
 }
 
 const apiService = axios.create({
-    baseURL: "https://growing-together-app.onrender.com/api",
+    // baseURL: "https://growing-together-app.onrender.com/api",
+    baseURL: API_BASE_URL,
     timeout: 30000, 
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
 });
 
 // Request interceptor for authentication
 apiService.interceptors.request.use(
   async (config) => {
+    // Log the request for debugging
+    console.log("API Request:%%%%", {
+      method: config.method?.toUpperCase(),
+      url: (config.baseURL || '') + (config.url || ''),
+      data: config.data
+    });
+    
     // Add auth token if available
     try {
       const authService = (await import('./authService')).default;
@@ -49,9 +57,8 @@ apiService.interceptors.response.use(
         message: 'An unknown error occurred.',
       };
       if (error.response) {
-        // Server responded with a status code outside 2xx
         formattedError = {
-          message: error.response.data?.message || error.response.statusText || 'API Error',
+          message: error.response.data?.error || error.response.data?.message || error.response.statusText || 'API Error',
           status: error.response.status,
           statusText: error.response.statusText,
           url: error.response.config?.url,
