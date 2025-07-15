@@ -4,15 +4,15 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
-  ImageBackground,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ImageBackground,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import { useAppDispatch, useAppSelector } from "./redux/hooks";
@@ -90,9 +90,10 @@ export default function Login() {
       await authService.requestPasswordReset(forgotEmail);
       setForgotMessage("If this email is registered, a reset link has been sent.");
     } catch (err: any) {
-      console.log('Forgot password error:', err);
+      const { sanitizeError } = await import("./utils/logUtils");
+      console.error('Forgot password error:', sanitizeError(err));
       // Show more detailed error if available
-      setForgotError(err?.message || JSON.stringify(err) || "Failed to send reset email.");
+      setForgotError(err?.message || "Failed to send reset email.");
     } finally {
       setForgotLoading(false);
     }

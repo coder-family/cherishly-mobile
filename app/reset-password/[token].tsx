@@ -1,14 +1,14 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import authService from "../services/authService";
 
@@ -44,7 +44,8 @@ export default function ResetPassword() {
       await authService.resetPassword(token, password);
       setSuccess(true);
     } catch (err: any) {
-      console.log("🧨 Full axios error:", err);
+      const { sanitizeError } = await import("../utils/logUtils");
+      console.error("Reset password error:", sanitizeError(err));
 
       // If err is a string (from authService.resetPassword), use it directly
       const backendMsg =

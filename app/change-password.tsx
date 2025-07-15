@@ -27,7 +27,8 @@ export default function ChangePasswordScreen() {
       router.back();
     } catch (err: any) {
       Alert.alert("Error", err?.message || "Failed to change password");
-      console.log("Change password error:^^^^^", err);
+      const { sanitizeError } = await import("./utils/logUtils");
+      console.error("Change password error:", sanitizeError(err));
     } finally {
       setLoading(false);
     }
