@@ -149,8 +149,16 @@ export default function EditFamilyGroupScreen() {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to upload avatar');
+      let errorMessage = 'Failed to upload avatar';
+      
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || 'Unknown server error';
+      } catch {
+        // If we can't parse the response, use status information
+        errorMessage = `Server returned ${response.status} ${response.statusText}`;
+      }
+      throw new Error(`Avatar upload failed: ${errorMessage} (Status: ${response.status})`);
     }
 
     const data = await response.json();
