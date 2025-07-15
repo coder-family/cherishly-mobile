@@ -146,7 +146,14 @@ const AddFamilyGroupModal: React.FC<AddFamilyGroupModalProps> = ({
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to upload avatar');
+      const errorMessage = errorData.message || 'Failed to upload avatar';
+      if (response.status === 413) {
+        throw new Error(`File size too large: ${errorMessage}`);
+      } else if (response.status === 415) {
+        throw new Error(`Unsupported file type: ${errorMessage}`);
+      } else {
+        throw new Error(`Avatar upload failed: ${errorMessage}`);
+      }
     }
 
     const data = await response.json();
