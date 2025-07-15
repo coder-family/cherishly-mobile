@@ -94,11 +94,21 @@ function removeSensitiveFields(obj: any): any {
   return sanitized;
 }
 
+// Define an interface for the API request config
+interface ApiRequestConfig {
+  method?: string;
+  baseURL?: string;
+  url?: string;
+  headers?: Record<string, string>;
+  data?: any;
+  params?: any;
+}
+
 // Specific function for sanitizing API requests
-export function sanitizeApiRequest(config: any): any {
+export function sanitizeApiRequest(config: ApiRequestConfig): ApiRequestConfig {
   if (!config) return config;
 
-  const sanitized = {
+  const sanitized: ApiRequestConfig = {
     method: config.method?.toUpperCase(),
     url: (config.baseURL || '') + (config.url || ''),
     // Only include non-sensitive headers
@@ -112,7 +122,7 @@ export function sanitizeApiRequest(config: any): any {
 }
 
 // Function to sanitize headers, removing sensitive ones
-function sanitizeHeaders(headers: any): any {
+function sanitizeHeaders(headers: Record<string, string> | undefined): Record<string, string> | undefined {
   if (!headers || typeof headers !== 'object') {
     return headers;
   }
@@ -122,7 +132,7 @@ function sanitizeHeaders(headers: any): any {
     'x-auth-token', 'x-access-token', 'x-csrf-token'
   ];
 
-  const sanitized: any = {};
+  const sanitized: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(headers)) {
     const keyLower = key.toLowerCase();
