@@ -110,7 +110,7 @@ export function sanitizeApiRequest(config: ApiRequestConfig): ApiRequestConfig {
 
   const sanitized: ApiRequestConfig = {
     method: config.method?.toUpperCase(),
-    url: (config.baseURL || '') + (config.url || ''),
+    url: `${config.baseURL ?? ''}${config.url ?? ''}`,
     // Only include non-sensitive headers
     headers: sanitizeHeaders(config.headers),
     // Sanitize request data
