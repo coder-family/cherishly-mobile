@@ -1,14 +1,29 @@
-export function sanitizeLog(input: unknown): string {
-    let stringInput: string;
-    if (typeof input !== 'string') {
-      stringInput = String(input); // convert undefined, null, number, etc.
-    } else {
-      stringInput = input;
-    }
-    return stringInput
-      .replace(/[\r\n\t]+/g, ' ')
-      .replace(/[\u001b]/g, ''); // remove ESC character (used in terminal control)
+// Helper function for string sanitization
+function sanitizeString(input: string, options: { removeEsc?: boolean; maxLength?: number } = {}): string {
+  const { removeEsc = false, maxLength } = options;
+  
+  let result = input.replace(/[\r\n\t]+/g, ' ');
+  
+  if (removeEsc) {
+    result = result.replace(/[\u001b]/g, ''); // remove ESC character (used in terminal control)
   }
+  
+  if (maxLength) {
+    result = result.substring(0, maxLength);
+  }
+  
+  return result;
+}
+
+export function sanitizeLog(input: unknown): string {
+  let stringInput: string;
+  if (typeof input !== 'string') {
+    stringInput = String(input); // convert undefined, null, number, etc.
+  } else {
+    stringInput = input;
+  }
+  return sanitizeString(stringInput, { removeEsc: true });
+}
 
 // Enhanced sanitization for logging that removes sensitive data
 export function sanitizeForLogging(data: any): string {
@@ -17,8 +32,8 @@ export function sanitizeForLogging(data: any): string {
   }
 
   if (typeof data === "string") {
-    // Remove newlines and other potentially dangerous characters
-    return data.replace(/[\r\n\t]/g, " ").substring(0, 200);
+    // Remove newlines, ESC characters, and other potentially dangerous characters
+    return sanitizeString(data, { removeEsc: true, maxLength: 200 });
   }
 
   if (typeof data === "object") {
@@ -26,15 +41,13 @@ export function sanitizeForLogging(data: any): string {
       // Remove sensitive fields before stringifying
       const sanitized = removeSensitiveFields(data);
       const stringified = JSON.stringify(sanitized);
-      return stringified.replace(/[\r\n\t]/g, " ").substring(0, 500);
+      return sanitizeString(stringified, { removeEsc: true, maxLength: 500 });
     } catch {
       return "[Object - cannot stringify]";
     }
   }
 
-  return String(data)
-    .replace(/[\r\n\t]/g, " ")
-    .substring(0, 200);
+  return sanitizeString(String(data), { removeEsc: true, maxLength: 200 });
 }
 
 // Function to remove sensitive fields from objects before logging
