@@ -390,14 +390,19 @@ class AuthService {
    * Check if user is authenticated
    */
   async isAuthenticated(): Promise<boolean> {
-    if (!this.isInitialized) {
-      await this.initialize();
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      const token = await this.getAccessToken();
+      if (!token) return false;
+
+      return await this.isTokenValid(token);
+    } catch (error) {
+      console.error("Error checking authentication status:", sanitizeForLogging(error));
+      return false;
     }
-
-    const token = await this.getAccessToken();
-    if (!token) return false;
-
-    return await this.isTokenValid(token);
   }
 
   /**
