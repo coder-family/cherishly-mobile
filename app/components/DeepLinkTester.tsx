@@ -21,13 +21,11 @@ export default function DeepLinkTester({ visible = false }: DeepLinkTesterProps)
   ];
 
   const handleTestLink = async (url: string, name: string) => {
-    console.log(`Testing deep link: ${name} - ${url}`);
     
     const canOpen = await linkingUtils.canOpenURL(url);
     if (canOpen) {
       await linkingUtils.openURL(url);
     } else {
-      console.log(`Cannot open URL: ${url}`);
     }
   };
 
