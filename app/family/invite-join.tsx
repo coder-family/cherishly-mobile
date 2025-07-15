@@ -75,7 +75,7 @@ export default function InviteJoinScreen() {
 
     setIsSubmitting(true);
     try {
-      const result = await dispatch(joinFamilyGroup({
+      await dispatch(joinFamilyGroup({
         groupId: joinForm.groupId.trim(),
         inviteCode: joinForm.inviteCode.trim() || undefined,
       })).unwrap();

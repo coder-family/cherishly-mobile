@@ -221,7 +221,7 @@ export default function EditFamilyGroupScreen() {
         <View style={styles.errorContainer}>
           <Text style={styles.errorTitle}>Family Group Not Found</Text>
           <Text style={styles.errorMessage}>
-            The family group you're looking for could not be found.
+            The family group you&apos;re looking for could not be found.
           </Text>
           <TouchableOpacity
             style={styles.primaryButton}

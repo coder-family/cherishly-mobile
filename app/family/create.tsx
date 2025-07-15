@@ -25,7 +25,7 @@ import { authService } from '../services/authService';
 export default function CreateFamilyGroupScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { loading, error } = useAppSelector((state) => state.family);
+  const { error } = useAppSelector((state) => state.family);
 
   // Form state
   const [formData, setFormData] = useState({

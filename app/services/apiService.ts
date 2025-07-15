@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '@env';
 import axios from "axios";
+import { sanitizeApiRequest } from '../utils/logUtils';
 // Type definitions
 interface ApiError {
   message: string;
@@ -31,7 +32,6 @@ export const API_BASE_URL_EXPORT = API_BASE_URL;
 apiService.interceptors.request.use(
   async (config) => {
     // Log the request for debugging (sanitized to remove sensitive data)
-    const { sanitizeApiRequest } = await import('../utils/logUtils');
     console.log("API Request:", sanitizeApiRequest(config));
     
     // Add auth token if available

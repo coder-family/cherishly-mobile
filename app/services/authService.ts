@@ -547,7 +547,7 @@ class AuthService {
    */
   async requestPasswordReset(email: string): Promise<void> {
     try {
-      const response = await apiService.post("/users/forgot-password", {
+      await apiService.post("/users/forgot-password", {
         email,
       });
     } catch (error: any) {
