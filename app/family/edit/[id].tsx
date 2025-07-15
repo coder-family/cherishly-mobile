@@ -80,45 +80,61 @@ export default function EditFamilyGroupScreen() {
 
     setIsSubmitting(true);
     try {
-      // First update the family group details without avatar
-      const updateData = {
-        name: formData.name.trim(),
-        description: formData.description.trim() || undefined,
-      };
-
-      await dispatch(updateFamilyGroup({ groupId: id, data: updateData })).unwrap();
-      
-      // If avatar was changed, upload it separately
-      if (avatarUrl && avatarUrl !== currentGroup?.avatarUrl) {
-        try {
-          await uploadGroupAvatar(id, avatarUrl);
-          // Refresh family groups to show updated avatar
-          dispatch(fetchFamilyGroups());
-        } catch (avatarError) {
-          console.warn('Avatar upload failed, but group was updated:', avatarError);
-          // Don't fail the entire operation if avatar upload fails
-        }
-      }
-      
-      Alert.alert(
-        'Success!',
-        'Family group has been updated successfully.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back()
-          }
-        ]
-      );
+      await updateFamilyGroupDetails(id);
+      await handleAvatarUpload(id);
+      showSuccessMessage();
     } catch (err: any) {
-      console.error('Error updating family group:', err);
-      Alert.alert(
-        'Error',
-        err.message || 'Failed to update family group. Please try again.'
-      );
+      handleUpdateError(err);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Update family group details
+  const updateFamilyGroupDetails = async (groupId: string) => {
+    const updateData = {
+      name: formData.name.trim(),
+      description: formData.description.trim() || undefined,
+    };
+
+    await dispatch(updateFamilyGroup({ groupId, data: updateData })).unwrap();
+  };
+
+  // Handle avatar upload if changed
+  const handleAvatarUpload = async (groupId: string) => {
+    if (avatarUrl && avatarUrl !== currentGroup?.avatarUrl) {
+      try {
+        await uploadGroupAvatar(groupId, avatarUrl);
+        // Refresh family groups to show updated avatar
+        dispatch(fetchFamilyGroups());
+      } catch (avatarError) {
+        console.warn('Avatar upload failed, but group was updated:', avatarError);
+        // Don't fail the entire operation if avatar upload fails
+      }
+    }
+  };
+
+  // Show success message and navigate
+  const showSuccessMessage = () => {
+    Alert.alert(
+      'Success!',
+      'Family group has been updated successfully.',
+      [
+        {
+          text: 'OK',
+          onPress: () => router.back()
+        }
+      ]
+    );
+  };
+
+  // Handle update errors
+  const handleUpdateError = (err: any) => {
+    console.error('Error updating family group:', err);
+    Alert.alert(
+      'Error',
+      err.message || 'Failed to update family group. Please try again.'
+    );
   };
 
   // Helper function to upload group avatar (same pattern as successful child avatar upload)
