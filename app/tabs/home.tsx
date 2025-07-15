@@ -9,7 +9,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import AddChildModal from "../components/child/AddChildModal";
 import ChildProfileCard from "../components/child/ChildProfileCard";
@@ -53,6 +53,8 @@ export default function HomeScreen() {
     }
   }, [dispatch, user]);
 
+  // Family groups will be updated automatically by Redux when operations succeed
+
   // Handle children errors using the shared utility
   useEffect(() => {
     ChildUtils.handleChildrenError(childrenError, dispatch);
@@ -68,30 +70,9 @@ export default function HomeScreen() {
     }
   }, [familyError, userError]);
 
-  // Add debugging for family groups
-  useEffect(() => {
-    console.log('Family groups state debug:', {
-      familyGroups,
-      familyGroupsCount: familyGroups?.length || 0,
-      familyError,
-      hasFamilyGroups: familyGroups && familyGroups.length > 0
-    });
-  }, [familyGroups, familyError]);
+  // Family groups debug removed to prevent frequent re-renders
 
-  // Debug log for children data using utility
-  useEffect(() => {
-    const validChildren = ChildUtils.getValidChildren(children);
-    const hasChildren = ChildUtils.hasChildren(children);
-    console.log('Children state debug:', {
-      children,
-      childrenCount: ChildUtils.getChildrenCount(children),
-      validChildren,
-      validChildrenCount: validChildren.length,
-      childrenLoading,
-      childrenError,
-      hasChildren
-    });
-  }, [children, childrenLoading, childrenError]);
+  // Children debug removed to prevent frequent re-renders
 
   // Refresh children when add child modal closes (in case a child was added)
   useEffect(() => {
@@ -103,6 +84,8 @@ export default function HomeScreen() {
       return () => clearTimeout(timer);
     }
   }, [showAddChildModal, dispatch, user]);
+
+  // No automatic refresh - only refresh when family groups are actually modified
 
   // Use utility functions for child-related logic
   const validChildren = ChildUtils.getValidChildren(children);
@@ -141,7 +124,6 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={[styles.groupButton, { backgroundColor: '#fef2f2' }]}
             onPress={() => {
-              console.log('Retrying children fetch...');
               dispatch(fetchChildren());
             }}
           >
@@ -240,7 +222,6 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={[styles.groupButton, { backgroundColor: '#fee' }]}
             onPress={() => {
-              console.log('Retrying family groups fetch...');
               dispatch(fetchFamilyGroups());
             }}
           >

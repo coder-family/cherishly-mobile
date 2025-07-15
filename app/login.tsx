@@ -18,6 +18,7 @@ import {
 import { useAppDispatch, useAppSelector } from "./redux/hooks";
 import { clearError, loginUser } from "./redux/slices/authSlice";
 import authService from "./services/authService";
+import { sanitizeError } from "./utils/logUtils";
 import { LoginForm, loginSchema } from "./utils/validation";
 
 export default function Login() {
@@ -90,9 +91,9 @@ export default function Login() {
       await authService.requestPasswordReset(forgotEmail);
       setForgotMessage("If this email is registered, a reset link has been sent.");
     } catch (err: any) {
-      console.log('Forgot password error:', err);
+      console.error('Forgot password error:', sanitizeError(err));
       // Show more detailed error if available
-      setForgotError(err?.message || JSON.stringify(err) || "Failed to send reset email.");
+      setForgotError(err?.message || "Failed to send reset email.");
     } finally {
       setForgotLoading(false);
     }

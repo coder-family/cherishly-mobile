@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '@env';
 import axios from "axios";
+import { sanitizeApiRequest } from '../utils/logUtils';
 // Type definitions
 interface ApiError {
   message: string;
@@ -24,15 +25,14 @@ const apiService = axios.create({
     },
 });
 
+// Export the base URL for use in other parts of the app
+export const API_BASE_URL_EXPORT = API_BASE_URL;
+
 // Request interceptor for authentication
 apiService.interceptors.request.use(
   async (config) => {
-    // Log the request for debugging
-    console.log("API Request:%%%%", {
-      method: config.method?.toUpperCase(),
-      url: (config.baseURL || '') + (config.url || ''),
-      data: config.data
-    });
+    // Log the request for debugging (sanitized to remove sensitive data)
+    console.log("API Request:", sanitizeApiRequest(config));
     
     // Add auth token if available
     try {
