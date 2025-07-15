@@ -100,12 +100,15 @@ export default function CreateFamilyGroupScreen() {
           }
         ]
       );
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error creating family group:', err);
-      Alert.alert(
-        'Error',
-        err.message || 'Failed to create family group. Please try again.'
-      );
+      let errorMessage = 'Failed to create family group. Please try again.';
+      if (err instanceof Error) {
+        errorMessage = err.message || errorMessage;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
