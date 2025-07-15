@@ -1,10 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import apiService from "./apiService";
 
-// Storage keys
+// Storage keys for AsyncStorage - these are key names, not actual credentials
 const STORAGE_KEYS = {
   ACCESS_TOKEN: "access_token",
-  REFRESH_TOKEN: "refresh_token",
+  REFRESH_TOKEN: "refresh_token", 
   USER_DATA: "user_data",
   TOKEN_EXPIRY: "token_expiry",
 } as const;
@@ -127,7 +127,6 @@ class AuthService {
     try {
       const response = await apiService.post("/users/login", credentials);
 
-      console.log("Login response:", sanitizeForLogging(response)); // Debug log
 
       // Handle different possible response structures
       let user: User;
@@ -234,8 +233,6 @@ class AuthService {
   ): Promise<{ user: User; tokens: AuthTokens }> {
     try {
       const response = await apiService.post("/users/", data);
-
-      console.log("Register response:", sanitizeForLogging(response)); // Debug log
 
       // Handle different possible response structures
       let user: User;
@@ -545,12 +542,9 @@ class AuthService {
    */
   async requestPasswordReset(email: string): Promise<void> {
     try {
-      console.log("Attempting to call forgot password endpoint...");
-      console.log("Email:", email);
       const response = await apiService.post("/users/forgot-password", {
         email,
       });
-      console.log("Forgot password response:", sanitizeForLogging(response));
     } catch (error: any) {
       console.error("Forgot password error:", sanitizeForLogging(error));
       console.error("Error details:", {
@@ -567,17 +561,11 @@ class AuthService {
    * Reset password with token
    */
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    console.log("reset with token:", token, "newPassword:", newPassword);
     try {
       await apiService.post(`/users/reset-password/${token}`, {
         newPassword,
       });
     } catch (error: any) {
-      // 👇 Thêm log chi tiết
-      console.log("🧨 Full axios error:", error);
-      console.log("🧨 Axios error.response:", error?.response);
-      console.log("🧨 Axios error.response.data:", error?.response?.data);
-  
       // Ném lại toàn bộ phản hồi từ backend để frontend xử lý
       throw error?.response?.data?.error || error?.message || "Đã xảy ra lỗi.";
     }
@@ -589,7 +577,6 @@ class AuthService {
   async changePassword({ currentPassword, newPassword }: { currentPassword: string, newPassword: string }) {
     try {
       const response = await apiService.put("/users/change-password", { currentPassword, newPassword });
-      console.log("Change password response:", sanitizeForLogging(response));
       return response;
     } catch (error: any) {
       console.error("Change password error:", sanitizeForLogging(error));

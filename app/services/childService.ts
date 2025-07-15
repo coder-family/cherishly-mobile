@@ -67,23 +67,22 @@ function transformChild(apiChild: ApiChild): Child {
 
 // API functions
 export async function getChildren(): Promise<Child[]> {
-  const response = await apiService.get('/children/my-children');
-  console.log('Raw children response:', response);
-  console.log('Response type:', typeof response);
-  console.log('Is array?', Array.isArray(response));
-  
-  // Get the actual children data from response
-  const childrenData: ApiChild[] = Array.isArray(response) 
-    ? response 
-    : (response.data || response || []);
-  
-  console.log('Children data before transform:', childrenData);
-  
-  // Transform API format to UI format
-  const transformedChildren = childrenData.map(transformChild);
-  console.log('Transformed children:', transformedChildren);
-  
-  return transformedChildren;
+  try {
+    const response = await apiService.get('/children/my-children');
+    
+    // Get the actual children data from response
+    const childrenData: ApiChild[] = Array.isArray(response) 
+      ? response 
+      : (response.data || response || []);
+    
+    // Transform API format to UI format
+    const transformedChildren = childrenData.map(transformChild);
+    
+    return transformedChildren;
+  } catch (error) {
+    console.error('Error fetching children:', error);
+    throw error; // Re-throw to allow calling code to handle the error
+  }
 }
 
 export async function getChild(childId: string): Promise<Child> {

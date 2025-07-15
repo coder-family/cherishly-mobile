@@ -73,24 +73,17 @@ export async function getFamilyGroups(): Promise<FamilyGroup[]> {
     // Handle nested response structure: response.data.groups or response.groups
     const responseData = response.data || response;
     const groups = responseData.groups || responseData;
-    
-    console.log('Family groups API response:', { groups, response, responseData });
-    
+        
     // If no groups exist, return empty array
     if (!groups || !Array.isArray(groups)) {
-      console.log('No family groups found, returning empty array');
       return [];
     }
     
     // Transform and return all groups
     const transformed = groups.map(group => transformFamilyGroupData(group));
-    console.log('Transformed family groups:', transformed);
     return transformed;
-  } catch (error: any) {
-    console.log('Family groups API error:', error);
-    // If the error is 404 (no family groups found), return empty array instead of throwing
+  } catch (error: any) {    // If the error is 404 (no family groups found), return empty array instead of throwing
     if (error.status === 404 || error.message?.includes('not found') || error.message?.includes('No family group')) {
-      console.log('404 error for family groups, returning empty array');
       return [];
     }
     // For other errors, re-throw to maintain error handling
@@ -104,9 +97,7 @@ export async function getPrimaryFamilyGroup(): Promise<FamilyGroup | null> {
     // Get the current user's primary family group (first group for backward compatibility)
     const response = await apiService.get('/family-groups/my-group');
     const group = response.data || response;
-    
-    console.log('Primary family group API response:', { group, response });
-    
+        
     // If no group exists, return null
     if (!group || (!group.id && !group._id)) {
       console.log('No primary family group found, returning null');
@@ -115,11 +106,8 @@ export async function getPrimaryFamilyGroup(): Promise<FamilyGroup | null> {
     
     // Transform and return single group
     const transformed = transformFamilyGroupData(group);
-    console.log('Transformed primary family group:', transformed);
     return transformed;
-  } catch (error: any) {
-    console.log('Primary family group API error:', error);
-    // If the error is 404 (no family group found), return null instead of throwing
+  } catch (error: any) {    // If the error is 404 (no family group found), return null instead of throwing
     if (error.status === 404 || error.message?.includes('not found') || error.message?.includes('No family group')) {
       console.log('404 error for primary family group, returning null');
       return null;
