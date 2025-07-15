@@ -59,7 +59,58 @@ export default function CreateFamilyGroupScreen() {
     return Object.keys(errors).length === 0;
   };
 
-  // Handle form submission
+  // Prepare form data for submission
+  const prepareFormData = () => {
+    return {
+      name: formData.name.trim(),
+      description: formData.description.trim() || undefined,
+    };
+  };
+
+  // Handle avatar upload after group creation
+  const handleAvatarUpload = async (groupId: string) => {
+    if (!avatarUrl) return;
+
+    try {
+      await uploadGroupAvatar(groupId, avatarUrl);
+      // Refresh family groups to show updated avatar
+      dispatch(fetchFamilyGroups());
+    } catch (avatarError) {
+      console.warn('Avatar upload failed, but group was created:', avatarError);
+      // Don't fail the entire operation if avatar upload fails
+    }
+  };
+
+  // Show success message and navigate back
+  const handleSubmissionSuccess = () => {
+    Alert.alert(
+      'Success!',
+      'Your family group has been created successfully.',
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            // Navigate back to home or to the new family group
+            router.back();
+          }
+        }
+      ]
+    );
+  };
+
+  // Handle submission errors
+  const handleSubmissionError = (err: unknown) => {
+    console.error('Error creating family group:', err);
+    let errorMessage = 'Failed to create family group. Please try again.';
+    if (err instanceof Error) {
+      errorMessage = err.message || errorMessage;
+    } else if (typeof err === 'string') {
+      errorMessage = err;
+    }
+    Alert.alert('Error', errorMessage);
+  };
+
+  // Main form submission handler
   const handleSubmit = async () => {
     if (!validateForm()) {
       return;
@@ -67,48 +118,19 @@ export default function CreateFamilyGroupScreen() {
 
     setIsSubmitting(true);
     try {
-      // First create the family group without avatar
-      const createData = {
-        name: formData.name.trim(),
-        description: formData.description.trim() || undefined,
-      };
-
+      // Create the family group
+      const createData = prepareFormData();
       const result = await dispatch(createFamilyGroup(createData)).unwrap();
       
-      // If avatar was selected, upload it after group creation
-      if (avatarUrl && result.id) {
-        try {
-          await uploadGroupAvatar(result.id, avatarUrl);
-          // Refresh family groups to show updated avatar
-          dispatch(fetchFamilyGroups());
-        } catch (avatarError) {
-          console.warn('Avatar upload failed, but group was created:', avatarError);
-          // Don't fail the entire operation if avatar upload fails
-        }
+      // Handle avatar upload if needed
+      if (result.id) {
+        await handleAvatarUpload(result.id);
       }
       
-      Alert.alert(
-        'Success!',
-        'Your family group has been created successfully.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate back to home or to the new family group
-              router.back();
-            }
-          }
-        ]
-      );
+      // Show success message
+      handleSubmissionSuccess();
     } catch (err) {
-      console.error('Error creating family group:', err);
-      let errorMessage = 'Failed to create family group. Please try again.';
-      if (err instanceof Error) {
-        errorMessage = err.message || errorMessage;
-      } else if (typeof err === 'string') {
-        errorMessage = err;
-      }
-      Alert.alert('Error', errorMessage);
+      handleSubmissionError(err);
     } finally {
       setIsSubmitting(false);
     }
