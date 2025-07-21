@@ -1,7 +1,7 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ResizeMode, Video } from 'expo-av';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { MaterialIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ResizeMode, Video } from "expo-av";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -12,45 +12,56 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { MemoryAttachment } from '../../services/memoryService';
-import VideoPlayer from '../media/VideoPlayer';
+} from "react-native";
+import { MemoryAttachment } from "../../services/memoryService";
+import VideoPlayer from "../media/VideoPlayer";
 
 interface MemoryMediaViewerProps {
   attachments: MemoryAttachment[];
   maxPreviewCount?: number;
 }
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get("window");
 const PREVIEW_SIZE = 120;
-const MAX_PREVIEW_COUNT = 2;
+const MAX_PREVIEW_COUNT = 2; // Show only 2 items initially
 
-export default function MemoryMediaViewer({ 
-  attachments, 
-  maxPreviewCount = MAX_PREVIEW_COUNT 
+export default function MemoryMediaViewer({
+  attachments,
+  maxPreviewCount = MAX_PREVIEW_COUNT,
 }: MemoryMediaViewerProps) {
-  const [selectedAttachment, setSelectedAttachment] = useState<MemoryAttachment | null>(null);
+  const [selectedAttachment, setSelectedAttachment] =
+    useState<MemoryAttachment | null>(null);
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const [currentScrollIndex, setCurrentScrollIndex] = useState<number>(0);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // Ensure attachments are valid and have required fields
   const safeAttachments = useMemo(() => {
     return attachments
-      .filter(att => att && att.url && att.type)
-      .slice(0, maxPreviewCount);
-  }, [attachments, maxPreviewCount]);
-  
+      .filter((att) => att && att.url && att.type)
+      .sort((a, b) => {
+        // Sort images first, then videos, then audio
+        const typeOrder = { image: 0, video: 1, audio: 2 };
+        return typeOrder[a.type] - typeOrder[b.type];
+      });
+  }, [attachments]);
+
   // Debug log to help identify issues
   if (!attachments) {
-    console.warn('MemoryMediaViewer: attachments prop is undefined or null');
+    console.warn("MemoryMediaViewer: attachments prop is undefined or null");
   }
 
   // Generate a unique key for this memory's expanded state
   const getExpandedStateKey = useCallback(() => {
     if (!safeAttachments || safeAttachments.length === 0) return null;
     // Use the first attachment's ID or a combination of attachment IDs
-    const attachmentIds = safeAttachments.map(att => att.id).sort().join('-');
+    const attachmentIds = safeAttachments
+      .map((att) => att.id)
+      .sort()
+      .join("-");
     return `memory_expanded_${attachmentIds}`;
   }, [safeAttachments]);
 
@@ -61,19 +72,39 @@ export default function MemoryMediaViewer({
         const key = getExpandedStateKey();
         if (key) {
           const expanded = await AsyncStorage.getItem(key);
-          if (expanded === 'true') {
+          if (expanded === "true") {
             setIsExpanded(true);
           }
         }
       } catch (error) {
-        console.error('Error loading expanded state:', error);
+        console.error("Error loading expanded state:", error);
       }
     };
 
     loadExpandedState();
   }, [safeAttachments, getExpandedStateKey]);
 
+  // Save expanded state to AsyncStorage
+  const saveExpandedState = useCallback(
+    async (expanded: boolean) => {
+      try {
+        const key = getExpandedStateKey();
+        if (key) {
+          await AsyncStorage.setItem(key, expanded.toString());
+        }
+      } catch (error) {
+        console.error("Error saving expanded state:", error);
+      }
+    },
+    [getExpandedStateKey]
+  );
 
+  // Toggle expanded state
+  const toggleExpanded = useCallback(() => {
+    const newExpandedState = !isExpanded;
+    setIsExpanded(newExpandedState);
+    saveExpandedState(newExpandedState);
+  }, [isExpanded, saveExpandedState]);
 
   // Auto-clear playing video after timeout to prevent stuck states
   useEffect(() => {
@@ -90,18 +121,23 @@ export default function MemoryMediaViewer({
     return null;
   }
 
-  const images = safeAttachments.filter(att => att.type === 'image');
-  const videos = safeAttachments.filter(att => att.type === 'video');
-  const audios = safeAttachments.filter(att => att.type === 'audio');
+  const images = safeAttachments.filter((att) => att.type === "image");
+  const videos = safeAttachments.filter((att) => att.type === "video");
+  const audios = safeAttachments.filter((att) => att.type === "audio");
+
+  // Determine which media to show in preview
+  const previewMedia = safeAttachments.slice(0, maxPreviewCount);
+  const remainingCount = safeAttachments.length - maxPreviewCount;
+  const hasMoreMedia = remainingCount > 0;
 
   const renderImagePreview = (attachment: MemoryAttachment, index: number) => (
     <TouchableOpacity
-      style={[
-        styles.fullWidthMediaPreview,
-        index > 0 && styles.mediaSpacing
-      ]}
+      style={[styles.fullWidthMediaPreview, index > 0 && styles.mediaSpacing]}
       onPress={() => {
+        const index = safeAttachments.findIndex(att => att.id === attachment.id);
         setSelectedAttachment(attachment);
+        setSelectedIndex(index);
+        setCurrentScrollIndex(index);
         setShowFullScreen(true);
       }}
       key={`image-${attachment.id || index}`}
@@ -111,85 +147,60 @@ export default function MemoryMediaViewer({
         style={styles.fullWidthPreviewImage}
         resizeMode="cover"
       />
-
     </TouchableOpacity>
   );
 
   const renderVideoPreview = (attachment: MemoryAttachment, index: number) => {
     const videoId = attachment.id || `video-${index}`;
     const isPlaying = playingVideoId === videoId;
-    
-    // console.log('Rendering video:', {
-    //   videoId,
-    //   playingVideoId,
-    //   isPlaying,
-    //   attachmentId: attachment.id,
-    //   index
-    // });
-    
+
     return (
       <View
-        style={[
-          styles.fullWidthMediaPreview,
-          index > 0 && styles.mediaSpacing
-        ]}
+        style={[styles.fullWidthMediaPreview, index > 0 && styles.mediaSpacing]}
         key={videoId}
       >
         {isPlaying ? (
           // Show video player when playing
-          (() => {
-            // console.log('Rendering VideoPlayer with URL:', attachment.url);
-            return (
-              <View style={styles.inlineVideoContainer}>
-                <Video
-                  source={{ uri: attachment.url }}
-                  style={styles.inlineVideo}
-                  shouldPlay={true}
-                  isLooping={false}
-                  isMuted={false}
-                  useNativeControls={true}
-                  resizeMode={ResizeMode.CONTAIN}
-                  onPlaybackStatusUpdate={(status) => {
-                    // console.log('Video playback status:', status);
-                    // Only stop playing when video actually ends or has a real error
-                    if ('didJustFinish' in status && status.didJustFinish) {
-                      // console.log('Video finished, clearing playingVideoId');
-                      setPlayingVideoId(null);
-                    } else if ('error' in status && status.error) {
-                      // console.log('Video error:', status.error, 'clearing playingVideoId');
-                      setPlayingVideoId(null);
-                    }
-                  }}
-                />
-                <TouchableOpacity
-                  style={styles.closeVideoButton}
-                  onPress={() => {
-                    // console.log('Close button pressed, clearing playingVideoId');
-                    setPlayingVideoId(null);
-                  }}
-                >
-                  <MaterialIcons name="close" size={20} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            );
-          })()
+          <View style={styles.inlineVideoContainer}>
+            <Video
+              source={{ uri: attachment.url }}
+              style={styles.inlineVideo}
+              shouldPlay={true}
+              isLooping={false}
+              isMuted={false}
+              useNativeControls={true}
+              resizeMode={ResizeMode.CONTAIN}
+              onPlaybackStatusUpdate={(status) => {
+                if ("didJustFinish" in status && status.didJustFinish) {
+                  setPlayingVideoId(null);
+                } else if ("error" in status && status.error) {
+                  setPlayingVideoId(null);
+                }
+              }}
+            />
+            <TouchableOpacity
+              style={styles.closeVideoButton}
+              onPress={() => {
+                setPlayingVideoId(null);
+              }}
+            >
+              <MaterialIcons name="close" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
         ) : (
           // Show thumbnail when not playing
-          <View
-            style={[
-              styles.fullWidthMediaPreview,
-              index > 0 && styles.mediaSpacing
-            ]}
-          >
+          <View style={styles.videoThumbnailContainer}>
             <TouchableOpacity
               style={styles.videoThumbnailContainer}
               onPress={() => {
-                // console.log('Video thumbnail pressed, starting video:', videoId);
-                setPlayingVideoId(videoId);
+                const index = safeAttachments.findIndex(att => att.id === attachment.id);
+                setSelectedAttachment(attachment);
+                setSelectedIndex(index);
+                setCurrentScrollIndex(index);
+                setShowFullScreen(true);
               }}
               activeOpacity={0.7}
             >
-              {/* Use Video component to show first frame as thumbnail */}
               <Video
                 source={{ uri: attachment.url }}
                 style={styles.videoThumbnail}
@@ -200,13 +211,16 @@ export default function MemoryMediaViewer({
                 useNativeControls={false}
               />
             </TouchableOpacity>
-            
-            {/* Play button overlay - also clickable */}
+
+            {/* Play button overlay */}
             <TouchableOpacity
               style={styles.videoOverlay}
               onPress={() => {
-                // console.log('Play button pressed, starting video:', videoId);
-                setPlayingVideoId(videoId);
+                const index = safeAttachments.findIndex(att => att.id === attachment.id);
+                setSelectedAttachment(attachment);
+                setSelectedIndex(index);
+                setCurrentScrollIndex(index);
+                setShowFullScreen(true);
               }}
               activeOpacity={0.7}
             >
@@ -214,7 +228,6 @@ export default function MemoryMediaViewer({
             </TouchableOpacity>
           </View>
         )}
-
       </View>
     );
   };
@@ -223,7 +236,7 @@ export default function MemoryMediaViewer({
     <TouchableOpacity
       style={styles.audioPreview}
       onPress={() => {
-        Alert.alert('Audio Player', 'Audio playback feature coming soon!');
+        Alert.alert("Audio Player", "Audio playback feature coming soon!");
       }}
     >
       <MaterialIcons name="audiotrack" size={24} color="#4f8cff" />
@@ -239,6 +252,28 @@ export default function MemoryMediaViewer({
     </TouchableOpacity>
   );
 
+    const renderMediaGrid = (
+    mediaItems: MemoryAttachment[],
+    showAll: boolean = false
+  ) => {
+    const itemsToShow = showAll
+      ? mediaItems
+      : mediaItems.slice(0, maxPreviewCount);
+
+    return (
+      <View style={styles.fullWidthMediaContainer}>
+        {itemsToShow.map((attachment, index) => {
+          if (attachment.type === "image") {
+            return renderImagePreview(attachment, index);
+          } else if (attachment.type === "video") {
+            return renderVideoPreview(attachment, index);
+          }
+          return null;
+        })}
+      </View>
+    );
+  };
+
   const renderFullScreenModal = () => (
     <Modal
       visible={showFullScreen}
@@ -253,7 +288,7 @@ export default function MemoryMediaViewer({
         >
           <MaterialIcons name="close" size={24} color="#fff" />
         </TouchableOpacity>
-        
+
         {/* Gallery indicator */}
         {safeAttachments.length > 1 && (
           <View style={styles.galleryIndicator}>
@@ -262,44 +297,119 @@ export default function MemoryMediaViewer({
             </Text>
           </View>
         )}
-        
+
         {selectedAttachment && (
           <ScrollView 
+            ref={scrollViewRef}
             style={styles.fullScreenContent}
             contentContainerStyle={styles.fullScreenContentContainer}
             showsVerticalScrollIndicator={false}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
+            contentOffset={{ x: (selectedIndex + 1) * screenWidth, y: 0 }}
+            onMomentumScrollEnd={(event) => {
+              const newIndex = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
+              let actualIndex = newIndex - 1;
+              
+              // Handle infinite scroll
+              if (actualIndex < 0) {
+                actualIndex = safeAttachments.length - 1;
+                // Jump to the last real item
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollTo({ x: safeAttachments.length * screenWidth, animated: false });
+                }, 0);
+              } else if (actualIndex >= safeAttachments.length) {
+                actualIndex = 0;
+                // Jump to the first real item
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollTo({ x: screenWidth, animated: false });
+                }, 0);
+              }
+              
+              setCurrentScrollIndex(actualIndex);
+            }}
+            onScroll={(event) => {
+              const newIndex = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
+              let actualIndex = newIndex - 1;
+              
+              // Handle infinite scroll
+              if (actualIndex < 0) {
+                actualIndex = safeAttachments.length - 1;
+              } else if (actualIndex >= safeAttachments.length) {
+                actualIndex = 0;
+              }
+              
+              setCurrentScrollIndex(actualIndex);
+            }}
+            scrollEventThrottle={16}
           >
-            {safeAttachments.map((attachment, index) => (
-              <View key={attachment.id || index} style={styles.fullScreenItem}>
-                {attachment.type === 'image' && (
+            {/* Clone last item at the beginning */}
+            {safeAttachments.length > 1 && safeAttachments.slice(-1).map((attachment, index) => (
+              <View key={`clone-last-${attachment.id}`} style={styles.fullScreenItem}>
+                {attachment.type === "image" && (
                   <Image
                     source={{ uri: attachment.url }}
                     style={styles.fullScreenImage}
                     resizeMode="contain"
                   />
                 )}
-                {attachment.type === 'video' && (
+                {attachment.type === "video" && (
                   <VideoPlayer
                     uri={attachment.url}
                     style={styles.fullScreenVideo}
                   />
                 )}
-                
-                <View style={styles.attachmentInfo}>
-                  <Text style={styles.attachmentName}>{attachment.filename}</Text>
-                  <Text style={styles.attachmentSize}>
-                    {(attachment.size / 1024 / 1024).toFixed(1)} MB
-                  </Text>
-                  <Text style={styles.attachmentCounter}>
-                    {index + 1} / {safeAttachments.length}
-                  </Text>
-                </View>
+              </View>
+            ))}
+            
+            {/* Original items */}
+            {safeAttachments.map((attachment, index) => (
+              <View key={attachment.id || index} style={styles.fullScreenItem}>
+                {attachment.type === "image" && (
+                  <Image
+                    source={{ uri: attachment.url }}
+                    style={styles.fullScreenImage}
+                    resizeMode="contain"
+                  />
+                )}
+                {attachment.type === "video" && (
+                  <VideoPlayer
+                    uri={attachment.url}
+                    style={styles.fullScreenVideo}
+                  />
+                )}
+              </View>
+            ))}
+            
+            {/* Clone first item at the end */}
+            {safeAttachments.length > 1 && safeAttachments.slice(0, 1).map((attachment, index) => (
+              <View key={`clone-first-${attachment.id}`} style={styles.fullScreenItem}>
+                {attachment.type === "image" && (
+                  <Image
+                    source={{ uri: attachment.url }}
+                    style={styles.fullScreenImage}
+                    resizeMode="contain"
+                  />
+                )}
+                {attachment.type === "video" && (
+                  <VideoPlayer
+                    uri={attachment.url}
+                    style={styles.fullScreenVideo}
+                  />
+                )}
               </View>
             ))}
           </ScrollView>
+        )}
+
+        {/* Counter at bottom */}
+        {selectedAttachment && safeAttachments.length > 1 && (
+          <View style={styles.fullScreenInfoContainer}>
+            <Text style={styles.attachmentCounter}>
+              {currentScrollIndex + 1} / {safeAttachments.length}
+            </Text>
+          </View>
         )}
       </View>
     </Modal>
@@ -307,66 +417,31 @@ export default function MemoryMediaViewer({
 
   return (
     <View style={styles.container}>
-      {/* Images and Videos - Initial Preview */}
+      {/* Images and Videos - Initial Preview or Expanded */}
       {(images.length > 0 || videos.length > 0) && (
-        <View style={styles.fullWidthMediaContainer}>
-          {images.slice(0, maxPreviewCount).map((image, index) => 
-            renderImagePreview(image, index)
-          )}
-          {videos.slice(0, maxPreviewCount - images.length).map((video, index) => 
-            renderVideoPreview(video, images.length + index)
-          )}
-        </View>
-      )}
+        <>
+          {renderMediaGrid([...images, ...videos], isExpanded)}
 
-      {/* Expanded Media - Show when expanded */}
-      {isExpanded && safeAttachments.length > maxPreviewCount && (
-        <View style={styles.expandedMediaContainer}>
-          
-          <View style={styles.expandedList}>
-            {safeAttachments.slice(maxPreviewCount).map((attachment, index) => (
-              <View key={attachment.id || `expanded-${index}`} style={styles.expandedListItem}>
-                {attachment.type === 'image' && (
-                  <TouchableOpacity
-                    style={styles.expandedImageContainer}
-                    onPress={() => {
-                      setSelectedAttachment(attachment);
-                      setShowFullScreen(true);
-                    }}
-                  >
-                    <Image
-                      source={{ uri: attachment.url }}
-                      style={styles.expandedImage}
-                      resizeMode="cover"
-                    />
-                  </TouchableOpacity>
-                )}
-                {attachment.type === 'video' && (
-                  <TouchableOpacity
-                    style={styles.expandedVideoContainer}
-                    onPress={() => {
-                      setSelectedAttachment(attachment);
-                      setShowFullScreen(true);
-                    }}
-                  >
-                    <Video
-                      source={{ uri: attachment.url }}
-                      style={styles.expandedVideo}
-                      shouldPlay={false}
-                      isLooping={false}
-                      isMuted={true}
-                      resizeMode={ResizeMode.COVER}
-                      useNativeControls={false}
-                    />
-                    <View style={styles.videoPlayOverlay}>
-                      <MaterialIcons name="play-circle-filled" size={24} color="#fff" />
-                    </View>
-                  </TouchableOpacity>
-                )}
+          {/* Expand/Collapse Button */}
+          {hasMoreMedia && (
+            <TouchableOpacity
+              style={styles.expandButton}
+              onPress={toggleExpanded}
+              activeOpacity={0.7}
+            >
+              <View style={styles.expandButtonContent}>
+                <MaterialIcons
+                  name={isExpanded ? "expand-less" : "expand-more"}
+                  size={20}
+                  color="#4f8cff"
+                />
+                <Text style={styles.expandButtonText}>
+                  {isExpanded ? "" : `${remainingCount}`}
+                </Text>
               </View>
-            ))}
-          </View>
-        </View>
+            </TouchableOpacity>
+          )}
+        </>
       )}
 
       {/* Audio Files */}
@@ -390,7 +465,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   mediaContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 8,
   },
   fullWidthMediaContainer: {
@@ -401,14 +476,14 @@ const styles = StyleSheet.create({
     height: PREVIEW_SIZE,
     borderRadius: 8,
     marginRight: 12,
-    overflow: 'hidden',
-    backgroundColor: '#f0f0f0',
+    overflow: "hidden",
+    backgroundColor: "#f0f0f0",
   },
   fullWidthMediaPreview: {
-    width: '100%',
+    width: "100%",
     borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#f0f0f0',
+    overflow: "hidden",
+    backgroundColor: "#f0f0f0",
   },
   mediaSpacing: {
     marginTop: 12,
@@ -417,61 +492,98 @@ const styles = StyleSheet.create({
     marginLeft: 0,
   },
   lastPreview: {
-    position: 'relative',
+    position: "relative",
   },
   previewImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   fullWidthPreviewImage: {
-    width: '100%',
+    width: "100%",
     aspectRatio: 16 / 9,
   },
   overlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: 8,
   },
   countOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: 8,
   },
   overlayText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
   },
   videoOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  moreMediaOverlay: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  moreMediaContent: {
+    alignItems: "center",
+  },
+  moreMediaText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
+    marginTop: 4,
+  },
+  expandButton: {
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e9ecef",
+  },
+  expandButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  expandButtonText: {
+    fontSize: 14,
+    color: "#4f8cff",
+    fontWeight: "500",
+    marginLeft: 4,
   },
   audioContainer: {
     marginTop: 8,
   },
   audioPreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f9ff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8f9ff",
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -482,24 +594,24 @@ const styles = StyleSheet.create({
   },
   audioTitle: {
     fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
+    color: "#333",
+    fontWeight: "500",
   },
   audioSize: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 2,
   },
   fullScreenContainer: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
   },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 50,
     right: 20,
     zIndex: 1000,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     borderRadius: 20,
     padding: 8,
   },
@@ -508,8 +620,8 @@ const styles = StyleSheet.create({
   },
   fullScreenContentContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   fullScreenImage: {
     width: screenWidth,
@@ -521,99 +633,108 @@ const styles = StyleSheet.create({
   },
   attachmentInfo: {
     padding: 20,
-    alignItems: 'center',
+    alignItems: "center",
+  },
+  fullScreenInfoContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    padding: 20,
+    alignItems: "center",
   },
   attachmentName: {
     fontSize: 16,
-    color: '#fff',
-    fontWeight: '500',
-    textAlign: 'center',
+    color: "#fff",
+    fontWeight: "500",
+    textAlign: "center",
   },
   attachmentSize: {
     fontSize: 14,
-    color: '#ccc',
+    color: "#ccc",
     marginTop: 4,
   },
   fullScreenItem: {
     width: screenWidth,
-    alignItems: 'center',
+    alignItems: "center",
   },
   inlineVideoContainer: {
-    position: 'relative',
-    width: '100%',
-    aspectRatio: 16 / 9, // Match image aspect ratio
-    backgroundColor: '#000',
+    position: "relative",
+    width: "100%",
+    aspectRatio: 16 / 9,
+    backgroundColor: "#000",
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   inlineVideo: {
-    width: '100%',
-    height: '100%', // Fill container height
+    width: "100%",
+    height: "100%",
   },
   closeVideoButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 10,
     right: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     borderRadius: 15,
     padding: 5,
   },
   videoThumbnailContainer: {
-    position: 'relative',
-    width: '100%',
-    aspectRatio: 16 / 9, // Match video aspect ratio
-    backgroundColor: '#333', // Dark background for video placeholder
+    position: "relative",
+    width: "100%",
+    aspectRatio: 16 / 9,
+    backgroundColor: "#333",
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   videoThumbnail: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   videoLabel: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
     marginTop: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
   attachmentCounter: {
     fontSize: 12,
-    color: '#ccc',
+    color: "#ccc",
     marginTop: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   galleryIndicator: {
-    position: 'absolute',
+    position: "absolute",
     top: 100,
     left: 20,
     right: 20,
     zIndex: 1000,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     borderRadius: 20,
     padding: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   galleryIndicatorText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   expandedMediaContainer: {
     marginTop: 12,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
     borderRadius: 8,
     padding: 12,
   },
   expandedHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   expandedTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
   },
   collapseButton: {
     padding: 4,
@@ -623,58 +744,58 @@ const styles = StyleSheet.create({
   },
   expandedListItem: {
     borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-    shadowColor: '#000',
+    overflow: "hidden",
+    backgroundColor: "#fff",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
   expandedImageContainer: {
-    position: 'relative',
-    width: '100%',
+    position: "relative",
+    width: "100%",
     aspectRatio: 4 / 3,
   },
   expandedImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   expandedVideoContainer: {
-    position: 'relative',
-    width: '100%',
+    position: "relative",
+    width: "100%",
     aspectRatio: 4 / 3,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
   },
   expandedVideo: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   videoPlayOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
   expandedItemInfo: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
     padding: 8,
   },
   expandedItemName: {
     fontSize: 12,
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: '500',
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "500",
   },
   expandIcon: {
     marginBottom: 4,
   },
-}); 
+});

@@ -2,15 +2,15 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAppDispatch } from '../../redux/hooks';
 import { clearError, fetchMemories, updateMemory, updateMemoryAttachments } from '../../redux/slices/memorySlice';
@@ -72,7 +72,7 @@ export default function EditMemoryModal({ visible, onClose, memory }: EditMemory
             type: mimeType,
             name: attachment.filename || 'attachment',
             size: attachment.size,
-            publicId: attachment.id, // Use the attachment ID for removal
+            publicId: attachment.publicId, // Store the Cloudinary public ID for removal
             isNew: false, // Mark as existing file
           };
         });
@@ -174,8 +174,20 @@ export default function EditMemoryModal({ visible, onClose, memory }: EditMemory
     if (!memory) return;
     
     conditionalLog.memoryUI('=== DEBUGGING ATTACHMENT CHANGES ===');
-    conditionalLog.memoryUI('Original memory attachments:', memory.attachments?.map(att => ({ id: att.id, filename: att.filename })));
+    conditionalLog.memoryUI('Original memory attachments:', memory.attachments?.map(att => ({ id: att.id, publicId: att.publicId, filename: att.filename })));
     conditionalLog.memoryUI('Selected files:', selectedFiles.map(f => ({ name: f.name, isNew: f.isNew, publicId: f.publicId })));
+    
+    // Calculate what would be removed
+    const currentAttachmentIds = selectedFiles
+      .filter(file => !file.isNew && file.publicId)
+      .map(file => file.publicId);
+    
+    const removedAttachmentIds = memory.attachments
+      ?.filter(att => !currentAttachmentIds.includes(att.id))
+      .map(att => att.id) || [];
+    
+    conditionalLog.memoryUI('Current attachment IDs (from selectedFiles):', currentAttachmentIds);
+    conditionalLog.memoryUI('Removed attachment IDs (would be deleted):', removedAttachmentIds);
     conditionalLog.memoryUI('=== END DEBUG ===');
   };
 
@@ -284,7 +296,9 @@ export default function EditMemoryModal({ visible, onClose, memory }: EditMemory
         newFiles: newFiles.length,
         removedAttachmentIds: removedAttachmentIds.length,
         currentAttachmentIds,
-        originalAttachmentIds: memory.attachments?.map(att => att.id) || []
+        originalAttachmentIds: memory.attachments?.map(att => att.id) || [],
+        selectedFilesDetails: selectedFiles.map(f => ({ name: f.name, isNew: f.isNew, publicId: f.publicId })),
+        originalAttachmentsDetails: memory.attachments?.map(att => ({ id: att.id, publicId: att.publicId, filename: att.filename })) || []
       });
       
       if (newFiles.length > 0 || removedAttachmentIds.length > 0) {
@@ -377,13 +391,25 @@ export default function EditMemoryModal({ visible, onClose, memory }: EditMemory
         } catch (attachmentError: any) {
           conditionalLog.memoryUI('Attachment update error:', attachmentError);
           
+          // Extract error message properly
+          let errorMessage = 'Unknown attachment error';
+          if (attachmentError?.message) {
+            errorMessage = attachmentError.message;
+          } else if (attachmentError?.error) {
+            errorMessage = attachmentError.error;
+          } else if (typeof attachmentError === 'string') {
+            errorMessage = attachmentError;
+          } else if (attachmentError?.data?.message) {
+            errorMessage = attachmentError.data.message;
+          }
+          
           // Check if this is a "refresh needed" error vs a real failure
-          if (attachmentError.message?.includes('Please refresh to see changes')) {
+          if (errorMessage.includes('Please refresh to see changes')) {
             conditionalLog.memoryUI('Attachment operation completed but needs refresh, continuing with success flow');
             // Don't show error, just refresh the data and continue with success
           } else {
             // Real error occurred, show warning but still continue
-            Alert.alert('Warning', `Memory updated but some attachment changes may not have been applied: ${attachmentError.message}`);
+            Alert.alert('Warning', `Memory updated but some attachment changes may not have been applied: ${errorMessage}`);
           }
         } finally {
           setAttachmentLoading(false);
