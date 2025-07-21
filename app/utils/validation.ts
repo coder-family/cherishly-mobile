@@ -1,5 +1,65 @@
 import * as yup from "yup";
 
+/**
+ * Sanitizes and validates MongoDB ObjectId strings to prevent NoSQL injection
+ * @param id - The ID string to sanitize
+ * @returns The sanitized ID string or throws an error if invalid
+ */
+export function sanitizeObjectId(id: string): string {
+  if (!id || typeof id !== 'string') {
+    throw new Error('Invalid ID: ID must be a non-empty string');
+  }
+  
+  // Trim whitespace
+  const trimmedId = id.trim();
+  
+  if (!trimmedId) {
+    throw new Error('Invalid ID: ID cannot be empty or whitespace only');
+  }
+  
+  // MongoDB ObjectId validation: 24 character hex string
+  const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+  
+  if (!objectIdRegex.test(trimmedId)) {
+    throw new Error('Invalid ID: ID must be a valid 24-character hexadecimal string');
+  }
+  
+  return trimmedId;
+}
+
+/**
+ * Sanitizes and validates general string IDs to prevent injection attacks
+ * @param id - The ID string to sanitize
+ * @returns The sanitized ID string or throws an error if invalid
+ */
+export function sanitizeId(id: string): string {
+  if (!id || typeof id !== 'string') {
+    throw new Error('Invalid ID: ID must be a non-empty string');
+  }
+  
+  // Trim whitespace
+  const trimmedId = id.trim();
+  
+  if (!trimmedId) {
+    throw new Error('Invalid ID: ID cannot be empty or whitespace only');
+  }
+  
+  // Remove any potentially dangerous characters
+  // Allow alphanumeric characters, hyphens, and underscores only
+  const sanitizedId = trimmedId.replace(/[^a-zA-Z0-9\-_]/g, '');
+  
+  if (!sanitizedId) {
+    throw new Error('Invalid ID: ID contains no valid characters after sanitization');
+  }
+  
+  // Limit length to prevent buffer overflow attacks
+  if (sanitizedId.length > 100) {
+    throw new Error('Invalid ID: ID is too long (maximum 100 characters)');
+  }
+  
+  return sanitizedId;
+}
+
 export function isValidRecordingId(id: string): boolean {
   return typeof id === "string" && /^recording_\d+_[a-z0-9]+$/.test(id);
 }

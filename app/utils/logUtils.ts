@@ -17,46 +17,98 @@ export const LOG_CONFIG = {
   GENERAL: false,            // General app logs
 };
 
-// Conditional logging functions
+// Conditional logging functions with sanitization
 export const conditionalLog = {
   memory: (message: string, ...args: any[]) => {
-    if (LOG_CONFIG.MEMORY) console.log(`[MEMORY] ${message}`, ...args);
+    if (LOG_CONFIG.MEMORY) {
+      const sanitizedMessage = sanitizeLog(message);
+      const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
+      console.log(`[MEMORY] ${sanitizedMessage}`, ...sanitizedArgs);
+    }
   },
   memoryApi: (message: string, ...args: any[]) => {
-    if (LOG_CONFIG.MEMORY_API) console.log(`[MEMORY-API] ${message}`, ...args);
+    if (LOG_CONFIG.MEMORY_API) {
+      const sanitizedMessage = sanitizeLog(message);
+      const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
+      console.log(`[MEMORY-API] ${sanitizedMessage}`, ...sanitizedArgs);
+    }
   },
   memoryRedux: (message: string, ...args: any[]) => {
-    if (LOG_CONFIG.MEMORY_REDUX) console.log(`[MEMORY-REDUX] ${message}`, ...args);
+    if (LOG_CONFIG.MEMORY_REDUX) {
+      const sanitizedMessage = sanitizeLog(message);
+      const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
+      console.log(`[MEMORY-REDUX] ${sanitizedMessage}`, ...sanitizedArgs);
+    }
   },
   memoryUI: (message: string, ...args: any[]) => {
-    if (LOG_CONFIG.MEMORY_UI) console.log(`[MEMORY-UI] ${message}`, ...args);
+    if (LOG_CONFIG.MEMORY_UI) {
+      const sanitizedMessage = sanitizeLog(message);
+      const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
+      console.log(`[MEMORY-UI] ${sanitizedMessage}`, ...sanitizedArgs);
+    }
   },
   api: (message: string, ...args: any[]) => {
-    if (LOG_CONFIG.API_REQUESTS) console.log(`[API] ${message}`, ...args);
+    if (LOG_CONFIG.API_REQUESTS) {
+      const sanitizedMessage = sanitizeLog(message);
+      const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
+      console.log(`[API] ${sanitizedMessage}`, ...sanitizedArgs);
+    }
   },
   auth: (message: string, ...args: any[]) => {
-    if (LOG_CONFIG.AUTH) console.log(`[AUTH] ${message}`, ...args);
+    if (LOG_CONFIG.AUTH) {
+      const sanitizedMessage = sanitizeLog(message);
+      const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
+      console.log(`[AUTH] ${sanitizedMessage}`, ...sanitizedArgs);
+    }
   },
   authError: (message: string, ...args: any[]) => {
-    if (LOG_CONFIG.AUTH) console.error(`[AUTH-ERROR] ${message}`, ...args);
+    if (LOG_CONFIG.AUTH) {
+      const sanitizedMessage = sanitizeLog(message);
+      const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
+      console.error(`[AUTH-ERROR] ${sanitizedMessage}`, ...sanitizedArgs);
+    }
   },
   search: (message: string, ...args: any[]) => {
-    if (LOG_CONFIG.SEARCH) console.log(`[SEARCH] ${message}`, ...args);
+    if (LOG_CONFIG.SEARCH) {
+      const sanitizedMessage = sanitizeLog(message);
+      const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
+      console.log(`[SEARCH] ${sanitizedMessage}`, ...sanitizedArgs);
+    }
   },
   family: (message: string, ...args: any[]) => {
-    if (LOG_CONFIG.FAMILY) console.log(`[FAMILY] ${message}`, ...args);
+    if (LOG_CONFIG.FAMILY) {
+      const sanitizedMessage = sanitizeLog(message);
+      const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
+      console.log(`[FAMILY] ${sanitizedMessage}`, ...sanitizedArgs);
+    }
   },
   child: (message: string, ...args: any[]) => {
-    if (LOG_CONFIG.CHILD) console.log(`[CHILD] ${message}`, ...args);
+    if (LOG_CONFIG.CHILD) {
+      const sanitizedMessage = sanitizeLog(message);
+      const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
+      console.log(`[CHILD] ${sanitizedMessage}`, ...sanitizedArgs);
+    }
   },
   media: (message: string, ...args: any[]) => {
-    if (LOG_CONFIG.MEDIA) console.log(`[MEDIA] ${message}`, ...args);
+    if (LOG_CONFIG.MEDIA) {
+      const sanitizedMessage = sanitizeLog(message);
+      const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
+      console.log(`[MEDIA] ${sanitizedMessage}`, ...sanitizedArgs);
+    }
   },
   navigation: (message: string, ...args: any[]) => {
-    if (LOG_CONFIG.NAVIGATION) console.log(`[NAV] ${message}`, ...args);
+    if (LOG_CONFIG.NAVIGATION) {
+      const sanitizedMessage = sanitizeLog(message);
+      const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
+      console.log(`[NAV] ${sanitizedMessage}`, ...sanitizedArgs);
+    }
   },
   general: (message: string, ...args: any[]) => {
-    if (LOG_CONFIG.GENERAL) console.log(`[APP] ${message}`, ...args);
+    if (LOG_CONFIG.GENERAL) {
+      const sanitizedMessage = sanitizeLog(message);
+      const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
+      console.log(`[APP] ${sanitizedMessage}`, ...sanitizedArgs);
+    }
   },
 };
 

@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '@env';
 import { conditionalLog } from '../utils/logUtils';
+import { sanitizeObjectId } from '../utils/validation';
 import apiService from './apiService';
 import authService from './authService';
 
@@ -292,7 +293,9 @@ export async function getMemories(params: GetMemoriesParams): Promise<{ memories
 }
 
 export async function getMemoryById(memoryId: string): Promise<Memory> {
-  const response = await apiService.get(`/memories/${memoryId}`);
+  // Sanitize the memoryId to prevent NoSQL injection
+  const sanitizedMemoryId = sanitizeObjectId(memoryId);
+  const response = await apiService.get(`/memories/${sanitizedMemoryId}`);
   const memory = response.data || response;
   
   // Map API fields to frontend interface (same mapping as in getMemories)
@@ -453,7 +456,9 @@ export async function createMemory(data: CreateMemoryData): Promise<Memory> {
 }
 
 export async function updateMemory(memoryId: string, data: UpdateMemoryData & { attachments?: any[] }): Promise<Memory> {
-  conditionalLog.memoryApi('updateMemory called with:', { memoryId, data });
+  // Sanitize the memoryId to prevent NoSQL injection
+  const sanitizedMemoryId = sanitizeObjectId(memoryId);
+  conditionalLog.memoryApi('updateMemory called with:', { memoryId: sanitizedMemoryId, data });
   
   // Check if we have attachments to upload
   const hasAttachments = data.attachments && data.attachments.length > 0;
@@ -543,14 +548,14 @@ export async function updateMemory(memoryId: string, data: UpdateMemoryData & { 
     const token = await authService.getAccessToken();
     
     const baseUrl = API_BASE_URL || "https://growing-together-app.onrender.com/api";
-    conditionalLog.memoryApi('Making multipart update request to:', `${baseUrl}/memories/${memoryId}`);
+    conditionalLog.memoryApi('Making multipart update request to:', `${baseUrl}/memories/${sanitizedMemoryId}`);
     conditionalLog.memoryApi('FormData contents:');
     conditionalLog.memoryApi('- title:', data.title);
     conditionalLog.memoryApi('- content:', data.content);
     conditionalLog.memoryApi('- tags:', data.tags);
     conditionalLog.memoryApi('- attachments count:', data.attachments!.length);
     
-    const response = await fetch(`${baseUrl}/memories/${memoryId}`, {
+    const response = await fetch(`${baseUrl}/memories/${sanitizedMemoryId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -566,7 +571,7 @@ export async function updateMemory(memoryId: string, data: UpdateMemoryData & { 
       conditionalLog.memoryApi('Multipart update error response:', errorData);
       const baseUrl = API_BASE_URL || "https://growing-together-app.onrender.com/api";
       conditionalLog.memoryApi('Request details:', {
-        url: `${baseUrl}/memories/${memoryId}`,
+        url: `${baseUrl}/memories/${sanitizedMemoryId}`,
         method: 'PUT',
         hasFormData: true
       });
@@ -629,7 +634,7 @@ export async function updateMemory(memoryId: string, data: UpdateMemoryData & { 
     
     let responseData: any;
     try {
-      const response = await apiService.put(`/memories/${memoryId}`, backendData);
+      const response = await apiService.put(`/memories/${sanitizedMemoryId}`, backendData);
       conditionalLog.memoryApi('updateMemory API response:', response);
       
       responseData = response.data || response;
@@ -683,7 +688,9 @@ export async function updateMemory(memoryId: string, data: UpdateMemoryData & { 
 
 // Alternative method for removing attachments using different API approaches
 async function removeAttachmentsAlternative(memoryId: string, attachmentIds: string[]): Promise<Memory> {
-  conditionalLog.memoryApi('removeAttachmentsAlternative called with:', { memoryId, attachmentIds });
+  // Sanitize the memoryId to prevent NoSQL injection
+  const sanitizedMemoryId = sanitizeObjectId(memoryId);
+  conditionalLog.memoryApi('removeAttachmentsAlternative called with:', { memoryId: sanitizedMemoryId, attachmentIds });
   
   const token = await authService.getAccessToken();
   if (!token) {
@@ -733,7 +740,7 @@ async function removeAttachmentsAlternative(memoryId: string, attachmentIds: str
       const requestBody = requestBodies[i];
       conditionalLog.memoryApi(`Trying JSON format ${i + 1} with MongoDB _id values:`, requestBody);
       
-      const response = await fetch(`${API_BASE_URL}/memories/${memoryId}/attachments`, {
+      const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -789,7 +796,7 @@ async function removeAttachmentsAlternative(memoryId: string, attachmentIds: str
   conditionalLog.memoryApi('Trying Method 2: Individual DELETE requests with MongoDB _id');
   try {
     const deletePromises = attachmentIds.map(async (attachmentId) => {
-      const response = await fetch(`${API_BASE_URL}/memories/${memoryId}/attachments/${attachmentId}`, {
+      const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments/${attachmentId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -810,7 +817,7 @@ async function removeAttachmentsAlternative(memoryId: string, attachmentIds: str
     conditionalLog.memoryApi('Method 2 (Individual DELETEs) succeeded');
     
     // Fetch the updated memory
-    const updatedMemoryResponse = await apiService.get(`/memories/${memoryId}`);
+    const updatedMemoryResponse = await apiService.get(`/memories/${sanitizedMemoryId}`);
     const memory = updatedMemoryResponse.data || updatedMemoryResponse;
     
     // Map API fields to frontend interface
@@ -838,7 +845,7 @@ async function removeAttachmentsAlternative(memoryId: string, attachmentIds: str
   // Try Method 3: Use the unified attachments endpoint
   conditionalLog.memoryApi('Trying Method 3: PATCH request to unified attachments endpoint');
   try {
-    const response = await fetch(`${API_BASE_URL}/memories/${memoryId}/attachments`, {
+    const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -866,11 +873,13 @@ async function removeAttachmentsAlternative(memoryId: string, attachmentIds: str
 
 // Helper function to process attachment update responses
 async function processAttachmentResponse(responseData: any, memoryId: string): Promise<Memory> {
+  // Sanitize the memoryId to prevent NoSQL injection
+  const sanitizedMemoryId = sanitizeObjectId(memoryId);
   let memory = responseData.data || responseData.memory || responseData;
   
   if (!memory || (!memory._id && !memory.id)) {
     conditionalLog.memoryApi('Response did not contain memory, fetching separately');
-    const updatedMemoryResponse = await apiService.get(`/memories/${memoryId}`);
+    const updatedMemoryResponse = await apiService.get(`/memories/${sanitizedMemoryId}`);
     memory = updatedMemoryResponse.data || updatedMemoryResponse;
   }
   
@@ -895,13 +904,17 @@ async function processAttachmentResponse(responseData: any, memoryId: string): P
 
 
 export async function deleteMemory(memoryId: string): Promise<void> {
-  await apiService.delete(`/memories/${memoryId}`);
+  // Sanitize the memoryId to prevent NoSQL injection
+  const sanitizedMemoryId = sanitizeObjectId(memoryId);
+  await apiService.delete(`/memories/${sanitizedMemoryId}`);
 }
 
 // Debug function to test backend attachment deletion API
 export async function debugAttachmentDeletion(memoryId: string, attachmentIds: string[]): Promise<void> {
+  // Sanitize the memoryId to prevent NoSQL injection
+  const sanitizedMemoryId = sanitizeObjectId(memoryId);
   conditionalLog.memoryApi('=== DEBUGGING ATTACHMENT DELETION API ===');
-  conditionalLog.memoryApi('Testing different API endpoints and formats for:', { memoryId, attachmentIds });
+  conditionalLog.memoryApi('Testing different API endpoints and formats for:', { memoryId: sanitizedMemoryId, attachmentIds });
   
   const token = await authService.getAccessToken();
   if (!token) {
@@ -912,7 +925,7 @@ export async function debugAttachmentDeletion(memoryId: string, attachmentIds: s
   // Test 1: Check current memory state
   conditionalLog.memoryApi('TEST 1: Getting current memory state');
   try {
-    const currentMemory = await getMemoryById(memoryId);
+    const currentMemory = await getMemoryById(sanitizedMemoryId);
     conditionalLog.memoryApi('Current memory attachments:', {
       count: currentMemory.attachments?.length || 0,
       ids: currentMemory.attachments?.map(att => att.id) || []
@@ -923,7 +936,7 @@ export async function debugAttachmentDeletion(memoryId: string, attachmentIds: s
   
   // Test 2: Check if backend has specific deletion endpoints
   const testEndpoints = [
-    `/memories/${memoryId}/attachments`,
+    `/memories/${sanitizedMemoryId}/attachments`,
     `/attachments/delete`,
     `/cloudinary/delete`
   ];
@@ -948,9 +961,9 @@ export async function debugAttachmentDeletion(memoryId: string, attachmentIds: s
   // Test 3: Try different HTTP methods on main endpoint
   const methods = ['PATCH', 'DELETE', 'PUT', 'POST'];
   for (const method of methods) {
-    conditionalLog.memoryApi(`TEST: Trying ${method} on /memories/${memoryId}/attachments`);
+    conditionalLog.memoryApi(`TEST: Trying ${method} on /memories/${sanitizedMemoryId}/attachments`);
     try {
-      const response = await fetch(`${API_BASE_URL}/memories/${memoryId}/attachments`, {
+      const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
         method: method,
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -982,8 +995,10 @@ export async function debugAttachmentDeletion(memoryId: string, attachmentIds: s
 
 // Debug function to test different attachment deletion formats
 export async function testAttachmentDeletionFormats(memoryId: string, attachmentIds: string[]): Promise<void> {
+  // Sanitize the memoryId to prevent NoSQL injection
+  const sanitizedMemoryId = sanitizeObjectId(memoryId);
   conditionalLog.memoryApi('=== TESTING ATTACHMENT DELETION FORMATS ===');
-  conditionalLog.memoryApi('Testing with memory ID:', memoryId);
+  conditionalLog.memoryApi('Testing with memory ID:', sanitizedMemoryId);
   conditionalLog.memoryApi('Testing with attachment IDs:', attachmentIds);
   
   const token = await authService.getAccessToken();
@@ -1011,7 +1026,7 @@ export async function testAttachmentDeletionFormats(memoryId: string, attachment
     conditionalLog.memoryApi(`Testing format ${i + 1}:`, format);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/memories/${memoryId}/attachments`, {
+      const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1061,8 +1076,10 @@ export async function testAttachmentDeletionFormats(memoryId: string, attachment
 }
 
 export async function updateMemoryAttachments(memoryId: string, attachments: any[], action: 'add' | 'remove' | 'replace' = 'add', attachmentIds: string[] = []): Promise<Memory> {
+  // Sanitize the memoryId to prevent NoSQL injection
+  const sanitizedMemoryId = sanitizeObjectId(memoryId);
   conditionalLog.memoryApi('updateMemoryAttachments called with:', { 
-    memoryId, 
+    memoryId: sanitizedMemoryId, 
     attachmentCount: attachments.length, 
     action, 
     attachmentIds,
@@ -1084,7 +1101,7 @@ export async function updateMemoryAttachments(memoryId: string, attachments: any
     conditionalLog.memoryApi('Using PATCH /memories/:id/attachments for attachment removal');
     
     try {
-      const response = await fetch(`${API_BASE_URL}/memories/${memoryId}/attachments`, {
+      const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1132,7 +1149,7 @@ export async function updateMemoryAttachments(memoryId: string, attachments: any
         conditionalLog.memoryApi('Backend did not return memory object, fetching updated memory separately');
         
         try {
-          const updatedMemoryResponse = await apiService.get(`/memories/${memoryId}`);
+          const updatedMemoryResponse = await apiService.get(`/memories/${sanitizedMemoryId}`);
           memory = updatedMemoryResponse.data || updatedMemoryResponse;
           conditionalLog.memoryApi('Fetched updated memory separately:', memory);
         } catch (fetchError) {
@@ -1170,7 +1187,7 @@ export async function updateMemoryAttachments(memoryId: string, attachments: any
       conditionalLog.memoryApi('Delete attachments endpoint failed, falling back to alternative methods:', error);
       // Fall back to alternative methods if the correct endpoint fails
       try {
-        return await removeAttachmentsAlternative(memoryId, attachmentIds);
+        return await removeAttachmentsAlternative(sanitizedMemoryId, attachmentIds);
       } catch (alternativeError) {
         conditionalLog.memoryApi('All delete methods failed:', alternativeError);
         throw alternativeError;
@@ -1200,12 +1217,12 @@ export async function updateMemoryAttachments(memoryId: string, attachments: any
     });
   }
 
-  conditionalLog.memoryApi('Making attachment update request to:', `${API_BASE_URL}/memories/${memoryId}/attachments`);
+  conditionalLog.memoryApi('Making attachment update request to:', `${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`);
   conditionalLog.memoryApi('Request method: PATCH');
   conditionalLog.memoryApi('Action:', action);
   conditionalLog.memoryApi('Attachments to upload:', attachments.map(f => ({ name: f.name, type: f.type, size: f.size })));
   
-  const response = await fetch(`${API_BASE_URL}/memories/${memoryId}/attachments`, {
+  const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -1230,7 +1247,7 @@ export async function updateMemoryAttachments(memoryId: string, attachments: any
     
     conditionalLog.memoryApi('Parsed error data:', errorData);
     conditionalLog.memoryApi('Request details for debugging:', {
-      url: `${API_BASE_URL}/memories/${memoryId}/attachments`,
+      url: `${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`,
       method: 'PATCH',
       action,
       attachmentCount: attachments.length
@@ -1252,7 +1269,7 @@ export async function updateMemoryAttachments(memoryId: string, attachments: any
     
     try {
       // Fetch the updated memory from the main memories endpoint
-      const updatedMemoryResponse = await apiService.get(`/memories/${memoryId}`);
+      const updatedMemoryResponse = await apiService.get(`/memories/${sanitizedMemoryId}`);
       memory = updatedMemoryResponse.data || updatedMemoryResponse;
       conditionalLog.memoryApi('Fetched updated memory separately:', memory);
     } catch (fetchError) {
@@ -1301,8 +1318,10 @@ export async function updateMemoryAttachments(memoryId: string, attachments: any
 
 // Debug function to test memory update with minimal data
 export async function testMemoryUpdate(memoryId: string): Promise<void> {
+  // Sanitize the memoryId to prevent NoSQL injection
+  const sanitizedMemoryId = sanitizeObjectId(memoryId);
   conditionalLog.memoryApi('=== TESTING MEMORY UPDATE ===');
-  conditionalLog.memoryApi('Testing with memory ID:', memoryId);
+  conditionalLog.memoryApi('Testing with memory ID:', sanitizedMemoryId);
   
   const token = await authService.getAccessToken();
   if (!token) {
@@ -1313,7 +1332,7 @@ export async function testMemoryUpdate(memoryId: string): Promise<void> {
   // Test JSON PUT update (this is what works)
   conditionalLog.memoryApi('TEST: JSON PUT update');
   try {
-    const response = await fetch(`${API_BASE_URL}/memories/${memoryId}`, {
+    const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
