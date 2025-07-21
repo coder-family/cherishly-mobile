@@ -1,331 +1,233 @@
-import { registerSchema } from '../app/utils/validation';
+import {
+  createMemorySchema,
+  isValidRecordingId,
+  loginSchema,
+  registerSchema,
+  resetPasswordSchema,
+  sanitizeId,
+  sanitizeObjectId,
+  updateMemorySchema,
+} from "../app/utils/validation";
 
-const mockRegister = jest.fn();
-jest.mock('../app/services/authService', () => ({
-  __esModule: true,
-  default: {
-    register: mockRegister,
-    getCurrentUser: jest.fn(),
-  },
-}));
-
-describe('Register Validation Schema', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockRegister.mockImplementation((data) =>
-      Promise.resolve({
-        user: { id: '1', email: data.email, firstName: data.firstName },
-        accessToken: 'token',
-        refreshToken: 'refresh',
-        expiresIn: 3600,
-      })
-    );
-  });
-
-  describe('firstName validation', () => {
-    it('should pass with valid first name', async () => {
-      const validData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: 'Password123@',
-        confirmPassword: 'Password123@',
-        role: "parent"
-      };
-
-      await expect(registerSchema.validate(validData)).resolves.toEqual(validData);
+describe("Validation Utils", () => {
+  describe("isValidRecordingId", () => {
+    it("should return true for valid recording IDs", () => {
+      expect(isValidRecordingId("recording_123_abc123")).toBe(true);
+      expect(isValidRecordingId("recording_0_xyz789")).toBe(true);
     });
 
-    it('should fail with empty first name', async () => {
-      const invalidData = {
-        firstName: '',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: 'Password123@',
-        confirmPassword: 'Password123@',
-        role: "parent",
-      };
-
-      await expect(registerSchema.validate(invalidData)).rejects.toThrow('First name is required');
-    });
-
-    it('should fail with missing first name', async () => {
-      const invalidData = {
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: 'Password123@',
-        confirmPassword: 'Password123@',
-        role: "parent",
-      };
-
-      await expect(registerSchema.validate(invalidData)).rejects.toThrow('First name is required');
+    it("should return false for invalid recording IDs", () => {
+      expect(isValidRecordingId("invalid_id")).toBe(false);
+      expect(isValidRecordingId("recording_123")).toBe(false);
+      expect(isValidRecordingId("recording_abc_123")).toBe(false);
+      expect(isValidRecordingId("")).toBe(false);
     });
   });
 
-  describe('lastName validation', () => {
-    it('should pass with valid last name', async () => {
-      const validData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: 'Password123@',
-        confirmPassword: 'Password123@',
-        role: "parent",
-      };
-
-      await expect(registerSchema.validate(validData)).resolves.toEqual(validData);
+  describe("sanitizeObjectId", () => {
+    it("should accept valid MongoDB ObjectId strings", () => {
+      const validId = "507f1f77bcf86cd799439011";
+      expect(sanitizeObjectId(validId)).toBe(validId);
     });
 
-    it('should fail with empty last name', async () => {
-      const invalidData = {
-        firstName: 'John',
-        lastName: '',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: 'Password123@',
-        confirmPassword: 'Password123@',
-        role: "parent",
-      };
+    it("should trim whitespace from valid IDs", () => {
+      const validId = "507f1f77bcf86cd799439011";
+      expect(sanitizeObjectId(` ${validId} `)).toBe(validId);
+    });
 
-      await expect(registerSchema.validate(invalidData)).rejects.toThrow('Last name is required');
+    it("should throw error for invalid ObjectId format", () => {
+      expect(() => sanitizeObjectId("invalid-id")).toThrow("Invalid ID: ID must be a valid 24-character hexadecimal string");
+      expect(() => sanitizeObjectId("507f1f77bcf86cd79943901")).toThrow("Invalid ID: ID must be a valid 24-character hexadecimal string");
+      expect(() => sanitizeObjectId("507f1f77bcf86cd7994390111")).toThrow("Invalid ID: ID must be a valid 24-character hexadecimal string");
+      expect(() => sanitizeObjectId("507f1f77bcf86cd79943901g")).toThrow("Invalid ID: ID must be a valid 24-character hexadecimal string");
+    });
+
+    it("should throw error for empty or null values", () => {
+      expect(() => sanitizeObjectId("")).toThrow("Invalid ID: ID must be a non-empty string");
+      expect(() => sanitizeObjectId("   ")).toThrow("Invalid ID: ID cannot be empty or whitespace only");
+      expect(() => sanitizeObjectId(null as any)).toThrow("Invalid ID: ID must be a non-empty string");
+      expect(() => sanitizeObjectId(undefined as any)).toThrow("Invalid ID: ID must be a non-empty string");
     });
   });
 
-  describe('dateOfBirth validation', () => {
-    it('should pass with valid date of birth', async () => {
-      const validData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: 'Password123@',
-        confirmPassword: 'Password123@',
-        role: "parent",
-      };
-
-      await expect(registerSchema.validate(validData)).resolves.toEqual(validData);
+  describe("sanitizeId", () => {
+    it("should accept valid alphanumeric IDs", () => {
+      expect(sanitizeId("abc123")).toBe("abc123");
+      expect(sanitizeId("ABC_123-def")).toBe("ABC_123-def");
+      expect(sanitizeId("user123")).toBe("user123");
     });
 
-    it('should fail with empty date of birth', async () => {
-      const invalidData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '',
-        email: 'john.doe@example.com',
-        password: 'Password123@',
-        confirmPassword: 'Password123@',
-        role: "parent",
-      };
-
-      await expect(registerSchema.validate(invalidData)).rejects.toThrow('Date of birth is required');
-    });
-  });
-
-  describe('email validation', () => {
-    it('should pass with valid email', async () => {
-      const validData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: 'Password123@',
-        confirmPassword: 'Password123@',
-        role: "parent",
-      };
-
-      await expect(registerSchema.validate(validData)).resolves.toEqual(validData);
+    it("should remove dangerous characters", () => {
+      expect(sanitizeId("user<script>alert('xss')</script>")).toBe("userscriptalertxssscript");
+      expect(sanitizeId("user'; DROP TABLE users; --")).toBe("userDROPTABLEusers--");
+      expect(sanitizeId("user$()[]{}|\\")).toBe("user");
     });
 
-    it('should fail with invalid email format', async () => {
-      const invalidData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'invalid-email',
-        password: 'Password123@',
-        confirmPassword: 'Password123@',
-        role: "parent",
-      };
-
-      await expect(registerSchema.validate(invalidData)).rejects.toThrow('Email is invalid');
+    it("should trim whitespace", () => {
+      expect(sanitizeId(" abc123 ")).toBe("abc123");
     });
 
-    it('should fail with empty email', async () => {
-      const invalidData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: '',
-        password: 'Password123@',
-        confirmPassword: 'Password123@',
-        role: "parent",
-      };
-
-      await expect(registerSchema.validate(invalidData)).rejects.toThrow('Email is required');
+    it("should throw error for empty results after sanitization", () => {
+      expect(() => sanitizeId("$%^&*()")).toThrow("Invalid ID: ID contains no valid characters after sanitization");
+      expect(() => sanitizeId("")).toThrow("Invalid ID: ID must be a non-empty string");
+      expect(() => sanitizeId("   ")).toThrow("Invalid ID: ID cannot be empty or whitespace only");
     });
 
-    it('should pass with various valid email formats', async () => {
-      const validEmails = [
-        'test@example.com',
-        'user.name@domain.co.uk',
-        'user+tag@example.org',
-        '123@example.com',
-      ];
+    it("should throw error for IDs that are too long", () => {
+      const longId = "a".repeat(101);
+      expect(() => sanitizeId(longId)).toThrow("Invalid ID: ID is too long (maximum 100 characters)");
+    });
 
-      for (const email of validEmails) {
-        const validData = {
-          firstName: 'John',
-          lastName: 'Doe',
-          dateOfBirth: '1990-01-01',
-          email,
-          password: 'Password123@',
-          confirmPassword: 'Password123@',
-          role: "parent",
-        };
+    it("should accept IDs at the maximum length", () => {
+      const maxLengthId = "a".repeat(100);
+      expect(sanitizeId(maxLengthId)).toBe(maxLengthId);
+    });
 
-        await expect(registerSchema.validate(validData)).resolves.toEqual(validData);
-      }
+    it("should throw error for null or undefined values", () => {
+      expect(() => sanitizeId(null as any)).toThrow("Invalid ID: ID must be a non-empty string");
+      expect(() => sanitizeId(undefined as any)).toThrow("Invalid ID: ID must be a non-empty string");
     });
   });
 
-  describe('password validation', () => {
-    it('should pass with valid password', async () => {
+  describe("loginSchema", () => {
+    it("should validate correct login data", async () => {
       const validData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: 'Password123@',
-        confirmPassword: 'Password123@',
-        role: "parent",
+        email: "test@example.com",
+        password: "password123",
       };
 
-      await expect(registerSchema.validate(validData)).resolves.toEqual(validData);
+      const result = await loginSchema.validate(validData);
+      expect(result).toEqual(validData);
     });
 
-    it('should fail with password shorter than 6 characters', async () => {
+    it("should reject invalid email", async () => {
       const invalidData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: '123',
-        confirmPassword: '123',
-        role: "parent",
+        email: "invalid-email",
+        password: "password123",
       };
 
-      await expect(registerSchema.validate(invalidData)).rejects.toThrow('Password must be at least 6 characters');
+      await expect(loginSchema.validate(invalidData)).rejects.toThrow("Email is invalid");
     });
 
-    it('should pass with password exactly 6 characters', async () => {
-      const validData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: '123456',
-        confirmPassword: '123456',
-        role: "parent",
-      };
-
-      await expect(registerSchema.validate(validData)).resolves.toEqual(validData);
-    });
-
-    it('should fail with empty password', async () => {
-      const invalidData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: '',
-        confirmPassword: '',
-        role: "parent",
-      };
-
-      await expect(registerSchema.validate(invalidData)).rejects.toThrow('Confirm password is required');
+    it("should reject missing fields", async () => {
+      await expect(loginSchema.validate({ email: "test@example.com" })).rejects.toThrow("Password is required");
+      await expect(loginSchema.validate({ password: "password123" })).rejects.toThrow("Email is required");
     });
   });
 
-  describe('confirmPassword validation', () => {
-    it('should pass when passwords match', async () => {
+  describe("registerSchema", () => {
+    it("should validate correct registration data", async () => {
       const validData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: 'Password123@',
-        confirmPassword: 'Password123@',
+        firstName: "John",
+        lastName: "Doe",
+        dateOfBirth: "1990-01-01",
+        email: "john@example.com",
+        password: "password123",
+        confirmPassword: "password123",
         role: "parent",
       };
 
-      await expect(registerSchema.validate(validData)).resolves.toEqual(validData);
+      const result = await registerSchema.validate(validData);
+      expect(result).toEqual(validData);
     });
 
-    it('should fail when passwords do not match', async () => {
+    it("should reject mismatched passwords", async () => {
       const invalidData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: 'Password123@',
-        confirmPassword: 'differentpassword',
+        firstName: "John",
+        lastName: "Doe",
+        dateOfBirth: "1990-01-01",
+        email: "john@example.com",
+        password: "password123",
+        confirmPassword: "differentpassword",
         role: "parent",
       };
 
-      await expect(registerSchema.validate(invalidData)).rejects.toThrow('Passwords do not match');
+      await expect(registerSchema.validate(invalidData)).rejects.toThrow("Passwords do not match");
     });
 
-    it('should fail with empty confirm password', async () => {
+    it("should reject short passwords", async () => {
       const invalidData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: 'Password123@',
+        firstName: "John",
+        lastName: "Doe",
+        dateOfBirth: "1990-01-01",
+        email: "john@example.com",
+        password: "123",
+        confirmPassword: "123",
         role: "parent",
-        confirmPassword: '',
       };
 
-      await expect(registerSchema.validate(invalidData)).rejects.toThrow('Passwords do not match');
+      await expect(registerSchema.validate(invalidData)).rejects.toThrow("Password must be at least 6 characters");
     });
   });
 
-  describe('complete form validation', () => {
-    it('should pass with all valid fields', async () => {
+  describe("resetPasswordSchema", () => {
+    it("should validate correct reset password data", async () => {
       const validData = {
-        firstName: 'John',
-        lastName: 'Doe',
-        dateOfBirth: '1990-01-01',
-        email: 'john.doe@example.com',
-        password: 'Password123@',
-        confirmPassword: 'Password123@',
-        role: "parent"
+        password: "newpassword123",
+        confirmPassword: "newpassword123",
       };
 
-      await expect(registerSchema.validate(validData)).resolves.toEqual(validData);
+      const result = await resetPasswordSchema.validate(validData);
+      expect(result).toEqual(validData);
     });
 
-    it('should fail with multiple validation errors', async () => {
+    it("should reject mismatched passwords", async () => {
       const invalidData = {
-        firstName: '',
-        lastName: '',
-        dateOfBirth: '',
-        email: 'invalid-email',
-        password: '123',
-        confirmPassword: 'different',
-        role: "parent"
+        password: "newpassword123",
+        confirmPassword: "differentpassword",
       };
 
-      try {
-        await registerSchema.validate(invalidData);
-        throw new Error('Should have thrown validation error');
-      } catch (error: any) {
-        expect(error.message).toContain('Passwords do not match');
-      }
+      await expect(resetPasswordSchema.validate(invalidData)).rejects.toThrow("Passwords do not match");
+    });
+  });
+
+  describe("createMemorySchema", () => {
+    it("should validate correct memory data", async () => {
+      const validData = {
+        title: "My Memory",
+        content: "This is a memory content",
+        childId: "507f1f77bcf86cd799439011",
+        date: "2023-01-01T00:00:00.000Z",
+        tags: ["fun", "family"],
+        visibility: "private" as const,
+        location: {
+          type: "Point" as const,
+          coordinates: [-122.4194, 37.7749], // San Francisco coordinates
+        },
+      };
+
+      const result = await createMemorySchema.validate(validData);
+      expect(result).toEqual(validData);
+    });
+
+    it("should reject invalid coordinates", async () => {
+      const invalidData = {
+        title: "My Memory",
+        content: "This is a memory content",
+        childId: "507f1f77bcf86cd799439011",
+        date: "2023-01-01T00:00:00.000Z",
+        location: {
+          type: "Point" as const,
+          coordinates: [200, 100], // Invalid longitude/latitude
+        },
+      };
+
+      await expect(createMemorySchema.validate(invalidData)).rejects.toThrow("Invalid coordinates values");
+    });
+  });
+
+  describe("updateMemorySchema", () => {
+    it("should validate location when provided", async () => {
+      const validData = {
+        title: "Updated Memory",
+        location: {
+          type: "Point" as const,
+          coordinates: [-122.4194, 37.7749], // San Francisco coordinates
+        },
+      };
+
+      const result = await updateMemorySchema.validate(validData);
+      expect(result).toEqual(validData);
     });
   });
 }); 

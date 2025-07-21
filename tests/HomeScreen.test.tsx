@@ -56,9 +56,10 @@ jest.mock('expo-router', () => ({
   }),
 }));
 
-// Mock MaterialIcons from @expo/vector-icons
+// Mock @expo/vector-icons
 jest.mock('@expo/vector-icons', () => ({
   MaterialIcons: ({ name, testID }: any) => `MaterialIcons-${name}`,
+  Ionicons: ({ name, testID }: any) => `Ionicons-${name}`,
 }));
 
 // Mock all the components to React components with testIDs
@@ -275,7 +276,7 @@ describe('HomeScreen', () => {
         </SafeAreaProvider>
       );
 
-      expect(screen.getByText('2 more')).toBeTruthy();
+      expect(screen.getByText('2')).toBeTruthy();
     });
 
     it('should expand to show all children when expand button is tapped', async () => {
@@ -290,7 +291,7 @@ describe('HomeScreen', () => {
       );
 
       // Tap the expand button
-      const expandButton = screen.getByText('2 more');
+      const expandButton = screen.getByText('2');
       fireEvent.press(expandButton);
 
       // Should now show all children
@@ -299,8 +300,8 @@ describe('HomeScreen', () => {
       expect(screen.getByTestId('child-profile-card-Charlie')).toBeTruthy();
       expect(screen.getByTestId('child-profile-card-Diana')).toBeTruthy();
 
-      // Button should change to "Show Less"
-      expect(screen.getByText('Show Less')).toBeTruthy();
+      // Button should change to show no text when expanded
+      expect(screen.queryByText('2')).toBeFalsy();
     });
 
     it('should not show expand button when 2 or fewer children exist', () => {
@@ -397,7 +398,7 @@ describe('HomeScreen', () => {
         </SafeAreaProvider>
       );
 
-      expect(screen.getByText('1 more')).toBeTruthy();
+      expect(screen.getByText('1')).toBeTruthy();
     });
 
     it('should expand to show all family groups when expand button is tapped', async () => {
@@ -412,7 +413,7 @@ describe('HomeScreen', () => {
       );
 
       // Tap the expand button
-      const expandButton = screen.getByText('1 more');
+      const expandButton = screen.getByText('1');
       fireEvent.press(expandButton);
 
       // Should now show all family groups
@@ -420,8 +421,8 @@ describe('HomeScreen', () => {
       expect(screen.getByTestId('family-group-card-Extended Family')).toBeTruthy();
       expect(screen.getByTestId('family-group-card-Close Friends')).toBeTruthy();
 
-      // Button should change to "Show Less"
-      expect(screen.getByText('Show Less')).toBeTruthy();
+      // Button should change to show no text when expanded
+      expect(screen.queryByText('1')).toBeFalsy();
     });
 
     it('should show action buttons for family groups', () => {

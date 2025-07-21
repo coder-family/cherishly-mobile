@@ -1,3 +1,4 @@
+import { conditionalLog } from '../utils/logUtils';
 import apiService from './apiService';
 
 // Utility function to transform API response to FamilyGroup interface
@@ -100,7 +101,7 @@ export async function getPrimaryFamilyGroup(): Promise<FamilyGroup | null> {
         
     // If no group exists, return null
     if (!group || (!group.id && !group._id)) {
-      console.log('No primary family group found, returning null');
+      conditionalLog.family('No primary family group found, returning null');
       return null;
     }
     
@@ -109,7 +110,7 @@ export async function getPrimaryFamilyGroup(): Promise<FamilyGroup | null> {
     return transformed;
   } catch (error: any) {    // If the error is 404 (no family group found), return null instead of throwing
     if (error.status === 404 || error.message?.includes('not found') || error.message?.includes('No family group')) {
-      console.log('404 error for primary family group, returning null');
+      conditionalLog.family('404 error for primary family group, returning null');
       return null;
     }
     // For other errors, re-throw to maintain error handling

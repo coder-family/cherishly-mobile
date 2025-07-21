@@ -5,7 +5,11 @@ export default function TabLayout() {
     <Tabs>
       <Tabs.Screen
         name="home"
-        options={{ title: 'Home' }}
+        options={{ 
+          // title: 'Home',
+          tabBarStyle: { display: 'none' },
+          headerShown: false
+        }}
       />
       <Tabs.Screen
         name="profile"

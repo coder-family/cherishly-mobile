@@ -2,25 +2,28 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from "react-native";
 import AddChildModal from "../components/child/AddChildModal";
 import ChildProfileCard from "../components/child/ChildProfileCard";
 import FamilyGroupCard from "../components/family/FamilyGroupCard";
+import AppHeader from "../components/layout/AppHeader";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
+import SearchResults from "../components/ui/SearchResults";
 import UserProfileCard from "../components/user/UserProfileCard";
 import UserProfileEditModal from "../components/user/UserProfileEditModal";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
 import { fetchChildren } from "../redux/slices/childSlice";
 import { fetchFamilyGroups } from "../redux/slices/familySlice";
 import { fetchCurrentUser } from "../redux/slices/userSlice";
+import { SearchResult, searchService } from "../services/searchService";
 import { ChildUtils } from "../utils/childUtils";
 
 export default function HomeScreen() {
@@ -43,6 +46,11 @@ export default function HomeScreen() {
   const [showAddChildModal, setShowAddChildModal] = useState(false);
   const [childrenExpanded, setChildrenExpanded] = useState(false);
   const [familyGroupsExpanded, setFamilyGroupsExpanded] = useState(false);
+  
+  // Search state
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // Fetch current user data on component mount
   useEffect(() => {
@@ -53,7 +61,31 @@ export default function HomeScreen() {
     }
   }, [dispatch, user]);
 
-  // Family groups will be updated automatically by Redux when operations succeed
+  // Handle search
+  const handleSearch = async (query: string) => {
+    if (query.trim().length === 0) {
+      setShowSearchResults(false);
+      setSearchResults([]);
+      return;
+    }
+
+    if (query.trim().length < 2) {
+      return;
+    }
+
+    setSearchLoading(true);
+    setShowSearchResults(true);
+
+    try {
+      const results = await searchService.search(query);
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
   // Handle children errors using the shared utility
   useEffect(() => {
@@ -70,10 +102,6 @@ export default function HomeScreen() {
     }
   }, [familyError, userError]);
 
-  // Family groups debug removed to prevent frequent re-renders
-
-  // Children debug removed to prevent frequent re-renders
-
   // Refresh children when add child modal closes (in case a child was added)
   useEffect(() => {
     if (!showAddChildModal && user) {
@@ -84,8 +112,6 @@ export default function HomeScreen() {
       return () => clearTimeout(timer);
     }
   }, [showAddChildModal, dispatch, user]);
-
-  // No automatic refresh - only refresh when family groups are actually modified
 
   // Use utility functions for child-related logic
   const validChildren = ChildUtils.getValidChildren(children);
@@ -101,7 +127,19 @@ export default function HomeScreen() {
 
   // Show loading spinner while fetching user data
   if (userLoading && !currentUser) {
-    return <LoadingSpinner message="Loading your profile..." />;
+    return (
+      <View style={{ flex: 1 }}>
+        <AppHeader
+          title="Home"
+          onSearchChange={handleSearch}
+          searchPlaceholder="Search memories"
+          showBackButton={false}
+          showForwardButton={false}
+          showTitle={false}
+        />
+        <LoadingSpinner message="Loading your profile..." />
+      </View>
+    );
   }
 
   // UI for children section
@@ -175,8 +213,8 @@ export default function HomeScreen() {
                 />
                 <Text style={styles.seeMoreText}>
                   {childrenExpanded 
-                    ? 'Show Less' 
-                    : `${validChildren.length - 2} more`
+                    ? ''
+                    : `${validChildren.length - 2}`
                   }
                 </Text>
               </TouchableOpacity>
@@ -248,7 +286,6 @@ export default function HomeScreen() {
               key={`family-group-${group.id}-${index}`}
               onPress={() => {
                 // For now, just show an alert since the family detail page doesn't exist yet
-                // You can replace this with actual navigation once you create the family detail page
                 Alert.alert(
                   group.name,
                   `Family Group Details\n\nMembers: ${group.members?.length || 0}\nDescription: ${group.description || 'No description'}\n\nFamily group detail page coming soon!`,
@@ -285,8 +322,8 @@ export default function HomeScreen() {
               />
               <Text style={styles.seeMoreText}>
                 {familyGroupsExpanded 
-                  ? 'Show Less' 
-                  : `${familyGroups.length - 2} more`
+                  ? '' 
+                  : `${familyGroups.length - 2}`
                 }
               </Text>
             </TouchableOpacity>
@@ -327,13 +364,19 @@ export default function HomeScreen() {
     );
   };
 
-  // Single UI that works for both cases - with and without children
-  return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={80}
-    >
+  // Main content based on whether search is active
+  const renderMainContent = () => {
+    if (showSearchResults) {
+      return (
+        <SearchResults
+          results={searchResults}
+          loading={searchLoading}
+          emptyMessage="No results found. Try searching for your child&apos;s name, milestones, or family activities."
+        />
+      );
+    }
+
+    return (
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
@@ -348,22 +391,6 @@ export default function HomeScreen() {
           onEditPress={() => setShowEditModal(true)}
         />
 
-        {/* User Profile Edit Modal */}
-        <UserProfileEditModal
-          visible={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          user={user as any}
-          currentUser={currentUser || undefined}
-          loading={userLoading}
-          error={userError}
-        />
-
-        {/* Add Child Modal */}
-        <AddChildModal
-          visible={showAddChildModal}
-          onClose={() => setShowAddChildModal(false)}
-        />
-
         <Text style={styles.welcomeTitle}>
           Welcome
           {currentUser?.firstName || user?.firstName
@@ -372,9 +399,9 @@ export default function HomeScreen() {
           !
         </Text>
         
-        <Text style={styles.welcomeSubtitle}>
+        {/* <Text style={styles.welcomeSubtitle}>
           Ready to track your family&apos;s precious moments
-        </Text>
+        </Text> */}
 
         {/* Children Section */}
         {renderChildrenSection()}
@@ -382,14 +409,50 @@ export default function HomeScreen() {
         {/* Family Groups Section */}
         {renderFamilyGroupsSection()}
       </ScrollView>
+    );
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={80}
+    >
+      {/* Enhanced Header */}
+      <AppHeader
+        title="Home"
+        onSearchChange={handleSearch}
+        searchPlaceholder="Search memories"
+        showBackButton={false}
+        showForwardButton={false}
+        showTitle={false}
+      />
+
+      {/* Main Content */}
+      {renderMainContent()}
+
+      {/* Modals */}
+      <UserProfileEditModal
+        visible={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        user={user as any}
+        currentUser={currentUser || undefined}
+        loading={userLoading}
+        error={userError}
+      />
+
+      <AddChildModal
+        visible={showAddChildModal}
+        onClose={() => setShowAddChildModal(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: 15,
+    paddingBottom: 80,
     backgroundColor: "#fff",
     flexGrow: 1,
     alignItems: "center",
@@ -397,16 +460,16 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 28,
     fontWeight: "bold",
-    marginTop: 24,
+    marginTop: 10,
     marginBottom: 8,
     textAlign: "center",
   },
-  welcomeSubtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 24,
-    textAlign: "center",
-  },
+  // welcomeSubtitle: {
+  //   fontSize: 16,
+  //   color: "#666",
+  //   marginBottom: 24,
+  //   textAlign: "center",
+  // },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "600",
@@ -417,7 +480,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9f9f9",
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 5,
     borderWidth: 1,
     borderColor: "#e0e0e0",
   },
@@ -426,7 +489,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f7ff",
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+    marginTop: 10,
+    marginBottom: 7,
     borderWidth: 1,
     borderColor: "#e0e7ff",
   },
@@ -473,7 +537,8 @@ const styles = StyleSheet.create({
   quickActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 16,
+    marginTop: 0,
+    marginBottom: 40,
     width: '100%',
   },
   quickActionButton: {
@@ -495,18 +560,19 @@ const styles = StyleSheet.create({
   },
   seeMoreButton: {
     backgroundColor: '#e0e7ff',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    marginTop: 16,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    marginTop: -10,
+    alignSelf: 'flex-end',
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
   },
   seeMoreText: {
     color: '#3b4cca',
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: 'bold',
-    marginLeft: 8,
+    marginLeft: 3,
   },
 });
