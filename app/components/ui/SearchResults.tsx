@@ -106,7 +106,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         <Ionicons name="camera-outline" size={48} color="#ccc" />
         <Text style={styles.emptyText}>{emptyMessage}</Text>
         <Text style={styles.emptyHint}>
-          Try searching for things like "first steps", "birthday", or special moments
+          Try searching for things like &quot;first steps&quot;, &quot;birthday&quot;, or special moments
         </Text>
       </View>
     );

@@ -15,19 +15,9 @@ export interface SearchResult {
   relevanceScore: number;
 }
 
-// Search categories
-export enum SearchCategory {
-  ALL = 'all',
-  CHILDREN = 'children',
-  MEMORIES = 'memories',
-  FAMILY = 'family',
-  HEALTH = 'health',
-  MILESTONES = 'milestones'
-}
-
 // Search options
 export interface SearchOptions {
-  category?: SearchCategory;
+  category?: string;
   limit?: number;
   sortBy?: 'relevance' | 'date' | 'alphabetical';
 }
@@ -62,7 +52,7 @@ class SearchService {
     }
 
     const {
-      category = SearchCategory.ALL,
+      category = 'all',
       limit = 20,
       sortBy = 'relevance'
     } = options;
@@ -74,13 +64,13 @@ class SearchService {
       const results: SearchResult[] = [];
 
       // Search children
-      if (category === SearchCategory.ALL || category === SearchCategory.CHILDREN) {
+      if (category === 'all') {
         const childResults = await this.searchChildren(query);
         results.push(...childResults);
       }
 
       // Search family groups
-      if (category === SearchCategory.ALL || category === SearchCategory.FAMILY) {
+      if (category === 'all') {
         const familyResults = await this.searchFamilyGroups(query);
         results.push(...familyResults);
       }
@@ -273,11 +263,11 @@ class SearchService {
 
   // Quick search for specific content types
   async quickSearchChildren(name: string): Promise<SearchResult[]> {
-    return this.search(name, { category: SearchCategory.CHILDREN, limit: 5 });
+    return this.search(name, { category: 'all', limit: 5 });
   }
 
   async quickSearchFamily(name: string): Promise<SearchResult[]> {
-    return this.search(name, { category: SearchCategory.FAMILY, limit: 5 });
+    return this.search(name, { category: 'all', limit: 5 });
   }
 }
 

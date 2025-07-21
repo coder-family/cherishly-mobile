@@ -411,9 +411,8 @@ export async function createMemory(data: CreateMemoryData): Promise<Memory> {
     try {
       errorData = JSON.parse(errorText);
       conditionalLog.memoryApi('Parsed error data:', errorData);
-    } catch (e) {
+    } catch {
       conditionalLog.memoryApi('Failed to parse error response as JSON, treating as plain text');
-      conditionalLog.memoryApi('Parse error:', e);
     }
     
     // Create a more informative error message
@@ -1043,7 +1042,7 @@ export async function testAttachmentDeletionFormats(memoryId: string, attachment
               ids: memory.attachments.map((att: any) => att.publicId || att.id || 'unknown')
             });
           }
-        } catch (parseError) {
+        } catch {
           conditionalLog.memoryApi(`Format ${i + 1} response is not JSON:`, responseText);
         }
       } else {
@@ -1107,7 +1106,7 @@ export async function updateMemoryAttachments(memoryId: string, attachments: any
         let errorData;
         try {
           errorData = JSON.parse(errorText);
-        } catch (e) {
+        } catch {
           errorData = { message: errorText };
         }
         
@@ -1225,7 +1224,7 @@ export async function updateMemoryAttachments(memoryId: string, attachments: any
     let errorData;
     try {
       errorData = JSON.parse(errorText);
-    } catch (e) {
+    } catch {
       errorData = { message: errorText };
     }
     

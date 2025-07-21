@@ -1,17 +1,17 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ResizeMode, Video } from 'expo-av';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    Dimensions,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { MemoryAttachment } from '../../services/memoryService';
 import VideoPlayer from '../media/VideoPlayer';
@@ -34,8 +34,12 @@ export default function MemoryMediaViewer({
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Safety check for attachments
-  const safeAttachments = attachments || [];
+  // Ensure attachments are valid and have required fields
+  const safeAttachments = useMemo(() => {
+    return attachments
+      .filter(att => att && att.url && att.type)
+      .slice(0, maxPreviewCount);
+  }, [attachments, maxPreviewCount]);
   
   // Debug log to help identify issues
   if (!attachments) {
@@ -43,12 +47,12 @@ export default function MemoryMediaViewer({
   }
 
   // Generate a unique key for this memory's expanded state
-  const getExpandedStateKey = () => {
+  const getExpandedStateKey = useCallback(() => {
     if (!safeAttachments || safeAttachments.length === 0) return null;
     // Use the first attachment's ID or a combination of attachment IDs
     const attachmentIds = safeAttachments.map(att => att.id).sort().join('-');
     return `memory_expanded_${attachmentIds}`;
-  };
+  }, [safeAttachments]);
 
   // Load expanded state from AsyncStorage
   useEffect(() => {
@@ -67,19 +71,9 @@ export default function MemoryMediaViewer({
     };
 
     loadExpandedState();
-  }, [safeAttachments]);
+  }, [safeAttachments, getExpandedStateKey]);
 
-  // Save expanded state to AsyncStorage
-  const saveExpandedState = async (expanded: boolean) => {
-    try {
-      const key = getExpandedStateKey();
-      if (key) {
-        await AsyncStorage.setItem(key, expanded.toString());
-      }
-    } catch (error) {
-      console.error('Error saving expanded state:', error);
-    }
-  };
+
 
   // Auto-clear playing video after timeout to prevent stuck states
   useEffect(() => {

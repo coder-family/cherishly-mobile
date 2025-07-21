@@ -1,15 +1,15 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-    FlatList,
-    Image,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  FlatList,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import AddMemoryModal from '../../components/child/AddMemoryModal';
 import EditMemoryModal from '../../components/child/EditMemoryModal';
@@ -48,6 +48,18 @@ export default function ChildProfileScreen() {
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const [showEditMemoryModal, setShowEditMemoryModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Retry loading memories
+  const retryLoadMemories = useCallback(() => {
+    if (id) {
+      dispatch(clearMemories());
+      dispatch(fetchMemories({ 
+        childId: id, 
+        page: 1, 
+        limit: 50 // Increased to match initial load
+      }));
+    }
+  }, [id, dispatch]);
 
   // Debug: Track when memories change
   useEffect(() => {
@@ -103,23 +115,11 @@ export default function ChildProfileScreen() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [activeTab, memoriesError, id]);
+  }, [activeTab, memoriesError, id, retryLoadMemories]);
 
   // Handle memory modal close
   const handleMemoryModalClose = () => {
     setShowAddMemoryModal(false);
-  };
-
-  // Retry loading memories
-  const retryLoadMemories = () => {
-    if (id) {
-      dispatch(clearMemories());
-      dispatch(fetchMemories({ 
-        childId: id, 
-        page: 1, 
-        limit: 50 // Increased to match initial load
-      }));
-    }
   };
 
   // Ensure unique memories and create unique keys
@@ -595,7 +595,7 @@ export default function ChildProfileScreen() {
             Timeline feature coming soon!
           </Text>
           <Text style={styles.placeholderSubtext}>
-            This will show your child's important moments and milestones in chronological order.
+            This will show your child&apos;s important moments and milestones in chronological order.
           </Text>
         </View>
       </View>
@@ -729,7 +729,7 @@ export default function ChildProfileScreen() {
              Q&A feature coming soon!
            </Text>
            <Text style={styles.placeholderSubtext}>
-             Ask questions about your child's development and get helpful responses.
+             Ask questions about your child&apos;s development and get helpful responses.
            </Text>
          </View>
        </View>

@@ -171,7 +171,7 @@ export default function AddMemoryModal({ visible, onClose, childId }: AddMemoryM
       };
 
       // Dispatch the action to create memory
-      const result = await dispatch(createMemory(memoryData)).unwrap();
+      await dispatch(createMemory(memoryData)).unwrap();
       
       conditionalLog.memoryUI('AddMemoryModal: Memory created successfully:', memoryData);
 

@@ -2,14 +2,14 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from "react-native";
 import AddChildModal from "../components/child/AddChildModal";
 import ChildProfileCard from "../components/child/ChildProfileCard";
@@ -48,7 +48,6 @@ export default function HomeScreen() {
   const [familyGroupsExpanded, setFamilyGroupsExpanded] = useState(false);
   
   // Search state
-  const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -64,8 +63,6 @@ export default function HomeScreen() {
 
   // Handle search
   const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-    
     if (query.trim().length === 0) {
       setShowSearchResults(false);
       setSearchResults([]);
@@ -374,7 +371,7 @@ export default function HomeScreen() {
         <SearchResults
           results={searchResults}
           loading={searchLoading}
-          emptyMessage="No results found. Try searching for your child's name, milestones, or family activities."
+          emptyMessage="No results found. Try searching for your child&apos;s name, milestones, or family activities."
         />
       );
     }

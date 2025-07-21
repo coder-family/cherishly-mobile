@@ -2,11 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 interface AppHeaderProps {
@@ -83,20 +83,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     }
   };
 
-  const handleForward = () => {
-    // console.log('Forward button pressed');
-    try {
-      if (onForward) {
-        // console.log('Calling custom onForward function');
-        onForward();
-      } else {
-        // console.log('No forward function provided');
-      }
-    } catch (error) {
-      console.error('Error in forward navigation:', error);
-      Alert.alert('Navigation Error', 'Unable to go forward');
-    }
-  };
+
 
   return (
     <View style={styles.headerContainer}>

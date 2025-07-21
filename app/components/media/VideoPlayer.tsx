@@ -2,11 +2,10 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { ResizeMode, Video } from 'expo-av';
 import React, { useRef, useState } from 'react';
 import {
-    Dimensions,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 
 interface VideoPlayerProps {
@@ -15,7 +14,7 @@ interface VideoPlayerProps {
   onPlaybackStatusUpdate?: (status: any) => void;
 }
 
-const { width: screenWidth } = Dimensions.get('window');
+
 
 export default function VideoPlayer({ uri, style, onPlaybackStatusUpdate }: VideoPlayerProps) {
   const videoRef = useRef<Video>(null);
