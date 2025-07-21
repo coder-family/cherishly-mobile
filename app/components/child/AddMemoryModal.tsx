@@ -2,18 +2,19 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAppDispatch } from '../../redux/hooks';
 import { createMemory } from '../../redux/slices/memorySlice';
+import authService from '../../services/authService';
 import { CreateMemoryData } from '../../services/memoryService';
 import { conditionalLog } from '../../utils/logUtils';
 
@@ -109,7 +110,6 @@ export default function AddMemoryModal({ visible, onClose, childId }: AddMemoryM
       setLoading(true);
 
       // Check authentication first
-      const authService = (await import('../../services/authService')).default;
       const token = await authService.getAccessToken();
       const isAuthenticated = await authService.isAuthenticated();
       
