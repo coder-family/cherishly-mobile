@@ -1,8 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  FlatList,
+  Animated,
   Image,
   RefreshControl,
   ScrollView,
@@ -36,6 +36,15 @@ export default function ChildProfileScreen() {
   const { memories, loading: memoriesLoading, error: memoriesError, hasMore } = useAppSelector((state) => state.memories);
   const { currentUser } = useAppSelector((state) => state.user);
   const [activeTab, setActiveTab] = useState<TabType>('timeline');
+
+  // Animation refs
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerHeight = 200; // Height of the collapsible section (child info + tabs only)
+  const headerTranslateY = scrollY.interpolate({
+    inputRange: [0, headerHeight],
+    outputRange: [0, -headerHeight],
+    extrapolate: 'clamp',
+  });
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -386,70 +395,115 @@ export default function ChildProfileScreen() {
       );
     }
 
-    // For memories tab, use a different layout to avoid ScrollView nesting
+    // For memories tab, use collapsible header layout
     if (activeTab === 'memories') {
       return (
         <View style={styles.container}>
-          {/* Child Header */}
-          <View style={styles.childHeader}>
-            <View style={styles.childInfo}>
-              {currentChild.avatarUrl ? (
-                <Image source={{ uri: currentChild.avatarUrl }} style={styles.childAvatar} />
-              ) : (
-                <View style={styles.childAvatarPlaceholder}>
-                  <MaterialIcons name="person" size={60} color="#ccc" />
-                </View>
-              )}
-              <View style={styles.childDetails}>
-                <Text style={styles.childName}>{getDisplayName(currentChild.name)}</Text>
-                <Text style={styles.childAge}>{getAge(currentChild.birthdate)}</Text>
-                <Text style={styles.childBirthdate}>Born {formatDate(currentChild.birthdate)}</Text>
-                {currentChild.bio && (
-                  <Text style={styles.childBio}>{currentChild.bio}</Text>
+          {/* Fixed App Header */}
+          <View style={styles.fixedAppHeader}>
+            <AppHeader
+              title={currentChild ? `${getDisplayName(currentChild.name)}'s Profile` : 'Child Profile'}
+              onBack={handleBack}
+              onSearchChange={handleSearch}
+              searchPlaceholder={`Search for ${currentChild ? getDisplayName(currentChild.name) : 'child'}'s memories, milestones, health records...`}
+              showBackButton={true}
+              canGoBack={true}
+            />
+          </View>
+
+          {/* Collapsible Header */}
+          <Animated.View 
+            style={[
+              styles.collapsibleHeader,
+              {
+                transform: [{ translateY: headerTranslateY }],
+                zIndex: 1000,
+              }
+            ]}
+          >
+            {/* Child Header */}
+            <View style={styles.childHeader}>
+              <View style={styles.childInfo}>
+                {currentChild.avatarUrl ? (
+                  <Image source={{ uri: currentChild.avatarUrl }} style={styles.childAvatar} />
+                ) : (
+                  <View style={styles.childAvatarPlaceholder}>
+                    <MaterialIcons name="person" size={60} color="#ccc" />
+                  </View>
                 )}
+                <View style={styles.childDetails}>
+                  <Text style={styles.childName}>{getDisplayName(currentChild.name)}</Text>
+                  <Text style={styles.childAge}>{getAge(currentChild.birthdate)}</Text>
+                  <Text style={styles.childBirthdate}>Born {formatDate(currentChild.birthdate)}</Text>
+                  {currentChild.bio && (
+                    <Text style={styles.childBio}>{currentChild.bio}</Text>
+                  )}
+                </View>
               </View>
             </View>
-          </View>
 
-          {/* Tab Navigation */}
-          <View style={styles.tabContainer}>
-            {[
-              { key: 'timeline', label: 'Timeline', icon: 'timeline' },
-              { key: 'health', label: 'Health', icon: 'medical-services' },
-              { key: 'memories', label: 'Memories', icon: 'photo' },
-              { key: 'qa', label: 'Q&A', icon: 'help' },
-              { key: 'profile', label: 'Profile', icon: 'person' }
-            ].map(tab => (
-              <TouchableOpacity
-                key={tab.key}
-                style={[
-                  styles.tabButton,
-                  activeTab === tab.key && styles.activeTabButton
-                ]}
-                onPress={() => {
-                  // console.log(`Tab pressed: ${tab.key}`);
-                  setActiveTab(tab.key as TabType);
-                }}
-                activeOpacity={0.7}
-                hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-              >
-                <MaterialIcons
-                  name={tab.icon as any}
-                  size={20}
-                  color={activeTab === tab.key ? '#4f8cff' : '#666'}
-                />
-                <Text style={[
-                  styles.tabText,
-                  activeTab === tab.key && styles.activeTabText
-                ]}>
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+            {/* Tab Navigation */}
+            <View style={styles.tabContainer}>
+              {[
+                { key: 'timeline', label: 'Timeline', icon: 'timeline' },
+                { key: 'health', label: 'Health', icon: 'medical-services' },
+                { key: 'memories', label: 'Memories', icon: 'photo' },
+                { key: 'qa', label: 'Q&A', icon: 'help' },
+                { key: 'profile', label: 'Profile', icon: 'person' }
+              ].map(tab => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tabButton,
+                    activeTab === tab.key && styles.activeTabButton
+                  ]}
+                  onPress={() => {
+                    setActiveTab(tab.key as TabType);
+                  }}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                >
+                  <MaterialIcons
+                    name={tab.icon as any}
+                    size={20}
+                    color={activeTab === tab.key ? '#4f8cff' : '#666'}
+                  />
+                  <Text style={[
+                    styles.tabText,
+                    activeTab === tab.key && styles.activeTabText
+                  ]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
 
-          {/* Memories Content */}
-          {renderMemoriesContent()}
+          {/* Scrollable Content */}
+          <Animated.ScrollView
+            style={styles.scrollableContent}
+            contentContainerStyle={[
+              styles.scrollableContentContainer,
+              { paddingTop: 80 + headerHeight + 20 } // AppHeader height + collapsible header height + padding
+            ]}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={memoriesLoading && memories.length === 0}
+                onRefresh={retryLoadMemories}
+                colors={['#4f8cff']}
+                tintColor="#4f8cff"
+              />
+            }
+          >
+            {/* Memories Content */}
+            {renderMemoriesContent()}
+          </Animated.ScrollView>
         </View>
       );
     }
@@ -457,6 +511,16 @@ export default function ChildProfileScreen() {
     // For other tabs, use ScrollView
     return (
       <ScrollView style={styles.container}>
+        {/* App Header */}
+        <AppHeader
+          title={currentChild ? `${getDisplayName(currentChild.name)}'s Profile` : 'Child Profile'}
+          onBack={handleBack}
+          onSearchChange={handleSearch}
+          searchPlaceholder={`Search for ${currentChild ? getDisplayName(currentChild.name) : 'child'}'s memories, milestones, health records...`}
+          showBackButton={true}
+          canGoBack={true}
+        />
+        
         {/* Child Header */}
         <View style={styles.childHeader}>
           <View style={styles.childInfo}>
@@ -529,14 +593,6 @@ export default function ChildProfileScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      <AppHeader
-        title={currentChild ? `${getDisplayName(currentChild.name)}'s Profile` : 'Child Profile'}
-        onBack={handleBack}
-        onSearchChange={handleSearch}
-        searchPlaceholder={`Search for ${currentChild ? getDisplayName(currentChild.name) : 'child'}'s memories, milestones, health records...`}
-        showBackButton={true}
-        canGoBack={true}
-      />
       {renderMainContent()}
       {id && (
         <AddMemoryModal
@@ -684,40 +740,36 @@ export default function ChildProfileScreen() {
           </TouchableOpacity>
         </View>
         
-        <FlatList
-          data={getUniqueMemories()}
-          keyExtractor={keyExtractor}
-          refreshControl={
-            <RefreshControl
-              refreshing={memoriesLoading && memories.length === 0}
-              onRefresh={retryLoadMemories}
-              colors={['#4f8cff']}
-              tintColor="#4f8cff"
-            />
-          }
-          renderItem={({ item }) => (
-            <MemoryItem
-              memory={item}
-              creator={currentUser || undefined}
-              onPress={handleMemoryPress}
-              onEdit={handleMemoryEdit}
-              onDelete={handleMemoryDelete}
-              onLike={handleMemoryLike}
-              onComment={handleMemoryComment}
-            />
-          )}
-          onEndReached={loadMoreMemories}
-          onEndReachedThreshold={0.1}
-          ListFooterComponent={
-            memoriesLoading && memories.length > 0 ? (
-              <View style={styles.loadingMore}>
-                <LoadingSpinner message="Loading more memories..." />
-              </View>
-            ) : null
-          }
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.memoriesList}
-        />
+        {/* Render memories as regular views instead of FlatList */}
+        {getUniqueMemories().map((memory, index) => (
+          <MemoryItem
+            key={keyExtractor(memory, index)}
+            memory={memory}
+            creator={currentUser || undefined}
+            onPress={handleMemoryPress}
+            onEdit={handleMemoryEdit}
+            onDelete={handleMemoryDelete}
+            onLike={handleMemoryLike}
+            onComment={handleMemoryComment}
+          />
+        ))}
+        
+        {/* Load more indicator */}
+        {memoriesLoading && memories.length > 0 && (
+          <View style={styles.loadingMore}>
+            <LoadingSpinner message="Loading more memories..." />
+          </View>
+        )}
+        
+        {/* Load more trigger */}
+        {hasMore && !memoriesLoading && (
+          <TouchableOpacity 
+            style={styles.loadMoreButton}
+            onPress={loadMoreMemories}
+          >
+            <Text style={styles.loadMoreButtonText}>Load More</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -777,9 +829,32 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  fixedAppHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    zIndex: 1001,
+  },
+  collapsibleHeader: {
+    position: 'absolute',
+    top: 80, // Position below the AppHeader
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    zIndex: 1000,
+  },
+  scrollableContent: {
+    flex: 1,
+  },
+  scrollableContentContainer: {
+    flexGrow: 1,
+  },
   childHeader: {
     backgroundColor: '#f8f9ff',
     padding: 20,
+    paddingTop: 50,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
@@ -953,5 +1028,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  loadMoreButton: {
+    backgroundColor: '#f0f8ff',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  loadMoreButtonText: {
+    color: '#4f8cff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

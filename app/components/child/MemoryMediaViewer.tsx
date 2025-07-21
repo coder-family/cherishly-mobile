@@ -36,6 +36,7 @@ export default function MemoryMediaViewer({
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [currentScrollIndex, setCurrentScrollIndex] = useState<number>(0);
+  const [showCounter, setShowCounter] = useState<boolean>(true);
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Ensure attachments are valid and have required fields
@@ -328,6 +329,11 @@ export default function MemoryMediaViewer({
               }
               
               setCurrentScrollIndex(actualIndex);
+              
+              // Show counter again after scrolling stops
+              setTimeout(() => {
+                setShowCounter(true);
+              }, 1000); // Show after 1 second of no scrolling
             }}
             onScroll={(event) => {
               const newIndex = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
@@ -341,6 +347,10 @@ export default function MemoryMediaViewer({
               }
               
               setCurrentScrollIndex(actualIndex);
+            }}
+            onScrollBeginDrag={() => {
+              // Hide counter when user starts scrolling
+              setShowCounter(false);
             }}
             scrollEventThrottle={16}
           >
@@ -404,7 +414,7 @@ export default function MemoryMediaViewer({
         )}
 
         {/* Counter at bottom */}
-        {selectedAttachment && safeAttachments.length > 1 && (
+        {selectedAttachment && safeAttachments.length > 1 && showCounter && (
           <View style={styles.fullScreenInfoContainer}>
             <Text style={styles.attachmentCounter}>
               {currentScrollIndex + 1} / {safeAttachments.length}
@@ -644,6 +654,7 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: "center",
   },
+
   attachmentName: {
     fontSize: 16,
     color: "#fff",
