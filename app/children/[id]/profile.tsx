@@ -494,8 +494,12 @@ export default function ChildProfileScreen() {
                 activeTab === tab.key && styles.activeTabButton
               ]}
               onPress={() => {
-                console.log(`Tab pressed: ${tab.key}`);
-                setActiveTab(tab.key as TabType);
+                // Using a predefined list of valid tab keys to prevent log injection
+                const validTabKeys = ['timeline', 'health', 'memories', 'qa', 'profile'];
+                if (validTabKeys.includes(tab.key)) {
+                  console.log(`Tab pressed: ${tab.key}`);
+                  setActiveTab(tab.key as TabType);
+                }
               }}
               activeOpacity={0.7}
               hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
