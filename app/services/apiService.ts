@@ -1,6 +1,6 @@
 import { API_BASE_URL } from '@env';
 import axios from "axios";
-import { sanitizeApiRequest } from '../utils/logUtils';
+import { conditionalLog, sanitizeApiRequest } from '../utils/logUtils';
 // Type definitions
 interface ApiError {
   message: string;
@@ -17,7 +17,7 @@ interface ApiResponse<T = any> {
 
 const apiService = axios.create({
     // baseURL: "https://growing-together-app.onrender.com/api",
-    baseURL: API_BASE_URL,
+    baseURL: API_BASE_URL || "https://growing-together-app.onrender.com/api",
     timeout: 30000, 
     headers: {
       "Content-Type": "application/json",
@@ -32,7 +32,7 @@ export const API_BASE_URL_EXPORT = API_BASE_URL;
 apiService.interceptors.request.use(
   async (config) => {
     // Log the request for debugging (sanitized to remove sensitive data)
-    console.log("API Request:", sanitizeApiRequest(config));
+    conditionalLog.api("API Request:", sanitizeApiRequest(config));
     
     // Add auth token if available
     try {
@@ -42,7 +42,7 @@ apiService.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
-      console.warn('Error adding auth token:', error);
+      conditionalLog.auth('Error adding auth token:', error);
     }
     return config;
   },

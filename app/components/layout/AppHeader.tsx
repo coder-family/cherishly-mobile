@@ -40,11 +40,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   const [searchText, setSearchText] = useState('');
 
   // Debug logging for props
-  console.log('=== APP HEADER DEBUG ===');
-  console.log('showBackButton:', showBackButton);
-  console.log('canGoBack:', canGoBack);
-  console.log('onBack provided:', !!onBack);
-  console.log('title:', title);
+  // console.log('=== APP HEADER DEBUG ===');
+  // console.log('showBackButton:', showBackButton);
+  // console.log('canGoBack:', canGoBack);
+  // console.log('onBack provided:', !!onBack);
+  // console.log('title:', title);
 
   const handleSearchChange = (text: string) => {
     setSearchText(text);
@@ -54,27 +54,27 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   const handleBack = () => {
-    console.log('=== HANDLE BACK CALLED ===');
-    console.log('=== CHILD PROFILE BACK PRESSED ===');
-    console.log('onBack prop:', !!onBack);
-    console.log('canGoBack prop:', canGoBack);
+    // console.log('=== HANDLE BACK CALLED ===');
+    // console.log('=== CHILD PROFILE BACK PRESSED ===');
+    // console.log('onBack prop:', !!onBack);
+    // console.log('canGoBack prop:', canGoBack);
     
     try {
       if (onBack) {
-        console.log('Executing custom onBack function');
+        // console.log('Executing custom onBack function');
         onBack();
       } else {
-        console.log('Executing router.back()');
+        // console.log('Executing router.back()');
         router.back();
       }
-      console.log('Back navigation completed successfully');
+      // console.log('Back navigation completed successfully');
     } catch (error) {
       console.error('=== BACK NAVIGATION ERROR ===');
       console.error('Error details:', error);
       
       // Fallback: navigate to home
       try {
-        console.log('Attempting fallback navigation to home');
+        // console.log('Attempting fallback navigation to home');
         router.push('/tabs/home');
       } catch (fallbackError) {
         console.error('Fallback navigation failed:', fallbackError);
@@ -84,13 +84,13 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   const handleForward = () => {
-    console.log('Forward button pressed');
+    // console.log('Forward button pressed');
     try {
       if (onForward) {
-        console.log('Calling custom onForward function');
+        // console.log('Calling custom onForward function');
         onForward();
       } else {
-        console.log('No forward function provided');
+        // console.log('No forward function provided');
       }
     } catch (error) {
       console.error('Error in forward navigation:', error);
@@ -105,14 +105,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         <View style={styles.searchRow}>
           {/* Back Arrow */}
           {showBackButton && (() => {
-            console.log('=== RENDERING BACK BUTTON ===');
-            console.log('showBackButton is true, rendering button');
+            // console.log('=== RENDERING BACK BUTTON ===');
+            // console.log('showBackButton is true, rendering button');
             return true;
           })() && (
             <TouchableOpacity 
               onPress={() => {
-                console.log('=== TOUCHABLE OPACITY PRESSED ===');
-                console.log('handleBack about to be called');
+                // console.log('=== TOUCHABLE OPACITY PRESSED ===');
+                // console.log('handleBack about to be called');
                 handleBack();
               }} 
               style={[
@@ -124,8 +124,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               activeOpacity={0.7}
               hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
               testID="back-button"
-              onPressIn={() => console.log('=== BACK BUTTON PRESS IN ===')}
-              onPressOut={() => console.log('=== BACK BUTTON PRESS OUT ===')}
+              onPressIn={() => {/* console.log('=== BACK BUTTON PRESS IN ===') */}}
+              onPressOut={() => {/* console.log('=== BACK BUTTON PRESS OUT ===') */}}
             >
               <Ionicons 
                 name="arrow-back" 

@@ -78,7 +78,7 @@ export class ChildUtils {
    */
   static handleAddChildPress(dispatch: AppDispatch, hasChildren: boolean, onOpenModal?: () => void) {
     // Log for debugging
-    console.log('Add child button pressed:', { hasChildren });
+    // console.log('Add child button pressed:', { hasChildren });
     
     // If modal callback is provided, use it; otherwise navigate to add child screen
     if (onOpenModal) {
@@ -93,7 +93,7 @@ export class ChildUtils {
    */
   static handleChildCardPress(childId: string, childName?: string) {
     // Log for debugging
-    console.log('Child card pressed:', { childId, childName });
+    // console.log('Child card pressed:', { childId, childName });
     
     // Navigate to child profile
     this.navigateToChildProfile(childId);
@@ -103,7 +103,7 @@ export class ChildUtils {
    * Refresh children data
    */
   static refreshChildren(dispatch: AppDispatch) {
-    console.log('Refreshing children data...');
+    // console.log('Refreshing children data...');
     dispatch(fetchChildren());
   }
 

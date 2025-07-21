@@ -1,3 +1,4 @@
+import { conditionalLog } from '../utils/logUtils';
 import { getChildren } from './childService';
 import { getFamilyGroups } from './familyService';
 
@@ -100,8 +101,8 @@ class SearchService {
       return this.sortResults(results, sortBy).slice(0, limit);
 
     } catch (error) {
-      console.error('Search error:', error);
-      return [];
+      conditionalLog.search('Search error:', error);
+      throw error;
     }
   }
 
@@ -135,8 +136,8 @@ class SearchService {
 
       return results;
     } catch (error) {
-      console.error('Error searching children:', error);
-      return [];
+      conditionalLog.search('Error searching children:', error);
+      throw error;
     }
   }
 
@@ -169,8 +170,8 @@ class SearchService {
 
       return results;
     } catch (error) {
-      console.error('Error searching family groups:', error);
-      return [];
+      conditionalLog.search('Error searching family groups:', error);
+      throw error;
     }
   }
 

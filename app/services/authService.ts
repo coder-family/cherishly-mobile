@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { conditionalLog } from "../utils/logUtils";
 import apiService from "./apiService";
 
 // Storage keys for AsyncStorage - these are key names, not actual credentials
@@ -111,7 +112,7 @@ class AuthService {
       this.isInitialized = true;
       return false;
     } catch (error) {
-      console.error("Auth initialization error:", sanitizeForLogging(error));
+      conditionalLog.authError("Auth initialization error:", sanitizeForLogging(error));
       await this.clearTokens();
       this.isInitialized = true;
       return false;
@@ -151,7 +152,7 @@ class AuthService {
 
       // Validate required fields
       if (!user || !accessToken || !refreshToken) {
-        console.error(
+        conditionalLog.authError(
           "Invalid login response structure:",
           sanitizeForLogging(response)
         );
@@ -185,18 +186,18 @@ class AuthService {
 
       return { user, tokens: { accessToken, refreshToken, expiresIn } };
     } catch (error: any) {
-      console.error("Login error details:", sanitizeForLogging(error));
+      conditionalLog.authError("Login error details:", sanitizeForLogging(error));
 
       if (error.response) {
         // The request was made and the server responded with a status code
         if (error.response.status === 401) {
-          console.error(
+          conditionalLog.authError(
             "Authentication failed: Invalid email or password.",
             sanitizeForLogging(error.response.data)
           );
           throw new Error("Authentication failed: Invalid email or password.");
         } else {
-          console.error(
+          conditionalLog.authError(
             `Server error (${error.response.status}):`,
             sanitizeForLogging(error.response.data)
           );
@@ -209,14 +210,14 @@ class AuthService {
         }
       } else if (error.request) {
         // The request was made but no response was received
-        console.error(
+        conditionalLog.authError(
           "Network error: No response received from server.",
           sanitizeForLogging(error.request)
         );
         throw new Error("Network error: No response received from server.");
       } else {
         // Something else happened
-        console.error(
+        conditionalLog.authError(
           "Unexpected login error:",
           sanitizeForLogging(error.message)
         );
@@ -257,7 +258,7 @@ class AuthService {
 
       // Validate required fields
       if (!user || !accessToken || !refreshToken) {
-        console.error(
+        conditionalLog.authError(
           "Invalid register response structure:",
           sanitizeForLogging(response)
         );
@@ -291,7 +292,7 @@ class AuthService {
 
       return { user, tokens: { accessToken, refreshToken, expiresIn } };
     } catch (error: any) {
-      console.error("Register error details:", sanitizeForLogging(error));
+      conditionalLog.authError("Register error details:", sanitizeForLogging(error));
 
       if (error.response) {
         // The request was made and the server responded with a status code
@@ -324,19 +325,19 @@ class AuthService {
               }
             }
           }
-          console.error(
+          conditionalLog.authError(
             "Registration failed: Invalid data provided.",
             sanitizeForLogging(error.response.data)
           );
           throw new Error(message);
         } else if (error.response.status === 409) {
-          console.error(
+          conditionalLog.authError(
             "Registration failed: User already exists.",
             sanitizeForLogging(error.response.data)
           );
           throw new Error("Registration failed: User already exists.");
         } else {
-          console.error(
+          conditionalLog.authError(
             `Server error (${error.response.status}):`,
             sanitizeForLogging(error.response.data)
           );
@@ -349,14 +350,14 @@ class AuthService {
         }
       } else if (error.request) {
         // The request was made but no response was received
-        console.error(
+        conditionalLog.authError(
           "Network error: No response received from server.",
           sanitizeForLogging(error.request)
         );
         throw new Error("Network error: No response received from server.");
       } else {
         // Something else happened
-        console.error(
+        conditionalLog.authError(
           "Unexpected registration error:",
           sanitizeForLogging(error.message)
         );
@@ -372,7 +373,7 @@ class AuthService {
     try {
       // No API call needed if there's no logout endpoint
     } catch (error) {
-      console.warn("Logout error:", sanitizeForLogging(error));
+      conditionalLog.auth("Logout error:", sanitizeForLogging(error));
     } finally {
       await this.clearTokens();
       this.currentUser = null;
@@ -400,7 +401,7 @@ class AuthService {
 
       return await this.isTokenValid(token);
     } catch (error) {
-      console.error("Error checking authentication status:", sanitizeForLogging(error));
+      conditionalLog.authError("Error checking authentication status:", sanitizeForLogging(error));
       return false;
     }
   }
@@ -412,7 +413,7 @@ class AuthService {
     try {
       return await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
     } catch (error) {
-      console.error("Error getting access token:", sanitizeForLogging(error));
+      conditionalLog.authError("Error getting access token:", sanitizeForLogging(error));
       return null;
     }
   }
@@ -424,7 +425,7 @@ class AuthService {
     try {
       return await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
     } catch (error) {
-      console.error("Error getting refresh token:", sanitizeForLogging(error));
+      conditionalLog.authError("Error getting refresh token:", sanitizeForLogging(error));
       return null;
     }
   }
@@ -442,7 +443,7 @@ class AuthService {
         AsyncStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, expiryTime.toString()),
       ]);
     } catch (error) {
-      console.error("Error storing tokens:", sanitizeForLogging(error));
+      conditionalLog.authError("Error storing tokens:", sanitizeForLogging(error));
       throw new Error("Failed to store authentication tokens");
     }
   }
@@ -454,7 +455,7 @@ class AuthService {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
     } catch (error) {
-      console.error("Error storing user data:", sanitizeForLogging(error));
+      conditionalLog.authError("Error storing user data:", sanitizeForLogging(error));
       throw new Error("Failed to store user data");
     }
   }
@@ -467,7 +468,7 @@ class AuthService {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error("Error getting user data:", sanitizeForLogging(error));
+      conditionalLog.authError("Error getting user data:", sanitizeForLogging(error));
       throw new Error("Failed to retrieve user data");
     }
   }
@@ -484,7 +485,7 @@ class AuthService {
         AsyncStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRY),
       ]);
     } catch (error) {
-      console.error("Error clearing tokens:", sanitizeForLogging(error));
+      conditionalLog.authError("Error clearing tokens:", sanitizeForLogging(error));
       throw error;
     }
   }
@@ -504,7 +505,7 @@ class AuthService {
       // await apiService.get('/auth/verify');
       return true;
     } catch (error) {
-      console.error("Token validation error:", sanitizeForLogging(error));
+      conditionalLog.authError("Token validation error:", sanitizeForLogging(error));
       return false;
     }
   }
@@ -536,7 +537,7 @@ class AuthService {
 
       return true;
     } catch (error) {
-      console.error("Token refresh error:", sanitizeForLogging(error));
+      conditionalLog.authError("Token refresh error:", sanitizeForLogging(error));
       await this.clearTokens();
       return false;
     }
@@ -551,7 +552,7 @@ class AuthService {
         email,
       });
     } catch (error: any) {
-      console.error("Forgot password error:", sanitizeForLogging(error));
+      conditionalLog.authError("Forgot password error:", sanitizeForLogging(error));
       console.error("Error details:", {
         message: error?.message,
         status: error?.status,
@@ -584,7 +585,7 @@ class AuthService {
       const response = await apiService.put("/users/change-password", { currentPassword, newPassword });
       return response;
     } catch (error: any) {
-      console.error("Change password error:", sanitizeForLogging(error));
+      conditionalLog.authError("Change password error:", sanitizeForLogging(error));
       if (error.response) {
         throw new Error(
           `Server error (${error.response.status}): ${

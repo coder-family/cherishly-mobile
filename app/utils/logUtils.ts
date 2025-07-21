@@ -1,3 +1,65 @@
+// Logging Configuration - Set to false to disable specific types of logs
+export const LOG_CONFIG = {
+  // Memory-related logs (keep these ON for your current work)
+  MEMORY: false,
+  MEMORY_API: false, // Disable memory API logs to reduce noise
+  MEMORY_REDUX: false,
+  MEMORY_UI: true, // Temporarily enable to debug modal interactions
+  
+  // Turn these OFF to reduce noise
+  API_REQUESTS: false,        // API service requests
+  AUTH: false,               // Authentication operations  
+  SEARCH: false,             // Search operations
+  FAMILY: false,             // Family service operations
+  CHILD: false,              // Child service operations
+  MEDIA: false,              // Audio/Video/Image operations
+  NAVIGATION: false,         // Router navigation
+  GENERAL: false,            // General app logs
+};
+
+// Conditional logging functions
+export const conditionalLog = {
+  memory: (message: string, ...args: any[]) => {
+    if (LOG_CONFIG.MEMORY) console.log(`[MEMORY] ${message}`, ...args);
+  },
+  memoryApi: (message: string, ...args: any[]) => {
+    if (LOG_CONFIG.MEMORY_API) console.log(`[MEMORY-API] ${message}`, ...args);
+  },
+  memoryRedux: (message: string, ...args: any[]) => {
+    if (LOG_CONFIG.MEMORY_REDUX) console.log(`[MEMORY-REDUX] ${message}`, ...args);
+  },
+  memoryUI: (message: string, ...args: any[]) => {
+    if (LOG_CONFIG.MEMORY_UI) console.log(`[MEMORY-UI] ${message}`, ...args);
+  },
+  api: (message: string, ...args: any[]) => {
+    if (LOG_CONFIG.API_REQUESTS) console.log(`[API] ${message}`, ...args);
+  },
+  auth: (message: string, ...args: any[]) => {
+    if (LOG_CONFIG.AUTH) console.log(`[AUTH] ${message}`, ...args);
+  },
+  authError: (message: string, ...args: any[]) => {
+    if (LOG_CONFIG.AUTH) console.error(`[AUTH-ERROR] ${message}`, ...args);
+  },
+  search: (message: string, ...args: any[]) => {
+    if (LOG_CONFIG.SEARCH) console.log(`[SEARCH] ${message}`, ...args);
+  },
+  family: (message: string, ...args: any[]) => {
+    if (LOG_CONFIG.FAMILY) console.log(`[FAMILY] ${message}`, ...args);
+  },
+  child: (message: string, ...args: any[]) => {
+    if (LOG_CONFIG.CHILD) console.log(`[CHILD] ${message}`, ...args);
+  },
+  media: (message: string, ...args: any[]) => {
+    if (LOG_CONFIG.MEDIA) console.log(`[MEDIA] ${message}`, ...args);
+  },
+  navigation: (message: string, ...args: any[]) => {
+    if (LOG_CONFIG.NAVIGATION) console.log(`[NAV] ${message}`, ...args);
+  },
+  general: (message: string, ...args: any[]) => {
+    if (LOG_CONFIG.GENERAL) console.log(`[APP] ${message}`, ...args);
+  },
+};
+
 // Helper function for string sanitization
 function sanitizeString(input: string, options: { removeEsc?: boolean; maxLength?: number } = {}): string {
   const { removeEsc = false, maxLength } = options;

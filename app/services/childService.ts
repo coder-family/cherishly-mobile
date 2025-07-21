@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '@env';
+import { conditionalLog } from '../utils/logUtils';
 import apiService from './apiService';
 import authService from './authService';
 
@@ -80,7 +81,7 @@ export async function getChildren(): Promise<Child[]> {
     
     return transformedChildren;
   } catch (error) {
-    console.error('Error fetching children:', error);
+    conditionalLog.child('Error fetching children:', error);
     throw error; // Re-throw to allow calling code to handle the error
   }
 }
