@@ -52,7 +52,7 @@ export default function MemoryMediaViewer({
 
   // Debug log to help identify issues
   if (!attachments) {
-    console.warn("MemoryMediaViewer: attachments prop is undefined or null");
+    // console.warn("MemoryMediaViewer: attachments prop is undefined or null"); // Commented out - not related to health/growth
   }
 
   // Generate a unique key for this memory's expanded state
@@ -77,8 +77,8 @@ export default function MemoryMediaViewer({
             setIsExpanded(true);
           }
         }
-      } catch (error) {
-        console.error("Error loading expanded state:", error);
+      } catch {
+        // console.error("Error loading expanded state:", error); // Commented out - not related to health/growth
       }
     };
 
@@ -93,8 +93,8 @@ export default function MemoryMediaViewer({
         if (key) {
           await AsyncStorage.setItem(key, expanded.toString());
         }
-      } catch (error) {
-        console.error("Error saving expanded state:", error);
+      } catch {
+        // console.error("Error saving expanded state:", error); // Commented out - not related to health/growth
       }
     },
     [getExpandedStateKey]
@@ -127,7 +127,7 @@ export default function MemoryMediaViewer({
   const audios = safeAttachments.filter((att) => att.type === "audio");
 
   // Determine which media to show in preview
-  const previewMedia = safeAttachments.slice(0, maxPreviewCount);
+  // const previewMedia = safeAttachments.slice(0, maxPreviewCount);
   const remainingCount = safeAttachments.length - maxPreviewCount;
   const hasMoreMedia = remainingCount > 0;
 
@@ -355,7 +355,7 @@ export default function MemoryMediaViewer({
             scrollEventThrottle={16}
           >
             {/* Clone last item at the beginning */}
-            {safeAttachments.length > 1 && safeAttachments.slice(-1).map((attachment, index) => (
+            {safeAttachments.length > 1 && safeAttachments.slice(-1).map((attachment, _index) => (
               <View key={`clone-last-${attachment.id}`} style={styles.fullScreenItem}>
                 {attachment.type === "image" && (
                   <Image
@@ -393,7 +393,7 @@ export default function MemoryMediaViewer({
             ))}
             
             {/* Clone first item at the end */}
-            {safeAttachments.length > 1 && safeAttachments.slice(0, 1).map((attachment, index) => (
+            {safeAttachments.length > 1 && safeAttachments.slice(0, 1).map((attachment, _index) => (
               <View key={`clone-first-${attachment.id}`} style={styles.fullScreenItem}>
                 {attachment.type === "image" && (
                   <Image

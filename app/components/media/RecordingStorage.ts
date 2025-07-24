@@ -50,8 +50,8 @@ export class RecordingStorage {
       await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(recordings));
 
       return newRecording;
-    } catch (error) {
-      console.error('Error saving recording:', error);
+    } catch (_error) {
+      // console.error('Error saving recording:', error); // Commented out - not related to health/growth
       throw new Error('Failed to save recording');
     }
   }
@@ -63,8 +63,8 @@ export class RecordingStorage {
     try {
       const data = await AsyncStorage.getItem(this.STORAGE_KEY);
       return data ? JSON.parse(data) : [];
-    } catch (error) {
-      console.error('Error getting recordings:', error);
+    } catch (_error) {
+      // console.error('Error getting recordings:', error); // Commented out - not related to health/growth
       return [];
     }
   }
@@ -79,8 +79,8 @@ export class RecordingStorage {
       }
       const recordings = await this.getAllRecordings();
       return recordings.find(recording => recording.id === id) || null;
-    } catch (error) {
-      console.error('Error getting recording:', error);
+    } catch (_error) {
+      // console.error('Error getting recording:', error); // Commented out - not related to health/growth
       return null;
     }
   }
@@ -102,8 +102,8 @@ export class RecordingStorage {
       await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(recordings));
       
       return true;
-    } catch (error) {
-      console.error('Error updating recording:', error);
+    } catch (_error) {
+      // console.error('Error updating recording:', error); // Commented out - not related to health/growth
       return false;
     }
   }
@@ -118,8 +118,8 @@ export class RecordingStorage {
       
       await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(filteredRecordings));
       return true;
-    } catch (error) {
-      console.error('Error deleting recording:', error);
+    } catch (_error) {
+      // console.error('Error deleting recording:', error); // Commented out - not related to health/growth
       return false;
     }
   }
@@ -130,8 +130,8 @@ export class RecordingStorage {
   static async clearAllRecordings(): Promise<void> {
     try {
       await AsyncStorage.removeItem(this.STORAGE_KEY);
-    } catch (error) {
-      console.error('Error clearing recordings:', error);
+    } catch (_error) {
+      // console.error('Error clearing recordings:', error); // Commented out - not related to health/growth
     }
   }
 
@@ -155,8 +155,8 @@ export class RecordingStorage {
         oldestRecording: timestamps.length > 0 ? Math.min(...timestamps) : undefined,
         newestRecording: timestamps.length > 0 ? Math.max(...timestamps) : undefined,
       };
-    } catch (error) {
-      console.error('Error getting storage stats:', error);
+    } catch (_error) {
+      // console.error('Error getting storage stats:', error); // Commented out - not related to health/growth
       return { totalRecordings: 0, totalSize: 0 };
     }
   }
@@ -176,8 +176,8 @@ export class RecordingStorage {
       }
       
       return oldRecordings.length;
-    } catch (error) {
-      console.error('Error cleaning up old recordings:', error);
+    } catch (_error) {
+      // console.error('Error cleaning up old recordings:', error); // Commented out - not related to health/growth
       return 0;
     }
   }

@@ -15,7 +15,7 @@ const FamilyGroupCard: React.FC<FamilyGroupCardProps> = ({
   avatarUrl, 
   description, 
   memberCount, 
-  subtitle = "Family Group" 
+  subtitle: _subtitle = "Family Group" 
 }) => (
   <View style={styles.card}>
     {avatarUrl ? (

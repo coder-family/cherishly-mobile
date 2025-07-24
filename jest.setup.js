@@ -226,6 +226,41 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
 
+// Mock react-native-chart-kit
+jest.mock('react-native-chart-kit', () => {
+  const React = require('react');
+  
+  const MockLineChart = (props) => {
+    return React.createElement('View', {
+      testID: 'line-chart',
+      ...props
+    }, 'LineChart');
+  };
+
+  const MockBarChart = (props) => {
+    return React.createElement('View', {
+      testID: 'bar-chart',
+      ...props
+    }, 'BarChart');
+  };
+
+  const MockPieChart = (props) => {
+    return React.createElement('View', {
+      testID: 'pie-chart',
+      ...props
+    }, 'PieChart');
+  };
+
+  return {
+    LineChart: MockLineChart,
+    BarChart: MockBarChart,
+    PieChart: MockPieChart,
+    ProgressChart: MockLineChart,
+    ContributionGraph: MockLineChart,
+    StackedBarChart: MockBarChart,
+  };
+});
+
 // Mock react-native-safe-area-context
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaProvider: ({ children }) => children,

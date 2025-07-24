@@ -139,7 +139,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
         clearInterval(durationInterval.current);
       }
     };
-  }, [isRecording, isPaused, maxDuration,stopRecording]);
+  }, [isRecording, isPaused, maxDuration, stopRecording]);
 
   // Pulse animation for recording indicator
   useEffect(() => {
@@ -167,8 +167,8 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     try {
       const storedRecordings = await RecordingStorage.getAllRecordings();
       setRecordings(storedRecordings);
-    } catch (error) {
-      console.error('Error loading recordings:', error);
+    } catch (_error) {
+      // console.error('Error loading recordings:', error); // Commented out - not related to health/growth
     }
   };
 
@@ -183,8 +183,8 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       if (durationInterval.current) {
         clearInterval(durationInterval.current);
       }
-    } catch (error) {
-      console.error('Cleanup error:', error);
+    } catch (_error) {
+      // console.error('Cleanup error:', error); // Commented out - not related to health/growth
     }
   }, [sound, recording]);
 
@@ -379,7 +379,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
         setIsPlaying(false);
         setCurrentPlayingId(undefined);
       } catch (err) {
-        console.error('Error stopping playback:', err);
+        // console.error('Error stopping playback:', err); // Commented out - not related to health/growth
       }
     }
   }, [sound, isPlaying, setIsPlaying, setCurrentPlayingId]);
@@ -415,7 +415,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       }
 
     } catch (err) {
-      console.error('Error deleting recording:', err);
+      // console.error('Error deleting recording:', err); // Commented out - not related to health/growth
       Alert.alert('Error', 'Failed to delete recording');
     }
   };

@@ -1,17 +1,16 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import authService from "../services/authService";
-import { sanitizeError } from "../utils/logUtils";
 
 export default function ResetPassword() {
   const router = useRouter();
@@ -45,7 +44,7 @@ export default function ResetPassword() {
       await authService.resetPassword(token, password);
       setSuccess(true);
     } catch (err: any) {
-      console.error("Reset password error:", sanitizeError(err));
+      // console.error("Reset password error:", sanitizeError(err)); // Commented out - not related to health/growth
 
       // If err is a string (from authService.resetPassword), use it directly
       const backendMsg =

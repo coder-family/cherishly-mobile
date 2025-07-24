@@ -553,12 +553,12 @@ class AuthService {
       });
     } catch (error: any) {
       conditionalLog.authError("Forgot password error:", sanitizeForLogging(error));
-      console.error("Error details:", {
-        message: error?.message,
-        status: error?.status,
-        url: error?.url,
-        request: error?.request ? "Request was made" : "No request made",
-      });
+      // console.error("Error details:", { // Commented out - not related to health/growth
+      //   message: error?.message,
+      //   status: error?.status,
+      //   url: error?.url,
+      //   request: error?.request ? "Request was made" : "No request made",
+      // });
       throw new Error(error?.message || "Failed to send reset email.");
     }
   }

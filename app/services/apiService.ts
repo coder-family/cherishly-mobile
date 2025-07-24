@@ -40,6 +40,13 @@ apiService.interceptors.request.use(
       const token = await authService.getAccessToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        conditionalLog.auth('Auth token added to request:', { 
+          hasToken: !!token, 
+          tokenLength: token ? token.length : 0,
+          url: config.url 
+        });
+      } else {
+        conditionalLog.auth('No auth token available for request:', { url: config.url });
       }
     } catch (error) {
       conditionalLog.auth('Error adding auth token:', error);

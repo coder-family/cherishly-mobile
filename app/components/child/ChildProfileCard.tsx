@@ -8,7 +8,7 @@ interface ChildProfileCardProps {
   bio?: string;
 }
 
-const ChildProfileCard: React.FC<ChildProfileCardProps> = ({ avatarUrl, name, birthdate, bio }) => (
+const ChildProfileCard: React.FC<ChildProfileCardProps> = ({ avatarUrl, name, birthdate: _birthdate, bio }) => (
   <View style={styles.card}>
     {avatarUrl && <Image source={{ uri: avatarUrl }} style={styles.avatar} />}
     <View style={styles.info}>

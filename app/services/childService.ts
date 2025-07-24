@@ -27,6 +27,7 @@ export interface Child {
   birthdate: string;
   avatarUrl?: string;
   bio?: string;
+  gender?: string;
   parentId: string;
   createdAt: string;
   updatedAt: string;
@@ -60,6 +61,7 @@ function transformChild(apiChild: ApiChild): Child {
     birthdate: apiChild.dateOfBirth,
     avatarUrl: apiChild.avatar,
     bio: apiChild.bio,
+    gender: apiChild.gender,
     parentId: apiChild.createdBy,
     createdAt: apiChild.createdAt,
     updatedAt: apiChild.updatedAt,
@@ -78,6 +80,11 @@ export async function getChildren(): Promise<Child[]> {
     
     // Transform API format to UI format
     const transformedChildren = childrenData.map(transformChild);
+    
+    conditionalLog.child('Fetched children:', {
+      count: transformedChildren.length,
+      children: transformedChildren.map(child => ({ id: child.id, name: child.name }))
+    });
     
     return transformedChildren;
   } catch (error) {

@@ -20,7 +20,7 @@ export default function DeepLinkTester({ visible = false }: DeepLinkTesterProps)
     { name: 'Health Record', url: deepLinkPatterns.healthRecord('health-789') },
   ];
 
-  const handleTestLink = async (url: string, name: string) => {
+  const handleTestLink = async (url: string, _name: string) => {
     
     const canOpen = await linkingUtils.canOpenURL(url);
     if (canOpen) {

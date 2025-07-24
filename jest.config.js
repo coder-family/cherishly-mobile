@@ -2,11 +2,12 @@ module.exports = {
   preset: 'jest-expo',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   transformIgnorePatterns: [
-    'node_modules/(?!(react-redux|@react-redux|expo|expo-modules-core|react-native-reanimated|@react-native|react-native|@expo)/)',
+    'node_modules/(?!(react-redux|@react-redux|expo|expo-modules-core|react-native-reanimated|@react-native|react-native|@expo|react-native-chart-kit|react-native-svg)/)',
   ],
   moduleNameMapper: {
     '^react-native/Libraries/Modal/Modal$': '<rootDir>/mocks/ModalMock.js',
     '^react-native/Libraries/Animated/NativeAnimatedHelper$': '<rootDir>/mocks/NativeAnimatedHelper.js',
+    '^react-native-svg$': '<rootDir>/mocks/react-native-svg.js',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   testEnvironment: 'jsdom',

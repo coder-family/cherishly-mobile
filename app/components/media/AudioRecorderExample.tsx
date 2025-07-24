@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { sanitizeLog } from '../../utils/logUtils';
 import AudioRecorder from './AudioRecorder';
 import { RecordingMetadata, RecordingStorage } from './RecordingStorage';
 
@@ -12,21 +11,21 @@ const AudioRecorderExample: React.FC = () => {
   }>({ totalRecordings: 0, totalSize: 0 });
 
   const handleRecordingComplete = (recording: RecordingMetadata) => {
-    console.log('Recording completed:', sanitizeLog(JSON.stringify(recording)));
+    // console.log('Recording completed:', sanitizeLog(JSON.stringify(recording))); // Commented out - not related to health/growth
     setLastRecording(recording);
     updateStorageStats();
     Alert.alert('Success', `Recording saved: ${recording.fileName}`);
   };
 
   const handleRecordingDelete = (id: string) => {
-    console.log('Recording deleted:', sanitizeLog(id));
+    // console.log('Recording deleted:', sanitizeLog(id)); // Commented out - not related to health/growth
     setLastRecording(null);
     updateStorageStats();
     Alert.alert('Deleted', 'Recording has been deleted');
   };
 
   const handleRecordingUpload = (recording: RecordingMetadata) => {
-    console.log('Recording uploaded:', sanitizeLog(JSON.stringify(recording)));
+    // console.log('Recording uploaded:', sanitizeLog(JSON.stringify(recording))); // Commented out - not related to health/growth
     Alert.alert('Uploaded', `Recording uploaded: ${recording.fileName}`);
   };
 
@@ -34,8 +33,8 @@ const AudioRecorderExample: React.FC = () => {
     try {
       const stats = await RecordingStorage.getStorageStats();
       setStorageStats(stats);
-    } catch (error) {
-      console.error('Error getting storage stats:', error);
+    } catch (_error) {
+      // console.error('Error getting storage stats:', error); // Commented out - not related to health/growth
     }
   };
 
