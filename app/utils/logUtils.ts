@@ -1,17 +1,18 @@
 // Logging Configuration - Set to false to disable specific types of logs
 export const LOG_CONFIG = {
-  // Memory-related logs (keep these ON for your current work)
+  // Memory-related logs (disable these for health/growth focus)
   MEMORY: false,
-  MEMORY_API: false, // Disable memory API logs to reduce noise
+  MEMORY_API: false,
   MEMORY_REDUX: false,
-  MEMORY_UI: true, // Temporarily enable to debug modal interactions
+  MEMORY_UI: false, // Disable memory UI logs
   
-  // Turn these OFF to reduce noise
+  // Turn these OFF to reduce noise (not related to health/growth)
   API_REQUESTS: false,        // API service requests
   AUTH: false,               // Authentication operations  
   SEARCH: false,             // Search operations
   FAMILY: false,             // Family service operations
   CHILD: false,              // Child service operations
+  HEALTH: true,              // Health service operations - ENABLE for health/growth work
   MEDIA: false,              // Audio/Video/Image operations
   NAVIGATION: false,         // Router navigation
   GENERAL: false,            // General app logs
@@ -87,6 +88,13 @@ export const conditionalLog = {
       const sanitizedMessage = sanitizeLog(message);
       const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
       console.log(`[CHILD] ${sanitizedMessage}`, ...sanitizedArgs);
+    }
+  },
+  health: (message: string, ...args: any[]) => {
+    if (LOG_CONFIG.HEALTH) {
+      const sanitizedMessage = sanitizeLog(message);
+      const sanitizedArgs = args.map(arg => sanitizeForLogging(arg));
+      console.log(`[HEALTH] ${sanitizedMessage}`, ...sanitizedArgs);
     }
   },
   media: (message: string, ...args: any[]) => {

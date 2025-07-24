@@ -33,8 +33,8 @@ export const linkingUtils = {
   canOpenURL: async (url: string) => {
     try {
       return await Linking.canOpenURL(url);
-    } catch (error) {
-      console.error('Error checking if URL can be opened:', error);
+    } catch (_error) {
+      // console.error('Error checking if URL can be opened:', error); // Commented out - not related to health/growth
       return false;
     }
   },
@@ -43,8 +43,8 @@ export const linkingUtils = {
   openURL: async (url: string) => {
     try {
       await Linking.openURL(url);
-    } catch (error) {
-      console.error('Error opening URL:', error);
+    } catch (_error) {
+      // console.error('Error opening URL:', error); // Commented out - not related to health/growth
     }
   },
 

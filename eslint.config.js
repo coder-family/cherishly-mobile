@@ -1,5 +1,7 @@
 // https://docs.expo.dev/guides/using-eslint/
 const expoConfig = require('eslint-config-expo/flat');
+const typescriptEslint = require('@typescript-eslint/eslint-plugin');
+const typescriptParser = require('@typescript-eslint/parser');
 
 module.exports = [
   ...expoConfig,
@@ -25,7 +27,24 @@ module.exports = [
     rules: {
       'import/no-unresolved': 'off', // Disable this rule as it can be problematic with React Native/Expo
       'import/no-named-as-default': 'off', // Common pattern in React Native services
-      'no-unused-vars': 'warn', // Change to warning instead of error
+      'no-unused-vars': ['warn', { 'argsIgnorePattern': '^_', 'varsIgnorePattern': '^_' }], // Allow underscore prefix for unused variables
+    },
+  },
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+    languageOptions: {
+      parser: typescriptParser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+    },
+    plugins: {
+      '@typescript-eslint': typescriptEslint,
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'off', // Disable TypeScript ESLint unused vars rule
+      'no-unused-vars': ['warn', { 'argsIgnorePattern': '^_', 'varsIgnorePattern': '^_' }], // Use regular ESLint rule with underscore pattern
     },
   },
   {

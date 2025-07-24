@@ -10,7 +10,10 @@ const iconColor = '#006400'; // Dark Green
 export const Colors = {
   light: {
     text: '#11181C',
+    textSecondary: '#6B7280',
     background: '#fff',
+    card: '#F3F4F6',
+    primary: tintColorLight,
     tint: tintColorLight,
     icon: iconColor,
     tabIconDefault: iconColor,
@@ -18,7 +21,10 @@ export const Colors = {
   },
   dark: {
     text: '#ECEDEE',
+    textSecondary: '#9CA3AF',
     background: '#151718',
+    card: '#1F2937',
+    primary: tintColorDark,
     tint: tintColorDark,
     icon: iconColor,
     tabIconDefault: iconColor,

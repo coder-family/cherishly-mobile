@@ -67,8 +67,8 @@ const ImagePicker: React.FC<ImagePickerProps> = ({ onImagePicked }) => {
         // const uploadedUrl = await uploadToCloudinary(uri);
         // console.log('Uploaded image URL:', uploadedUrl);
       }
-    } catch (error) {
-      console.error('Error picking image:', error);
+    } catch (_error) {
+      // console.error('Error picking image:', error); // Commented out - not related to health/growth
       // TODO: Show user-friendly error message (e.g., using a Toast or Alert)
     }
   };

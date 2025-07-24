@@ -99,9 +99,9 @@ const AddChildModal: React.FC<AddChildModalProps> = ({
             childId: newChild.id, 
             imageUri: avatar 
           })).unwrap();
-        } catch (avatarError: any) {
+        } catch {
           // Child was created but avatar upload failed
-          console.warn('Avatar upload failed:', avatarError);
+          // console.warn('Avatar upload failed:', avatarError); // Commented out - not related to health/growth
           Alert.alert(
             'Partial Success', 
             `${firstName} has been added but avatar upload failed. You can add the photo later.`

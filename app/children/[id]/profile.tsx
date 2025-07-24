@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import AddMemoryModal from '../../components/child/AddMemoryModal';
 import EditMemoryModal from '../../components/child/EditMemoryModal';
+import HealthContent from '../../components/child/HealthContent';
 import MemoryItem from '../../components/child/MemoryItem';
 import AppHeader from '../../components/layout/AppHeader';
 import ErrorView from '../../components/ui/ErrorView';
@@ -70,6 +71,14 @@ export default function ChildProfileScreen() {
     }
   }, [id, dispatch]);
 
+  // Retry loading health data - TEMPORARILY COMMENTED OUT TO PREVENT CONTINUOUS API CALLS
+  // const retryLoadHealthData = useCallback(() => {
+  //   if (id) {
+  //     dispatch(fetchGrowthRecords({ childId: id, filter: growthFilter }));
+  //     dispatch(fetchHealthRecords({ childId: id, filter: healthFilter }));
+  //   }
+  // }, [id, dispatch, growthFilter, healthFilter]);
+
   // Debug: Track when memories change
   useEffect(() => {
     // console.log('ChildProfile: Memories array changed:', {
@@ -89,6 +98,7 @@ export default function ChildProfileScreen() {
         page: 1, 
         limit: 50 // Increased from 10 to 50 to show more memories initially
       }));
+      // Health data is fetched by HealthContent component
     }
     
     // Cleanup when component unmounts
@@ -115,6 +125,8 @@ export default function ChildProfileScreen() {
     }
   }, [showAddMemoryModal, dispatch, id]);
 
+  // Health data is managed by HealthContent component
+
   // Auto-retry memories when switching to memories tab if there's an error
   useEffect(() => {
     if (activeTab === 'memories' && memoriesError && id) {
@@ -126,10 +138,16 @@ export default function ChildProfileScreen() {
     }
   }, [activeTab, memoriesError, id, retryLoadMemories]);
 
+  // Health data is managed by HealthContent component
+
   // Handle memory modal close
   const handleMemoryModalClose = () => {
     setShowAddMemoryModal(false);
   };
+
+
+
+
 
   // Ensure unique memories and create unique keys
   const getUniqueMemories = () => {
@@ -195,7 +213,7 @@ export default function ChildProfileScreen() {
       setEditingMemory(null);
       // No need to manually refetch, Redux will update the state automatically
     } catch (error: any) {
-      console.error('Delete memory error:', error);
+      // console.error('Delete memory error:', error); // Commented out - not related to health/growth
       let errorMessage = 'Failed to delete memory';
       
       if (error?.status === 401) {
@@ -256,8 +274,8 @@ export default function ChildProfileScreen() {
       const otherResults = results.filter(result => result.id !== id);
       
       setSearchResults([...childResults, ...otherResults]);
-    } catch (error) {
-      console.error('Search error:', error);
+    } catch {
+      // console.error('Search error:', error); // Commented out - not related to health/growth
       setSearchResults([]);
     } finally {
       setSearchLoading(false);
@@ -561,7 +579,7 @@ export default function ChildProfileScreen() {
                 // Using a predefined list of valid tab keys to prevent log injection
                 const validTabKeys = ['timeline', 'health', 'memories', 'qa', 'profile'];
                 if (validTabKeys.includes(tab.key)) {
-                  console.log(`Tab pressed: ${tab.key}`);
+                  // console.log(`Tab pressed: ${tab.key}`); // Commented out - not related to health/growth
                   setActiveTab(tab.key as TabType);
                 }
               }}
@@ -601,6 +619,8 @@ export default function ChildProfileScreen() {
           childId={id}
         />
       )}
+      
+
       
       {/* Edit Memory Modal */}
       <EditMemoryModal
@@ -662,23 +682,10 @@ export default function ChildProfileScreen() {
     );
   }
 
-     // Health content
-   function renderHealthContent() {
-     return (
-       <View style={styles.contentContainer}>
-         <Text style={styles.contentTitle}>Health Records</Text>
-         <View style={styles.placeholderContainer}>
-           <MaterialIcons name="medical-services" size={48} color="#ccc" />
-           <Text style={styles.placeholderText}>
-             Health tracking coming soon!
-           </Text>
-           <Text style={styles.placeholderSubtext}>
-             Track vaccinations, growth charts, doctor visits, and health milestones.
-           </Text>
-         </View>
-       </View>
-     );
-   }
+  // Health content
+  function renderHealthContent() {
+    return <HealthContent childId={id!} />;
+  }
 
   // Memories content
   function renderMemoriesContent() {
@@ -1043,4 +1050,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+
 }); 

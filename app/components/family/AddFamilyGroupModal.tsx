@@ -89,8 +89,8 @@ const AddFamilyGroupModal: React.FC<AddFamilyGroupModalProps> = ({
           await uploadGroupAvatar(result.id, avatarUrl);
           // Refresh family groups to show updated avatar
           dispatch(fetchFamilyGroups());
-        } catch (avatarError) {
-          console.warn('Avatar upload failed, but group was created:', avatarError);
+        } catch {
+          // console.warn('Avatar upload failed, but group was created:', avatarError); // Commented out - not related to health/growth
           // Don't fail the entire operation if avatar upload fails
         }
       }
@@ -109,7 +109,7 @@ const AddFamilyGroupModal: React.FC<AddFamilyGroupModalProps> = ({
         ]
       );
     } catch (err: any) {
-      console.error('Error creating family group:', err);
+      // console.error('Error creating family group:', err); // Commented out - not related to health/growth
       Alert.alert(
         'Error',
         err.message || 'Failed to create family group. Please try again.'

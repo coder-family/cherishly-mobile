@@ -31,8 +31,8 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({ onAvatarPicked, initialUri,
         setPreviewUri(uri); 
         onAvatarPicked(uri); // Pass local URI to parent
       }
-    } catch (error) {
-      console.error('Image picker error:', error);
+    } catch (_error) {
+      // console.error('Image picker error:', error); // Commented out - not related to health/growth
     } finally {
       setIsPicking(false);
     }

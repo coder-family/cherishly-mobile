@@ -1,10 +1,10 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Memory } from '../../services/memoryService';
 import { User } from '../../services/userService';
@@ -14,17 +14,17 @@ import MemoryMediaViewer from './MemoryMediaViewer';
 interface MemoryItemProps {
   memory: Memory;
   creator?: User;
-  onPress?: (memory: Memory) => void;
-  onEdit?: (memory: Memory) => void;
-  onDelete?: (memory: Memory) => void;
-  onLike?: (memory: Memory) => void;
-  onComment?: (memory: Memory) => void;
+  onPress?: (_memory: Memory) => void;
+  onEdit?: (_memory: Memory) => void;
+  onDelete?: (_memory: Memory) => void;
+  onLike?: (_memory: Memory) => void;
+  onComment?: (_memory: Memory) => void;
 }
 
 export default function MemoryItem({ 
   memory, 
   creator,
-  onPress, 
+  onPress: _onPress, 
   onEdit, 
   onDelete, 
   onLike, 
