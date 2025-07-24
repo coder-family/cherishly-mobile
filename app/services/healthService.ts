@@ -168,7 +168,7 @@ export async function getWHOStandardData(ageInMonths: number, gender: 'male' | '
       message: error?.message || 'Unknown error',
       status: error?.status || error?.response?.status,
       url: error?.url || error?.config?.url,
-      responseData: error?.response?.data
+      hasResponseData: !!error?.response?.data
     });
     
     // Always return mock data for individual requests since the chart needs this data
@@ -202,7 +202,7 @@ export async function getWHOStandardsInRange(gender: 'male' | 'female', startAge
       message: error?.message || 'Unknown error',
       status: error?.status || error?.response?.status,
       url: error?.url || error?.config?.url,
-      responseData: error?.response?.data
+      hasResponseData: !!error?.response?.data
     });
     
     // Fallback: generate mock data for the specific range
@@ -249,7 +249,7 @@ export async function getAllWHOStandardData(gender?: 'male' | 'female'): Promise
       message: error?.message || 'Unknown error',
       status: error?.status || error?.response?.status,
       url: error?.url || error?.config?.url,
-      responseData: error?.response?.data
+      hasResponseData: !!error?.response?.data
     });
     
     // Fallback: generate mock data for common ages
@@ -381,16 +381,13 @@ export async function getGrowthRecords(childId: string, filter?: GrowthFilter): 
     
     conditionalLog.health('Fetched growth records:', {
       count: transformedData.length,
-      firstRecord: transformedData[0] ? { id: transformedData[0].id, childId: transformedData[0].childId, type: transformedData[0].type, value: transformedData[0].value, date: transformedData[0].date } : null,
-      allRecords: transformedData.map(record => ({ id: record.id, childId: record.childId, type: record.type, value: record.value, date: record.date })),
-      rawDataCount: Array.isArray(rawData) ? rawData.length : 'not array',
-      rawDataSample: Array.isArray(rawData) && rawData.length > 0 ? { 
-        _id: rawData[0]._id, 
-        child: rawData[0].child, 
-        type: rawData[0].type, 
-        value: rawData[0].value,
-        date: rawData[0].date
-      } : 'no data'
+      hasData: transformedData.length > 0,
+      dataTypes: [...new Set(transformedData.map(record => record.type))],
+      dateRange: transformedData.length > 0 ? {
+        earliest: transformedData[0]?.date,
+        latest: transformedData[transformedData.length - 1]?.date
+      } : null,
+      rawDataCount: Array.isArray(rawData) ? rawData.length : 'not array'
     });
     
     return transformedData;
