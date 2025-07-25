@@ -11,6 +11,8 @@ jest.mock('../app/services/healthService', () => ({
   getAllWHOStandardData: jest.fn().mockResolvedValue([]),
 }));
 
+import * as healthService from '../app/services/healthService';
+
 describe('GrowthChart', () => {
   const mockGrowthData: GrowthRecord[] = [
     {
@@ -57,6 +59,26 @@ describe('GrowthChart', () => {
   };
 
   it('renders correctly with weight data', async () => {
+    // Provide mock WHO data for this test
+    (healthService.getWHOStandardsInRange as jest.Mock).mockResolvedValue([
+      {
+        id: 'who-0',
+        gender: 'male',
+        ageInMonths: 0,
+        height: { mean: 50, minus2SD: 48, plus2SD: 52 },
+        weight: { mean: 3.5, minus2SD: 2.5, plus2SD: 4.5 },
+        age: '0m'
+      },
+      {
+        id: 'who-12',
+        gender: 'male',
+        ageInMonths: 12,
+        height: { mean: 75, minus2SD: 70, plus2SD: 80 },
+        weight: { mean: 10, minus2SD: 8, plus2SD: 12 },
+        age: '12m'
+      }
+      // Add more if needed for yearly intervals
+    ]);
     const { getByText } = renderWithProvider({
       data: mockGrowthData,
       type: 'weight',
@@ -69,10 +91,29 @@ describe('GrowthChart', () => {
       expect(getByText('Weight Growth Chart')).toBeTruthy();
     });
 
-    expect(getByText('Age 0-10 years with WHO growth standards')).toBeTruthy();
+    expect(getByText('Age 0-10 years with WHO growth standards (yearly intervals)')).toBeTruthy();
   });
 
   it('renders correctly with height data', async () => {
+    // Provide mock WHO data for this test
+    (healthService.getWHOStandardsInRange as jest.Mock).mockResolvedValue([
+      {
+        id: 'who-0',
+        gender: 'male',
+        ageInMonths: 0,
+        height: { mean: 50, minus2SD: 48, plus2SD: 52 },
+        weight: { mean: 3.5, minus2SD: 2.5, plus2SD: 4.5 },
+        age: '0m'
+      },
+      {
+        id: 'who-12',
+        gender: 'male',
+        ageInMonths: 12,
+        height: { mean: 75, minus2SD: 70, plus2SD: 80 },
+        weight: { mean: 10, minus2SD: 8, plus2SD: 12 },
+        age: '12m'
+      }
+    ]);
     const heightData = mockGrowthData.map(record => ({
       ...record,
       type: 'height' as const,
@@ -130,6 +171,25 @@ describe('GrowthChart', () => {
   });
 
   it('shows legend with correct labels', async () => {
+    // Provide mock WHO data for this test
+    (healthService.getWHOStandardsInRange as jest.Mock).mockResolvedValue([
+      {
+        id: 'who-0',
+        gender: 'male',
+        ageInMonths: 0,
+        height: { mean: 50, minus2SD: 48, plus2SD: 52 },
+        weight: { mean: 3.5, minus2SD: 2.5, plus2SD: 4.5 },
+        age: '0m'
+      },
+      {
+        id: 'who-12',
+        gender: 'male',
+        ageInMonths: 12,
+        height: { mean: 75, minus2SD: 70, plus2SD: 80 },
+        weight: { mean: 10, minus2SD: 8, plus2SD: 12 },
+        age: '12m'
+      }
+    ]);
     const { getByText } = renderWithProvider({
       data: mockGrowthData,
       type: 'weight',
@@ -162,7 +222,7 @@ describe('GrowthChart', () => {
 
     // Should show chart labels
     expect(getByText('Weight (kg)')).toBeTruthy();
-    expect(getByText('Age (years: 0-10)')).toBeTruthy();
+    expect(getByText('Age (years: 0-10, yearly intervals)')).toBeTruthy();
   });
 
   it('shows increasing growth trend correctly', async () => {

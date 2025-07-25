@@ -64,90 +64,6 @@ const transformWHOStandardData = (record: any): WHOStandardGrowthData => ({
   updatedAt: record.updatedAt,
 });
 
-// Mock WHO standard data generator for fallback
-const generateMockWHOStandardData = (ageInMonths: number, gender: 'male' | 'female'): WHOStandardGrowthData => {
-  // Generate realistic WHO standard data based on age and gender
-  const isMale = gender === 'male';
-  
-  // More realistic growth curves based on actual WHO standards
-  let meanWeight: number;
-  let meanHeight: number;
-  
-  if (ageInMonths === 0) {
-    // Birth data
-    meanWeight = isMale ? 3.3 : 3.2;
-    meanHeight = isMale ? 50.0 : 49.1;
-  } else if (ageInMonths <= 12) {
-    // First year: rapid growth
-    const baseWeight = isMale ? 3.3 : 3.2;
-    const baseHeight = isMale ? 50.0 : 49.1;
-    meanWeight = baseWeight + (ageInMonths * (isMale ? 0.65 : 0.6));
-    meanHeight = baseHeight + (ageInMonths * (isMale ? 2.4 : 2.3));
-  } else if (ageInMonths <= 24) {
-    // Second year: slower growth
-    const age12Weight = isMale ? 11.1 : 10.4;
-    const age12Height = isMale ? 78.8 : 77.4;
-    const monthsAfter12 = ageInMonths - 12;
-    meanWeight = age12Weight + (monthsAfter12 * (isMale ? 0.25 : 0.23));
-    meanHeight = age12Height + (monthsAfter12 * (isMale ? 1.1 : 1.0));
-  } else if (ageInMonths <= 36) {
-    // Third year
-    const age24Weight = isMale ? 14.1 : 13.2;
-    const age24Height = isMale ? 92.0 : 89.4;
-    const monthsAfter24 = ageInMonths - 24;
-    meanWeight = age24Weight + (monthsAfter24 * (isMale ? 0.2 : 0.18));
-    meanHeight = age24Height + (monthsAfter24 * (isMale ? 0.9 : 0.8));
-  } else if (ageInMonths <= 48) {
-    // Fourth year
-    const age36Weight = isMale ? 16.5 : 15.4;
-    const age36Height = isMale ? 102.8 : 98.9;
-    const monthsAfter36 = ageInMonths - 36;
-    meanWeight = age36Weight + (monthsAfter36 * (isMale ? 0.18 : 0.16));
-    meanHeight = age36Height + (monthsAfter36 * (isMale ? 0.8 : 0.7));
-  } else if (ageInMonths <= 60) {
-    // Fifth year
-    const age48Weight = isMale ? 18.7 : 17.3;
-    const age48Height = isMale ? 112.4 : 107.3;
-    const monthsAfter48 = ageInMonths - 48;
-    meanWeight = age48Weight + (monthsAfter48 * (isMale ? 0.16 : 0.15));
-    meanHeight = age48Height + (monthsAfter48 * (isMale ? 0.7 : 0.6));
-  } else {
-    // Older children
-    const age60Weight = isMale ? 20.6 : 19.1;
-    const age60Height = isMale ? 120.8 : 114.5;
-    const monthsAfter60 = ageInMonths - 60;
-    meanWeight = age60Weight + (monthsAfter60 * (isMale ? 0.15 : 0.14));
-    meanHeight = age60Height + (monthsAfter60 * (isMale ? 0.6 : 0.55));
-  }
-  
-  // Generate realistic SD values based on WHO percentile distributions
-  const weight = {
-    minus2SD: meanWeight * (isMale ? 0.82 : 0.84),
-    mean: meanWeight,
-    plus2SD: meanWeight * (isMale ? 1.18 : 1.16),
-  };
-  
-  const height = {
-    minus2SD: meanHeight * (isMale ? 0.93 : 0.94),
-    mean: meanHeight,
-    plus2SD: meanHeight * (isMale ? 1.07 : 1.06),
-  };
-  
-  return {
-    id: `mock-${ageInMonths}-${gender}`,
-    age: ageInMonths === 0 ? 'Birth' : `${ageInMonths} months`,
-    ageInMonths,
-    gender,
-    weight,
-    height,
-    isDeleted: false,
-    deletedAt: null,
-    deletedBy: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-};
-
 // WHO Standard Growth Data API functions
 export async function getWHOStandardData(ageInMonths: number, gender: 'male' | 'female'): Promise<WHOStandardGrowthData | null> {
   try {
@@ -171,31 +87,114 @@ export async function getWHOStandardData(ageInMonths: number, gender: 'male' | '
       hasResponseData: !!error?.response?.data
     });
     
-    // Always return mock data for individual requests since the chart needs this data
-    conditionalLog.health(`[WHO-API] Using mock data for ${gender} at ${ageInMonths} months`);
-    return generateMockWHOStandardData(ageInMonths, gender);
+    // Re-throw the error instead of using mock data
+    throw error;
   }
 }
 
 export async function getWHOStandardsInRange(gender: 'male' | 'female', startAge: number, endAge: number): Promise<WHOStandardGrowthData[]> {
   try {
-    // Use the correct API endpoint with the parameters the backend expects: minAge and maxAge
+    // Try to get WHO data from a different endpoint that might exist
+    // First, let's try to get all WHO data and filter it
     conditionalLog.health(`[WHO-API] Requesting WHO standards range for ${gender}: ${startAge}-${endAge} months`);
-    const response = await apiService.get(`/who-standards/${gender}/range?minAge=${startAge}&maxAge=${endAge}`);
-    const rawData = response.data || response || [];
     
-    // Handle nested response structure
-    let data;
-    if (response && response.data && response.data.whoStandards) {
-      data = response.data.whoStandards;
-    } else if (Array.isArray(rawData)) {
-      data = rawData;
-    } else {
-      data = [];
+    // Try different possible endpoints
+    let response;
+    let data = [];
+    
+    try {
+      // Try the original endpoint first
+      const url = `/who-standards/${gender}/range?minAge=${startAge}&maxAge=${endAge}`;
+      conditionalLog.health(`[WHO-API] Calling: ${url}`);
+      response = await apiService.get(url);
+      const rawData = response.data || response || [];
+      
+      conditionalLog.health(`[WHO-API] Response structure:`, {
+        hasResponse: !!response,
+        hasData: !!response?.data,
+        hasWhoStandards: !!response?.data?.whoStandards,
+        isArray: Array.isArray(rawData),
+        rawDataLength: Array.isArray(rawData) ? rawData.length : 'not array'
+      });
+      
+      // Handle nested response structure
+      if (response && response.data && response.data.data) {
+        // Your backend returns: { success: true, data: { data: [...], count: 33, range: {...} } }
+        data = response.data.data;
+        conditionalLog.health(`[WHO-API] Using response.data.data: ${data.length} items`);
+      } else if (response && response.data && response.data.whoStandards) {
+        data = response.data.whoStandards;
+        conditionalLog.health(`[WHO-API] Using response.data.whoStandards: ${data.length} items`);
+      } else if (Array.isArray(rawData)) {
+        data = rawData;
+        conditionalLog.health(`[WHO-API] Using rawData array: ${data.length} items`);
+      } else {
+        conditionalLog.health(`[WHO-API] No valid data structure found in response`);
+      }
+      
+      // Log first item if available
+      if (data.length > 0) {
+        conditionalLog.health(`[WHO-API] First item:`, {
+          age: data[0].ageInMonths,
+          gender: data[0].gender,
+          weight: data[0].weight?.mean
+        });
+      }
+    } catch (firstError) {
+      conditionalLog.health(`[WHO-API] First endpoint failed, trying alternative...`);
+      
+      try {
+        // Try getting all WHO data and filtering
+        response = await apiService.get(`/who-standards/${gender}`);
+        const rawData = response.data || response || [];
+        
+        if (response && response.data && response.data.whoStandards) {
+          data = response.data.whoStandards;
+        } else if (Array.isArray(rawData)) {
+          data = rawData;
+        }
+        
+        // Filter to the requested range
+        data = data.filter((item: any) => {
+          const ageInMonths = item.ageInMonths || parseInt(item.age) || 0;
+          return ageInMonths >= startAge && ageInMonths <= endAge;
+        });
+      } catch (secondError) {
+        conditionalLog.health(`[WHO-API] Second endpoint also failed, trying generic endpoint...`);
+        
+        try {
+          // Try a generic WHO endpoint
+          response = await apiService.get('/who-standards');
+          const rawData = response.data || response || [];
+          
+          if (response && response.data && response.data.whoStandards) {
+            data = response.data.whoStandards;
+          } else if (Array.isArray(rawData)) {
+            data = rawData;
+          }
+          
+          // Filter by gender and age range
+          data = data.filter((item: any) => {
+            const ageInMonths = item.ageInMonths || parseInt(item.age) || 0;
+            const itemGender = item.gender || 'male';
+            return itemGender === gender && ageInMonths >= startAge && ageInMonths <= endAge;
+          });
+        } catch (thirdError) {
+          conditionalLog.health(`[WHO-API] All endpoints failed, using hardcoded WHO data`);
+          throw new Error('All WHO endpoints failed');
+        }
+      }
     }
     
     const result = Array.isArray(data) ? data.map(transformWHOStandardData) : [];
     conditionalLog.health(`[WHO-API] Successfully fetched ${result.length} WHO standards for ${gender}: ${startAge}-${endAge} months`);
+    
+    // If API returned empty data, throw an error
+    if (result.length === 0) {
+      conditionalLog.health(`[WHO-API] API returned empty data for ${gender}: ${startAge}-${endAge} months`);
+      throw new Error(`No WHO standards data available for ${gender} in age range ${startAge}-${endAge} months`);
+    }
+    
     return result;
   } catch (error: any) {
     conditionalLog.health(`[WHO-API] Error fetching WHO standards range for ${gender}: ${startAge}-${endAge} months:`, {
@@ -205,17 +204,8 @@ export async function getWHOStandardsInRange(gender: 'male' | 'female', startAge
       hasResponseData: !!error?.response?.data
     });
     
-    // Fallback: generate mock data for the specific range
-    conditionalLog.health(`[WHO-API] Using mock WHO standard data as fallback for ${gender}: ${startAge}-${endAge} months`);
-    const mockData: WHOStandardGrowthData[] = [];
-    
-    // Generate data for yearly intervals only (11 points: 0-10 years)
-    for (let age = startAge; age <= endAge; age += 12) { // Every 12 months (yearly only)
-      mockData.push(generateMockWHOStandardData(age, gender));
-    }
-    
-    conditionalLog.health(`[WHO-API] Generated ${mockData.length} mock WHO standards for ${gender} (yearly intervals only)`);
-    return mockData;
+    // Re-throw the error instead of using hardcoded data
+    throw error;
   }
 }
 
@@ -233,7 +223,10 @@ export async function getAllWHOStandardData(gender?: 'male' | 'female'): Promise
     
     // Handle nested response structure
     let data;
-    if (response && response.data && response.data.whoStandards) {
+    if (response && response.data && response.data.data) {
+      // Your backend returns: { success: true, data: { data: [...], count: 33, range: {...} } }
+      data = response.data.data;
+    } else if (response && response.data && response.data.whoStandards) {
       data = response.data.whoStandards;
     } else if (Array.isArray(rawData)) {
       data = rawData;
@@ -243,6 +236,13 @@ export async function getAllWHOStandardData(gender?: 'male' | 'female'): Promise
     
     const result = Array.isArray(data) ? data.map(transformWHOStandardData) : [];
     conditionalLog.health(`[WHO-API] Successfully fetched ${result.length} WHO standards for ${gender || 'all genders'}`);
+    
+    // If API returned empty data, throw an error
+    if (result.length === 0) {
+      conditionalLog.health(`[WHO-API] API returned empty data for ${gender || 'all genders'}`);
+      throw new Error(`No WHO standards data available for ${gender || 'all genders'}`);
+    }
+    
     return result;
   } catch (error: any) {
     conditionalLog.health(`[WHO-API] Error fetching all WHO standards for ${gender || 'all genders'}:`, {
@@ -252,18 +252,8 @@ export async function getAllWHOStandardData(gender?: 'male' | 'female'): Promise
       hasResponseData: !!error?.response?.data
     });
     
-    // Fallback: generate mock data for common ages
-    conditionalLog.health(`[WHO-API] Using mock WHO standard data as fallback for ${gender || 'male'}`);
-    const mockData: WHOStandardGrowthData[] = [];
-    
-    // Generate data for ages 0-120 months (yearly intervals only)
-    const targetGender = gender || 'male';
-    for (let age = 0; age <= 120; age += 12) { // Every 12 months (yearly only)
-      mockData.push(generateMockWHOStandardData(age, targetGender));
-    }
-    
-    conditionalLog.health(`[WHO-API] Generated ${mockData.length} mock WHO standards for ${targetGender} (yearly intervals only)`);
-    return mockData;
+    // Re-throw the error instead of using hardcoded data
+    throw error;
   }
 }
 
