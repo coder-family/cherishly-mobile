@@ -4,9 +4,11 @@ import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { deleteGrowthRecord, deleteHealthRecord, fetchGrowthRecords, fetchHealthRecords } from '../../redux/slices/healthSlice';
-import { HealthFilter } from '../../types/health';
+import { GrowthRecord, HealthFilter, HealthRecord } from '../../types/health';
 import AddGrowthRecordModal from '../health/AddGrowthRecordModal';
 import AddHealthRecordModal from '../health/AddHealthRecordModal';
+import EditGrowthRecordModal from '../health/EditGrowthRecordModal';
+import EditHealthRecordModal from '../health/EditHealthRecordModal';
 import GrowthChart from '../health/GrowthChart';
 import HealthRecordItem from '../health/HealthRecordItem';
 import ErrorView from '../ui/ErrorView';
@@ -22,6 +24,10 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId }) => {
   // Modal state
   const [showAddGrowthModal, setShowAddGrowthModal] = useState(false);
   const [showAddHealthModal, setShowAddHealthModal] = useState(false);
+  const [showEditGrowthModal, setShowEditGrowthModal] = useState(false);
+  const [showEditHealthModal, setShowEditHealthModal] = useState(false);
+  const [recordToEdit, setRecordToEdit] = useState<GrowthRecord | null>(null);
+  const [healthRecordToEdit, setHealthRecordToEdit] = useState<HealthRecord | null>(null);
   
   // Health filter state
   const [healthFilter] = useState<HealthFilter>({
@@ -121,14 +127,6 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId }) => {
     fetchHealthData();
   }, [fetchHealthData]);
 
-  // Refresh health data when modals close
-  useEffect(() => {
-    if ((!showAddGrowthModal || !showAddHealthModal) && childId) {
-      const timer = setTimeout(fetchHealthData, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [showAddGrowthModal, showAddHealthModal, fetchHealthData, childId]);
-
   // Handle growth record deletion
   const handleDeleteGrowthRecord = useCallback(async (recordId: string) => {
     Alert.alert(
@@ -185,6 +183,40 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId }) => {
     setShowAddHealthModal(false);
     fetchHealthData();
   }, [fetchHealthData]);
+
+  // Handle edit modal
+  const handleEditGrowthRecord = useCallback((record: GrowthRecord) => {
+    setRecordToEdit(record);
+    setShowEditGrowthModal(true);
+  }, []);
+
+  const handleEditModalSuccess = useCallback(() => {
+    setShowEditGrowthModal(false);
+    setRecordToEdit(null);
+    fetchHealthData();
+  }, [fetchHealthData]);
+
+  const handleEditModalClose = useCallback(() => {
+    setShowEditGrowthModal(false);
+    setRecordToEdit(null);
+  }, []);
+
+  // Handle edit health record
+  const handleEditHealthRecord = useCallback((record: HealthRecord) => {
+    setHealthRecordToEdit(record);
+    setShowEditHealthModal(true);
+  }, []);
+
+  const handleEditHealthModalSuccess = useCallback(() => {
+    setShowEditHealthModal(false);
+    setHealthRecordToEdit(null);
+    fetchHealthData();
+  }, [fetchHealthData]);
+
+  const handleEditHealthModalClose = useCallback(() => {
+    setShowEditHealthModal(false);
+    setHealthRecordToEdit(null);
+  }, []);
 
   if (healthLoading) {
     return (
@@ -307,10 +339,7 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId }) => {
                   <View style={[styles.actionButtons, { flex: 1.2 }]}>
                     <TouchableOpacity
                       style={[styles.actionButton, styles.editButton]}
-                      onPress={() => {
-                        // TODO: Implement edit functionality
-                        console.log('Edit record:', record.id);
-                      }}
+                      onPress={() => handleEditGrowthRecord(record)}
                     >
                       <MaterialIcons name="edit" size={16} color={Colors.light.primary} />
                     </TouchableOpacity>
@@ -357,6 +386,7 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId }) => {
                 key={record.id}
                 record={record}
                 onDelete={() => handleDeleteHealthRecord(record.id)}
+                onEdit={() => handleEditHealthRecord(record)}
                 isLast={index === healthRecords.length - 1}
               />
             ))}
@@ -377,6 +407,20 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId }) => {
         onClose={() => setShowAddHealthModal(false)}
         childId={childId}
         onSuccess={handleHealthModalSuccess}
+      />
+
+      <EditGrowthRecordModal
+        visible={showEditGrowthModal}
+        onClose={handleEditModalClose}
+        record={recordToEdit}
+        onSuccess={handleEditModalSuccess}
+      />
+
+      <EditHealthRecordModal
+        visible={showEditHealthModal}
+        onClose={handleEditHealthModalClose}
+        record={healthRecordToEdit}
+        onSuccess={handleEditHealthModalSuccess}
       />
     </View>
   );
@@ -494,7 +538,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
   },
   tableCell: {
-    fontSize: 14,
+    fontSize: 12,
     color: Colors.light.text,
     flex: 1,
     textAlign: 'left',

@@ -1,25 +1,25 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View
 } from 'react-native';
 import * as yup from 'yup';
 import { Colors } from '../../constants/Colors';
 import { useAppDispatch } from '../../redux/hooks';
-import { createGrowthRecord } from '../../redux/slices/healthSlice';
-import { CreateGrowthRecordData } from '../../types/health';
+import { updateGrowthRecord } from '../../redux/slices/healthSlice';
+import { GrowthRecord, UpdateGrowthRecordData } from '../../types/health';
 import ErrorText from '../form/ErrorText';
 import FormWrapper from '../form/FormWrapper';
 import InputField from '../form/InputField';
@@ -38,17 +38,17 @@ const schema = yup.object().shape({
   notes: yup.string().optional(),
 });
 
-interface AddGrowthRecordModalProps {
+interface EditGrowthRecordModalProps {
   visible: boolean;
   onClose: () => void;
-  childId: string;
+  record: GrowthRecord | null;
   onSuccess: () => void;
 }
 
-const AddGrowthRecordModal: React.FC<AddGrowthRecordModalProps> = ({
+const EditGrowthRecordModal: React.FC<EditGrowthRecordModalProps> = ({
   visible,
   onClose,
-  childId,
+  record,
   onSuccess,
 }) => {
   const dispatch = useAppDispatch();
@@ -74,7 +74,18 @@ const AddGrowthRecordModal: React.FC<AddGrowthRecordModalProps> = ({
     },
   });
 
-  // const watchedType = watch('type');
+  // Pre-populate form when record changes
+  useEffect(() => {
+    if (record) {
+      setSelectedType(record.type as 'height' | 'weight');
+      setValue('type', record.type);
+      setValue('value', record.value.toString());
+      setValue('unit', record.unit);
+      setValue('date', record.date);
+      setValue('source', record.source);
+      setValue('notes', record.notes || '');
+    }
+  }, [record, setValue]);
 
   const handleTypeChange = (type: 'height' | 'weight') => {
     setSelectedType(type);
@@ -83,9 +94,10 @@ const AddGrowthRecordModal: React.FC<AddGrowthRecordModalProps> = ({
   };
 
   const onSubmit = async (data: any) => {
+    if (!record) return;
+
     try {
-      const growthData: CreateGrowthRecordData = {
-        child: childId,
+      const updateData: UpdateGrowthRecordData = {
         type: data.type,
         value: parseFloat(data.value),
         unit: data.unit,
@@ -93,12 +105,12 @@ const AddGrowthRecordModal: React.FC<AddGrowthRecordModalProps> = ({
         source: data.source,
         notes: data.notes,
       };
-      await dispatch(createGrowthRecord(growthData)).unwrap();
-      reset();
+      
+      await dispatch(updateGrowthRecord({ recordId: record.id, data: updateData })).unwrap();
       onSuccess();
-      Alert.alert('Success', 'Growth record added successfully!');
+      Alert.alert('Success', 'Growth record updated successfully!');
     } catch (_error) {
-      Alert.alert('Error', 'Failed to add growth record. Please try again.');
+      Alert.alert('Error', 'Failed to update growth record. Please try again.');
     }
   };
 
@@ -113,6 +125,10 @@ const AddGrowthRecordModal: React.FC<AddGrowthRecordModalProps> = ({
     { value: 'clinic', label: 'Clinic' },
     { value: 'hospital', label: 'Hospital' },
   ];
+
+  if (!record) {
+    return null;
+  }
 
   return (
     <Modal
@@ -129,7 +145,7 @@ const AddGrowthRecordModal: React.FC<AddGrowthRecordModalProps> = ({
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
             <MaterialIcons name="close" size={24} color={Colors.light.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>Add Growth Record</Text>
+          <Text style={styles.title}>Edit Growth Record</Text>
           <View style={styles.placeholder} />
         </View>
 
@@ -194,10 +210,7 @@ const AddGrowthRecordModal: React.FC<AddGrowthRecordModalProps> = ({
                     <InputField
                       label="Value"
                       value={value}
-                      onChangeText={(text) => {
-                        // Allow any text input, validation will handle the number check
-                        onChange(text);
-                      }}
+                      onChangeText={onChange}
                       keyboardType="numeric"
                       placeholder="0.0"
                     />
@@ -319,7 +332,7 @@ const AddGrowthRecordModal: React.FC<AddGrowthRecordModalProps> = ({
             />
 
             <PrimaryButton
-              title="Add Record"
+              title="Update Record"
               onPress={handleSubmit(onSubmit)}
               loading={isSubmitting}
               style={styles.submitButton}
@@ -495,4 +508,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AddGrowthRecordModal; 
+export default EditGrowthRecordModal; 
