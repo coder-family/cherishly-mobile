@@ -4,10 +4,11 @@ import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { deleteGrowthRecord, deleteHealthRecord, fetchGrowthRecords, fetchHealthRecords } from '../../redux/slices/healthSlice';
-import { GrowthRecord, HealthFilter } from '../../types/health';
+import { GrowthRecord, HealthFilter, HealthRecord } from '../../types/health';
 import AddGrowthRecordModal from '../health/AddGrowthRecordModal';
 import AddHealthRecordModal from '../health/AddHealthRecordModal';
 import EditGrowthRecordModal from '../health/EditGrowthRecordModal';
+import EditHealthRecordModal from '../health/EditHealthRecordModal';
 import GrowthChart from '../health/GrowthChart';
 import HealthRecordItem from '../health/HealthRecordItem';
 import ErrorView from '../ui/ErrorView';
@@ -24,7 +25,9 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId }) => {
   const [showAddGrowthModal, setShowAddGrowthModal] = useState(false);
   const [showAddHealthModal, setShowAddHealthModal] = useState(false);
   const [showEditGrowthModal, setShowEditGrowthModal] = useState(false);
+  const [showEditHealthModal, setShowEditHealthModal] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState<GrowthRecord | null>(null);
+  const [healthRecordToEdit, setHealthRecordToEdit] = useState<HealthRecord | null>(null);
   
   // Health filter state
   const [healthFilter] = useState<HealthFilter>({
@@ -198,6 +201,23 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId }) => {
     setRecordToEdit(null);
   }, []);
 
+  // Handle edit health record
+  const handleEditHealthRecord = useCallback((record: HealthRecord) => {
+    setHealthRecordToEdit(record);
+    setShowEditHealthModal(true);
+  }, []);
+
+  const handleEditHealthModalSuccess = useCallback(() => {
+    setShowEditHealthModal(false);
+    setHealthRecordToEdit(null);
+    fetchHealthData();
+  }, [fetchHealthData]);
+
+  const handleEditHealthModalClose = useCallback(() => {
+    setShowEditHealthModal(false);
+    setHealthRecordToEdit(null);
+  }, []);
+
   if (healthLoading) {
     return (
       <View style={styles.contentContainer}>
@@ -366,6 +386,7 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId }) => {
                 key={record.id}
                 record={record}
                 onDelete={() => handleDeleteHealthRecord(record.id)}
+                onEdit={() => handleEditHealthRecord(record)}
                 isLast={index === healthRecords.length - 1}
               />
             ))}
@@ -393,6 +414,13 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId }) => {
         onClose={handleEditModalClose}
         record={recordToEdit}
         onSuccess={handleEditModalSuccess}
+      />
+
+      <EditHealthRecordModal
+        visible={showEditHealthModal}
+        onClose={handleEditHealthModalClose}
+        record={healthRecordToEdit}
+        onSuccess={handleEditHealthModalSuccess}
       />
     </View>
   );

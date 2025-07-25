@@ -1,14 +1,14 @@
 import {
-  CreateGrowthRecordData,
-  CreateHealthRecordData,
-  GrowthAnalysis,
-  GrowthFilter,
-  GrowthRecord,
-  HealthFilter,
-  HealthRecord,
-  UpdateGrowthRecordData,
-  UpdateHealthRecordData,
-  WHOStandardGrowthData
+    CreateGrowthRecordData,
+    CreateHealthRecordData,
+    GrowthAnalysis,
+    GrowthFilter,
+    GrowthRecord,
+    HealthFilter,
+    HealthRecord,
+    UpdateGrowthRecordData,
+    UpdateHealthRecordData,
+    WHOStandardGrowthData
 } from '../types/health';
 import { conditionalLog } from '../utils/logUtils';
 import apiService from './apiService';
@@ -27,20 +27,32 @@ const transformGrowthRecord = (record: any): GrowthRecord => ({
   updatedAt: record.updatedAt,
 });
 
-const transformHealthRecord = (record: any): HealthRecord => ({
-  id: record._id || record.id,
-  childId: record.child || record.childId,
-  type: record.type,
-  title: record.title,
-  description: record.description,
-  startDate: record.startDate,
-  endDate: record.endDate,
-  doctorName: record.doctorName,
-  location: record.location,
-  attachments: record.attachments,
-  createdAt: record.createdAt,
-  updatedAt: record.updatedAt,
-});
+const transformHealthRecord = (record: any): HealthRecord => {
+  console.log('[HEALTH-SERVICE] Transforming health record:', {
+    rawRecord: record,
+    startDate: record.startDate,
+    date: record.date, // API uses 'date' field
+    endDate: record.endDate,
+    attachments: record.attachments,
+    attachmentsType: typeof record.attachments,
+    isAttachmentsArray: Array.isArray(record.attachments)
+  });
+  
+  return {
+    id: record._id || record.id,
+    childId: record.child || record.childId,
+    type: record.type,
+    title: record.title,
+    description: record.description,
+    startDate: record.startDate || record.date, // Use 'date' field if 'startDate' is not available
+    endDate: record.endDate,
+    doctorName: record.doctorName || record.doctor, // Also map 'doctor' to 'doctorName'
+    location: record.location,
+    attachments: record.attachments,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  };
+};
 
 const transformWHOStandardData = (record: any): WHOStandardGrowthData => ({
   id: record._id || record.id,

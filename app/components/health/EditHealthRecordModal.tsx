@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
     Alert,
@@ -18,8 +18,8 @@ import {
 import * as yup from 'yup';
 import { Colors } from '../../constants/Colors';
 import { useAppDispatch } from '../../redux/hooks';
-import { createHealthRecord } from '../../redux/slices/healthSlice';
-import { CreateHealthRecordData } from '../../types/health';
+import { updateHealthRecord } from '../../redux/slices/healthSlice';
+import { HealthRecord, UpdateHealthRecordData } from '../../types/health';
 import ErrorText from '../form/ErrorText';
 import FormWrapper from '../form/FormWrapper';
 import InputField from '../form/InputField';
@@ -35,17 +35,17 @@ const schema = yup.object().shape({
   location: yup.string().optional(),
 });
 
-interface AddHealthRecordModalProps {
+interface EditHealthRecordModalProps {
   visible: boolean;
   onClose: () => void;
-  childId: string;
+  record: HealthRecord | null;
   onSuccess: () => void;
 }
 
-const AddHealthRecordModal: React.FC<AddHealthRecordModalProps> = ({
+const EditHealthRecordModal: React.FC<EditHealthRecordModalProps> = ({
   visible,
   onClose,
-  childId,
+  record,
   onSuccess,
 }) => {
   const dispatch = useAppDispatch();
@@ -58,7 +58,6 @@ const AddHealthRecordModal: React.FC<AddHealthRecordModalProps> = ({
     handleSubmit,
     reset,
     setValue,
-    // watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: yupResolver(schema),
@@ -72,6 +71,20 @@ const AddHealthRecordModal: React.FC<AddHealthRecordModalProps> = ({
       location: '',
     },
   });
+
+  // Pre-populate form when record changes
+  useEffect(() => {
+    if (record) {
+      setSelectedType(record.type);
+      setValue('type', record.type);
+      setValue('title', record.title);
+      setValue('description', record.description);
+      setValue('startDate', record.startDate);
+      setValue('endDate', record.endDate || '');
+      setValue('doctorName', record.doctorName || '');
+      setValue('location', record.location || '');
+    }
+  }, [record, setValue]);
 
   const handleTypeChange = (type: 'vaccination' | 'illness' | 'medication') => {
     setSelectedType(type);
@@ -101,9 +114,10 @@ const AddHealthRecordModal: React.FC<AddHealthRecordModalProps> = ({
   };
 
   const onSubmit = async (data: any) => {
+    if (!record) return;
+
     try {
-      const healthData: CreateHealthRecordData = {
-        childId,
+      const updateData: UpdateHealthRecordData = {
         type: data.type,
         title: data.title,
         description: data.description,
@@ -111,14 +125,14 @@ const AddHealthRecordModal: React.FC<AddHealthRecordModalProps> = ({
         endDate: data.endDate || undefined,
         doctorName: data.doctorName || undefined,
         location: data.location || undefined,
-        attachments: [],
+        attachments: record.attachments, // Keep existing attachments
       };
-      await dispatch(createHealthRecord(healthData)).unwrap();
+      await dispatch(updateHealthRecord({ recordId: record.id, data: updateData })).unwrap();
       reset();
       onSuccess();
-      Alert.alert('Success', 'Health record added successfully!');
+      Alert.alert('Success', 'Health record updated successfully!');
     } catch (_error) {
-      Alert.alert('Error', 'Failed to add health record. Please try again.');
+      Alert.alert('Error', 'Failed to update health record. Please try again.');
     }
   };
 
@@ -148,7 +162,7 @@ const AddHealthRecordModal: React.FC<AddHealthRecordModalProps> = ({
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
             <MaterialIcons name="close" size={24} color={Colors.light.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>Add Health Record</Text>
+          <Text style={styles.title}>Edit Health Record</Text>
           <View style={styles.placeholder} />
         </View>
 
@@ -293,7 +307,7 @@ const AddHealthRecordModal: React.FC<AddHealthRecordModalProps> = ({
             </View>
 
             <PrimaryButton
-              title="Add Health Record"
+              title="Update Health Record"
               onPress={handleSubmit(onSubmit)}
               loading={isSubmitting}
               style={styles.submitButton}
@@ -457,4 +471,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AddHealthRecordModal; 
+export default EditHealthRecordModal; 
