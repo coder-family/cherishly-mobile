@@ -7,9 +7,7 @@ import { deleteGrowthRecord, deleteHealthRecord, fetchGrowthRecords, fetchHealth
 import { HealthFilter } from '../../types/health';
 import AddGrowthRecordModal from '../health/AddGrowthRecordModal';
 import AddHealthRecordModal from '../health/AddHealthRecordModal';
-import GrowthAnalysisComponent from '../health/GrowthAnalysis';
 import GrowthChart from '../health/GrowthChart';
-import GrowthRecordItem from '../health/GrowthRecordItem';
 import HealthRecordItem from '../health/HealthRecordItem';
 import ErrorView from '../ui/ErrorView';
 import SectionCard from '../ui/SectionCard';
@@ -253,7 +251,7 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId }) => {
           </View>
         </View>
 
-        {/* Growth Records List */}
+        {/* Growth Records Table */}
         {growthRecords.length === 0 ? (
           <View style={styles.emptyState}>
             <MaterialIcons name="trending-up" size={48} color={Colors.light.text} />
@@ -263,23 +261,69 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId }) => {
             </Text>
           </View>
         ) : (
-          <View style={styles.recordsList}>
-            {growthRecords.map((record) => (
-              <View key={record.id}>
-                <GrowthRecordItem
-                  record={record}
-                  onDelete={() => handleDeleteGrowthRecord(record.id)}
-                />
-                {/* WHO Growth Analysis */}
-                <GrowthAnalysisComponent
-                  childValue={record.value}
-                  childAgeInMonths={childAgeInMonths}
-                  childGender={childGender}
-                  type={record.type}
-                  unit={record.unit}
-                />
-              </View>
-            ))}
+          <View style={styles.tableContainer}>
+            {/* Table Header */}
+            <View style={styles.tableHeader}>
+              <Text style={styles.tableHeaderText}>Date</Text>
+              <Text style={styles.tableHeaderText}>Type</Text>
+              <Text style={styles.tableHeaderText}>Value</Text>
+              <Text style={styles.tableHeaderText}>Unit</Text>
+              <Text style={styles.tableHeaderText}>Age</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Actions</Text>
+            </View>
+            
+            {/* Table Rows */}
+            {growthRecords.map((record) => {
+              const recordDate = new Date(record.date);
+              const recordAgeInMonths = currentChild?.birthdate ? 
+                Math.max(0, (recordDate.getFullYear() - new Date(currentChild.birthdate).getFullYear()) * 12 + 
+                (recordDate.getMonth() - new Date(currentChild.birthdate).getMonth())) : 0;
+              
+              return (
+                <View key={record.id} style={styles.tableRow}>
+                  <Text style={styles.tableCell}>
+                    {recordDate.toLocaleDateString('vi-VN', {
+                      month: 'numeric',
+                      day: 'numeric',
+                      year: '2-digit'
+                    })}
+                  </Text>
+                  <View style={styles.tableCell}>
+                    {record.type === 'height' ? (
+                      <MaterialIcons name="height" size={20} color={Colors.light.primary} />
+                    ) : (
+                      <MaterialIcons name="fitness-center" size={20} color={Colors.light.primary} />
+                    )}
+                  </View>
+                  <Text style={styles.tableCell}>
+                    {record.value}
+                  </Text>
+                  <Text style={styles.tableCell}>
+                    {record.unit}
+                  </Text>
+                  <Text style={styles.tableCell}>
+                    {recordAgeInMonths}m
+                  </Text>
+                  <View style={[styles.actionButtons, { flex: 1.2 }]}>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.editButton]}
+                      onPress={() => {
+                        // TODO: Implement edit functionality
+                        console.log('Edit record:', record.id);
+                      }}
+                    >
+                      <MaterialIcons name="edit" size={16} color={Colors.light.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.deleteButton]}
+                      onPress={() => handleDeleteGrowthRecord(record.id)}
+                    >
+                      <MaterialIcons name="delete" size={16} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
           </View>
         )}
       </SectionCard>
@@ -408,7 +452,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   chartsContainer: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   chartSection: {
     marginBottom: 16,
@@ -419,6 +463,61 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginBottom: 8,
     textAlign: 'center',
+  },
+  tableContainer: {
+    marginTop: 5,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: Colors.light.card,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  tableHeaderText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.light.textSecondary,
+    flex: 1,
+    textAlign: 'left',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  tableCell: {
+    fontSize: 14,
+    color: Colors.light.text,
+    flex: 1,
+    textAlign: 'left',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: 80, // Fixed width for action buttons
+  },
+  actionButton: {
+    padding: 8,
+  },
+  editButton: {
+    backgroundColor: Colors.light.card,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.light.primary,
+  },
+  deleteButton: {
+    backgroundColor: Colors.light.card,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#EF4444',
   },
 });
 
