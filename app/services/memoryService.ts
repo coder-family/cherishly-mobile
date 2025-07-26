@@ -4,6 +4,9 @@ import { sanitizeObjectId } from '../utils/validation';
 import apiService from './apiService';
 import authService from './authService';
 
+// Use the same fallback as apiService
+const BASE_URL = API_BASE_URL || "https://growing-together-app.onrender.com/api";
+
 // Type definitions
 export interface Memory {
   id: string;
@@ -740,7 +743,7 @@ async function removeAttachmentsAlternative(memoryId: string, attachmentIds: str
       const requestBody = requestBodies[i];
       conditionalLog.memoryApi(`Trying JSON format ${i + 1} with MongoDB _id values:`, requestBody);
       
-      const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
+      const response = await fetch(`${BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -796,7 +799,7 @@ async function removeAttachmentsAlternative(memoryId: string, attachmentIds: str
   conditionalLog.memoryApi('Trying Method 2: Individual DELETE requests with MongoDB _id');
   try {
     const deletePromises = attachmentIds.map(async (attachmentId) => {
-      const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments/${attachmentId}`, {
+      const response = await fetch(`${BASE_URL}/memories/${sanitizedMemoryId}/attachments/${attachmentId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -845,7 +848,7 @@ async function removeAttachmentsAlternative(memoryId: string, attachmentIds: str
   // Try Method 3: Use the unified attachments endpoint
   conditionalLog.memoryApi('Trying Method 3: PATCH request to unified attachments endpoint');
   try {
-    const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
+    const response = await fetch(`${BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -945,7 +948,7 @@ export async function debugAttachmentDeletion(memoryId: string, attachmentIds: s
     conditionalLog.memoryApi(`TEST: Checking endpoint ${endpoint}`);
     try {
       // Try OPTIONS request to see if endpoint exists
-      const optionsResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const optionsResponse = await fetch(`${BASE_URL}${endpoint}`, {
         method: 'OPTIONS',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -963,7 +966,7 @@ export async function debugAttachmentDeletion(memoryId: string, attachmentIds: s
   for (const method of methods) {
     conditionalLog.memoryApi(`TEST: Trying ${method} on /memories/${sanitizedMemoryId}/attachments`);
     try {
-      const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
+      const response = await fetch(`${BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
         method: method,
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1026,7 +1029,7 @@ export async function testAttachmentDeletionFormats(memoryId: string, attachment
     conditionalLog.memoryApi(`Testing format ${i + 1}:`, format);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
+      const response = await fetch(`${BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1101,7 +1104,7 @@ export async function updateMemoryAttachments(memoryId: string, attachments: any
     conditionalLog.memoryApi('Using PATCH /memories/:id/attachments for attachment removal');
     
     try {
-      const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
+      const response = await fetch(`${BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1217,12 +1220,12 @@ export async function updateMemoryAttachments(memoryId: string, attachments: any
     });
   }
 
-  conditionalLog.memoryApi('Making attachment update request to:', `${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`);
+  conditionalLog.memoryApi('Making attachment update request to:', `${BASE_URL}/memories/${sanitizedMemoryId}/attachments`);
   conditionalLog.memoryApi('Request method: PATCH');
   conditionalLog.memoryApi('Action:', action);
   conditionalLog.memoryApi('Attachments to upload:', attachments.map(f => ({ name: f.name, type: f.type, size: f.size })));
   
-  const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
+  const response = await fetch(`${BASE_URL}/memories/${sanitizedMemoryId}/attachments`, {
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -1247,7 +1250,7 @@ export async function updateMemoryAttachments(memoryId: string, attachments: any
     
     conditionalLog.memoryApi('Parsed error data:', errorData);
     conditionalLog.memoryApi('Request details for debugging:', {
-      url: `${API_BASE_URL}/memories/${sanitizedMemoryId}/attachments`,
+      url: `${BASE_URL}/memories/${sanitizedMemoryId}/attachments`,
       method: 'PATCH',
       action,
       attachmentCount: attachments.length
@@ -1332,7 +1335,7 @@ export async function testMemoryUpdate(memoryId: string): Promise<void> {
   // Test JSON PUT update (this is what works)
   conditionalLog.memoryApi('TEST: JSON PUT update');
   try {
-    const response = await fetch(`${API_BASE_URL}/memories/${sanitizedMemoryId}`, {
+    const response = await fetch(`${BASE_URL}/memories/${sanitizedMemoryId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,

@@ -2,26 +2,30 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { ResizeMode, Video } from 'expo-av';
 import React, { useRef, useState } from 'react';
 import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 interface VideoPlayerProps {
   uri: string;
   style?: any;
   onPlaybackStatusUpdate?: (status: any) => void;
+  shouldPlay?: boolean; // NEW PROP
 }
 
 
 
-export default function VideoPlayer({ uri, style, onPlaybackStatusUpdate }: VideoPlayerProps) {
+export default function VideoPlayer({ uri, style, onPlaybackStatusUpdate, shouldPlay = false }: VideoPlayerProps) {
   const videoRef = useRef<Video>(null);
   const [status, setStatus] = useState<any>({});
   const [isPlaying, setIsPlaying] = useState(false);
 
+  console.log('VideoPlayer render:', { uri, shouldPlay, style });
+
   const handlePlaybackStatusUpdate = (playbackStatus: any) => {
+    console.log('VideoPlayer status update:', playbackStatus);
     setStatus(playbackStatus);
     setIsPlaying(playbackStatus.isPlaying);
     onPlaybackStatusUpdate?.(playbackStatus);
@@ -43,15 +47,16 @@ export default function VideoPlayer({ uri, style, onPlaybackStatusUpdate }: Vide
   };
 
   return (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container]}>
       <Video
         ref={videoRef}
-        style={styles.video}
+        style={[styles.video, style]}
         source={{ uri }}
         useNativeControls={false}
         resizeMode={ResizeMode.CONTAIN}
         isLooping={false}
         onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+        shouldPlay={shouldPlay} // NEW PROP PASSED
       />
       
       <View style={styles.controls}>

@@ -2,14 +2,14 @@ import { API_BASE_URL } from '@env';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import ErrorText from '../../components/form/ErrorText';
 import FormWrapper from '../../components/form/FormWrapper';
@@ -20,6 +20,9 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { deleteFamilyGroup, fetchFamilyGroup, fetchFamilyGroups, updateFamilyGroup } from '../../redux/slices/familySlice';
 import { authService } from '../../services/authService';
+
+// Use the same fallback as apiService
+const BASE_URL = API_BASE_URL || "https://growing-together-app.onrender.com/api";
 
 export default function EditFamilyGroupScreen() {
   const router = useRouter();
@@ -155,7 +158,7 @@ export default function EditFamilyGroupScreen() {
     // Use a separate axios instance for file uploads to avoid JSON content-type issues
     const token = await authService.getAccessToken();
     
-    const response = await fetch(`${API_BASE_URL}/family-groups/${groupId}/avatar`, {
+    const response = await fetch(`${BASE_URL}/family-groups/${groupId}/avatar`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

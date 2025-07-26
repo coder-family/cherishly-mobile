@@ -4,11 +4,11 @@ import { Colors } from "../../constants/Colors";
 
 interface GrowthChartStatsProps {
   type: "height" | "weight";
-  userChartData: Array<{
+  userChartData: {
     value: number;
     ageInMonths: number;
     date: string;
-  }>;
+  }[];
   selectedMode: "yearly" | "half-yearly";
 }
 

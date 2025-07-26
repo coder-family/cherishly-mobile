@@ -3,6 +3,9 @@ import { conditionalLog } from '../utils/logUtils';
 import apiService from './apiService';
 import authService from './authService';
 
+// Use the same fallback as apiService
+const BASE_URL = API_BASE_URL || "https://growing-together-app.onrender.com/api";
+
 // Type definitions matching API response
 export interface ApiChild {
   _id: string;
@@ -132,7 +135,7 @@ export async function uploadAvatar(childId: string, imageUri: string): Promise<{
   // Use a separate axios instance for file uploads to avoid JSON content-type issues
   const token = await authService.getAccessToken();
   
-  const response = await fetch(`${API_BASE_URL}/children/${childId}/avatar`, {
+  const response = await fetch(`${BASE_URL}/children/${childId}/avatar`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,

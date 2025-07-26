@@ -2,6 +2,9 @@ import { API_BASE_URL } from '@env';
 import apiService from './apiService';
 import authService from './authService';
 
+// Use the same fallback as apiService
+const BASE_URL = API_BASE_URL || "https://growing-together-app.onrender.com/api";
+
 // Type definitions
 export interface User {
   id: string;
@@ -121,7 +124,7 @@ export async function uploadAvatar(userId: string, imageUri: string): Promise<{ 
   // Use a separate axios instance for file uploads to avoid JSON content-type issues
   const token = await authService.getAccessToken();
   
-  const response = await fetch(`${API_BASE_URL}/users/${userId}/avatar`, {
+  const response = await fetch(`${BASE_URL}/users/${userId}/avatar`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
