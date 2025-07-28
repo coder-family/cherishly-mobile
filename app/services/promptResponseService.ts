@@ -25,13 +25,24 @@ function mapPromptResponseFromApi(apiResponse: any): PromptResponse {
     attachmentsLength: apiResponse.attachments?.length
   });
   
+  // Map attachments to ensure they have the correct structure
+  const mappedAttachments = (apiResponse.attachments || []).map((attachment: any) => ({
+    id: attachment.id || attachment._id || attachment.url, // Use _id as fallback, then URL
+    publicId: attachment.publicId || '',
+    url: attachment.url || '',
+    type: attachment.type || 'image',
+    filename: attachment.filename || attachment.caption || '',
+    size: attachment.size || 0,
+    createdAt: attachment.createdAt || attachment.uploadedAt || '',
+  }));
+  
   return {
     id: apiResponse.id || apiResponse._id || '',
     promptId: apiResponse.promptId?._id || apiResponse.promptId || '',
     childId: apiResponse.child?._id || apiResponse.childId || '',
     parentId: apiResponse.parentId || '',
     content: apiResponse.response?.content || apiResponse.content || '',
-    attachments: apiResponse.attachments || [],
+    attachments: mappedAttachments,
     feedback: apiResponse.feedback,
     createdAt: apiResponse.createdAt || '',
     updatedAt: apiResponse.updatedAt || '',

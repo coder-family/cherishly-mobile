@@ -23,12 +23,12 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { ResizeMode, Video } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import React from 'react';
 import {
-    StyleSheet,
-    TouchableOpacity,
-    View
+  StyleSheet,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 interface VideoPreviewWithReduxProps {
@@ -40,15 +40,21 @@ const VideoPreviewWithRedux: React.FC<VideoPreviewWithReduxProps> = ({
   uri,
   onPressPlay,
 }) => {
+  const player = useVideoPlayer({ uri }, (player) => {
+    // Set up the player for preview
+    player.loop = true;
+    player.muted = false; // Enable audio
+    player.volume = 1.0; // Set volume to maximum
+  });
+
   return (
     <View style={styles.container}>
       {/* Video Player */}
-      <Video
-        source={{ uri }}
+      <VideoView
+        player={player}
         style={styles.video}
-        useNativeControls
-        resizeMode={ResizeMode.COVER}
-        isLooping
+        contentFit="cover"
+        nativeControls={true}
       />
 
       {/* Play Button Overlay */}
