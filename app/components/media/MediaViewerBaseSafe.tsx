@@ -26,11 +26,10 @@ interface MediaViewerBaseSafeProps<T extends BaseAttachment> {
   attachments: T[];
   maxPreviewCount?: number;
   onAttachmentPress?: (attachment: T, index: number) => void;
-  renderCustomContent?: (attachment: T, index: number) => React.ReactNode;
+  renderCustomContent?: (_attachment: T, _index: number) => React.ReactNode;
 }
 
 const { width: screenWidth } = Dimensions.get("window");
-const PREVIEW_SIZE = 120;
 const MAX_PREVIEW_COUNT = 2; // Show only 2 items initially
 
 export default function MediaViewerBaseSafe<T extends BaseAttachment>({
@@ -46,12 +45,12 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
   const [currentScrollIndex, setCurrentScrollIndex] = useState<number>(0);
   const [showCounter, setShowCounter] = useState<boolean>(true);
   const [modalKey, setModalKey] = useState<number>(0);
-  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
+  const [_playingVideoId, setPlayingVideoId] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [audioToggleKey, setAudioToggleKey] = useState<number>(0);
   const [mutedStates, setMutedStates] = useState<Record<string, boolean>>({});
   const [modalOpeningKey, setModalOpeningKey] = useState<number>(0);
-  const [videoTimestamp, setVideoTimestamp] = useState<number>(Date.now());
+  const [_videoTimestamp, setVideoTimestamp] = useState<number>(Date.now());
   const scrollViewRef = React.useRef<ScrollView>(null);
 
   // Ensure attachments are valid and have required fields
@@ -95,41 +94,51 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
     }))
   });
   
-  // Create individual video players at the top level with unique keys
-  const player1 = videoAttachments[0] ? useVideoPlayer({ uri: videoAttachments[0].url }, (player) => {
-    console.log('MediaViewerBaseSafe: player1 initialized for:', videoAttachments[0].url);
-    player.loop = false;
-    player.muted = false;
-    player.volume = 1.0;
-  }) : null;
+  // Create individual video players at the top level with unique keys - always create all 5
+  const player1 = useVideoPlayer({ uri: videoAttachments[0]?.url || '' }, (player) => {
+    if (videoAttachments[0]) {
+      console.log('MediaViewerBaseSafe: player1 initialized for:', videoAttachments[0].url);
+      player.loop = false;
+      player.muted = false;
+      player.volume = 1.0;
+    }
+  });
   
-  const player2 = videoAttachments[1] ? useVideoPlayer({ uri: videoAttachments[1].url }, (player) => {
-    console.log('MediaViewerBaseSafe: player2 initialized for:', videoAttachments[1].url);
-    player.loop = false;
-    player.muted = false;
-    player.volume = 1.0;
-  }) : null;
+  const player2 = useVideoPlayer({ uri: videoAttachments[1]?.url || '' }, (player) => {
+    if (videoAttachments[1]) {
+      console.log('MediaViewerBaseSafe: player2 initialized for:', videoAttachments[1].url);
+      player.loop = false;
+      player.muted = false;
+      player.volume = 1.0;
+    }
+  });
   
-  const player3 = videoAttachments[2] ? useVideoPlayer({ uri: videoAttachments[2].url }, (player) => {
-    console.log('MediaViewerBaseSafe: player3 initialized for:', videoAttachments[2].url);
-    player.loop = false;
-    player.muted = false;
-    player.volume = 1.0;
-  }) : null;
+  const player3 = useVideoPlayer({ uri: videoAttachments[2]?.url || '' }, (player) => {
+    if (videoAttachments[2]) {
+      console.log('MediaViewerBaseSafe: player3 initialized for:', videoAttachments[2].url);
+      player.loop = false;
+      player.muted = false;
+      player.volume = 1.0;
+    }
+  });
   
-  const player4 = videoAttachments[3] ? useVideoPlayer({ uri: videoAttachments[3].url }, (player) => {
-    console.log('MediaViewerBaseSafe: player4 initialized for:', videoAttachments[3].url);
-    player.loop = false;
-    player.muted = false;
-    player.volume = 1.0;
-  }) : null;
+  const player4 = useVideoPlayer({ uri: videoAttachments[3]?.url || '' }, (player) => {
+    if (videoAttachments[3]) {
+      console.log('MediaViewerBaseSafe: player4 initialized for:', videoAttachments[3].url);
+      player.loop = false;
+      player.muted = false;
+      player.volume = 1.0;
+    }
+  });
   
-  const player5 = videoAttachments[4] ? useVideoPlayer({ uri: videoAttachments[4].url }, (player) => {
-    console.log('MediaViewerBaseSafe: player5 initialized for:', videoAttachments[4].url);
-    player.loop = false;
-    player.muted = false;
-    player.volume = 1.0;
-  }) : null;
+  const player5 = useVideoPlayer({ uri: videoAttachments[4]?.url || '' }, (player) => {
+    if (videoAttachments[4]) {
+      console.log('MediaViewerBaseSafe: player5 initialized for:', videoAttachments[4].url);
+      player.loop = false;
+      player.muted = false;
+      player.volume = 1.0;
+    }
+  });
 
   const players = [player1, player2, player3, player4, player5];
   
@@ -212,11 +221,6 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
     };
   }, []);
 
-  // Early return if no attachments
-  if (!attachments || !Array.isArray(attachments) || safeAttachments.length === 0) {
-    return null;
-  }
-
   // Generate a unique key for this media's expanded state
   const getExpandedStateKey = useCallback(() => {
     if (!safeAttachments || safeAttachments.length === 0) return null;
@@ -264,6 +268,11 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
     setIsExpanded(newExpandedState);
     await saveExpandedState(newExpandedState);
   }, [isExpanded, saveExpandedState]);
+
+  // Early return if no attachments
+  if (!attachments || !Array.isArray(attachments) || safeAttachments.length === 0) {
+    return null;
+  }
 
   const renderImagePreview = (attachment: T, index: number) => (
     <TouchableOpacity
@@ -393,10 +402,6 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
     mediaItems: T[],
     showAll: boolean = false
   ) => {
-    const images = mediaItems.filter((item) => item.type === "image");
-    const videos = mediaItems.filter((item) => item.type === "video");
-    const audios = mediaItems.filter((item) => item.type === "audio");
-
     const displayItems = showAll ? mediaItems : mediaItems.slice(0, maxPreviewCount);
     const hasMoreItems = mediaItems.length > maxPreviewCount;
 

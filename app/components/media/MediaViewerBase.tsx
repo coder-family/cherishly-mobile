@@ -27,12 +27,11 @@ interface MediaViewerBaseProps<T extends BaseAttachment> {
   attachments: T[];
   maxPreviewCount?: number;
   onAttachmentPress?: (attachment: T, index: number) => void;
-  renderCustomContent?: (attachment: T, index: number) => React.ReactNode;
+  renderCustomContent?: (_attachment: T, _index: number) => React.ReactNode;
   enableOrientationControl?: boolean; // Optional flag to enable/disable orientation features
 }
 
 const { width: screenWidth } = Dimensions.get("window");
-const PREVIEW_SIZE = 120;
 const MAX_PREVIEW_COUNT = 2; // Show only 2 items initially
 
 export default function MediaViewerBase<T extends BaseAttachment>({
@@ -49,14 +48,14 @@ export default function MediaViewerBase<T extends BaseAttachment>({
   const [currentScrollIndex, setCurrentScrollIndex] = useState<number>(0);
   const [showCounter, setShowCounter] = useState<boolean>(true);
   const [modalKey, setModalKey] = useState<number>(0);
-  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
+  const [_playingVideoId, setPlayingVideoId] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [audioToggleKey, setAudioToggleKey] = useState<number>(0); // Add this for forcing re-render when audio changes
   const [mutedStates, setMutedStates] = useState<Record<string, boolean>>({}); // Track muted state per video
   const [modalOpeningKey, setModalOpeningKey] = useState<number>(0); // Track when modal is opening
-  const [videoTimestamp, setVideoTimestamp] = useState<number>(Date.now()); // Track video timestamp
+  const [_videoTimestamp, setVideoTimestamp] = useState<number>(Date.now()); // Track video timestamp
   const [isLandscape, setIsLandscape] = useState<boolean>(false); // Track orientation state
-  const [originalOrientation, setOriginalOrientation] = useState<number | null>(null); // Store original orientation
+  const [_originalOrientation, setOriginalOrientation] = useState<number | null>(null); // Store original orientation
   const scrollViewRef = React.useRef<ScrollView>(null);
 
   // Ensure attachments are valid and have required fields
@@ -100,41 +99,51 @@ export default function MediaViewerBase<T extends BaseAttachment>({
     }))
   });
   
-  // Create individual video players at the top level with unique keys
-  const player1 = videoAttachments[0] ? useVideoPlayer({ uri: videoAttachments[0].url }, (player) => {
-    console.log('MediaViewerBase: player1 initialized for:', videoAttachments[0].url);
-    player.loop = false;
-    player.muted = false; // Enable audio
-    player.volume = 1.0; // Set volume to maximum
-  }) : null;
+  // Create individual video players at the top level with unique keys - always create all 5
+  const player1 = useVideoPlayer({ uri: videoAttachments[0]?.url || '' }, (player) => {
+    if (videoAttachments[0]) {
+      console.log('MediaViewerBase: player1 initialized for:', videoAttachments[0].url);
+      player.loop = false;
+      player.muted = false; // Enable audio
+      player.volume = 1.0; // Set volume to maximum
+    }
+  });
   
-  const player2 = videoAttachments[1] ? useVideoPlayer({ uri: videoAttachments[1].url }, (player) => {
-    console.log('MediaViewerBase: player2 initialized for:', videoAttachments[1].url);
-    player.loop = false;
-    player.muted = false; // Enable audio
-    player.volume = 1.0; // Set volume to maximum
-  }) : null;
+  const player2 = useVideoPlayer({ uri: videoAttachments[1]?.url || '' }, (player) => {
+    if (videoAttachments[1]) {
+      console.log('MediaViewerBase: player2 initialized for:', videoAttachments[1].url);
+      player.loop = false;
+      player.muted = false; // Enable audio
+      player.volume = 1.0; // Set volume to maximum
+    }
+  });
   
-  const player3 = videoAttachments[2] ? useVideoPlayer({ uri: videoAttachments[2].url }, (player) => {
-    console.log('MediaViewerBase: player3 initialized for:', videoAttachments[2].url);
-    player.loop = false;
-    player.muted = false; // Enable audio
-    player.volume = 1.0; // Set volume to maximum
-  }) : null;
+  const player3 = useVideoPlayer({ uri: videoAttachments[2]?.url || '' }, (player) => {
+    if (videoAttachments[2]) {
+      console.log('MediaViewerBase: player3 initialized for:', videoAttachments[2].url);
+      player.loop = false;
+      player.muted = false; // Enable audio
+      player.volume = 1.0; // Set volume to maximum
+    }
+  });
   
-  const player4 = videoAttachments[3] ? useVideoPlayer({ uri: videoAttachments[3].url }, (player) => {
-    console.log('MediaViewerBase: player4 initialized for:', videoAttachments[3].url);
-    player.loop = false;
-    player.muted = false; // Enable audio
-    player.volume = 1.0; // Set volume to maximum
-  }) : null;
+  const player4 = useVideoPlayer({ uri: videoAttachments[3]?.url || '' }, (player) => {
+    if (videoAttachments[3]) {
+      console.log('MediaViewerBase: player4 initialized for:', videoAttachments[3].url);
+      player.loop = false;
+      player.muted = false; // Enable audio
+      player.volume = 1.0; // Set volume to maximum
+    }
+  });
   
-  const player5 = videoAttachments[4] ? useVideoPlayer({ uri: videoAttachments[4].url }, (player) => {
-    console.log('MediaViewerBase: player5 initialized for:', videoAttachments[4].url);
-    player.loop = false;
-    player.muted = false; // Enable audio
-    player.volume = 1.0; // Set volume to maximum
-  }) : null;
+  const player5 = useVideoPlayer({ uri: videoAttachments[4]?.url || '' }, (player) => {
+    if (videoAttachments[4]) {
+      console.log('MediaViewerBase: player5 initialized for:', videoAttachments[4].url);
+      player.loop = false;
+      player.muted = false; // Enable audio
+      player.volume = 1.0; // Set volume to maximum
+    }
+  });
 
   const players = [player1, player2, player3, player4, player5];
   
@@ -305,11 +314,6 @@ export default function MediaViewerBase<T extends BaseAttachment>({
     };
   }, [unlockOrientation, enableOrientationControl]);
 
-  // Early return if no attachments
-  if (!attachments || !Array.isArray(attachments) || safeAttachments.length === 0) {
-    return null;
-  }
-
   // Generate a unique key for this media's expanded state
   const getExpandedStateKey = useCallback(() => {
     if (!safeAttachments || safeAttachments.length === 0) return null;
@@ -358,6 +362,11 @@ export default function MediaViewerBase<T extends BaseAttachment>({
     setIsExpanded(newExpandedState);
     await saveExpandedState(newExpandedState);
   }, [isExpanded, saveExpandedState]);
+
+  // Early return if no attachments
+  if (!attachments || !Array.isArray(attachments) || safeAttachments.length === 0) {
+    return null;
+  }
 
   const renderImagePreview = (attachment: T, index: number) => (
     <TouchableOpacity
@@ -489,10 +498,6 @@ export default function MediaViewerBase<T extends BaseAttachment>({
     mediaItems: T[],
     showAll: boolean = false
   ) => {
-    const images = mediaItems.filter((item) => item.type === "image");
-    const videos = mediaItems.filter((item) => item.type === "video");
-    const audios = mediaItems.filter((item) => item.type === "audio");
-
     const displayItems = showAll ? mediaItems : mediaItems.slice(0, maxPreviewCount);
     const hasMoreItems = mediaItems.length > maxPreviewCount;
 

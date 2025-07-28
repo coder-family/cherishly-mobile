@@ -25,7 +25,7 @@ export default function VideoPlayerExampleSafe() {
     <View style={styles.container}>
       <Text style={styles.title}>Safe Video Player (No Orientation)</Text>
       <Text style={styles.subtitle}>
-        This version doesn't use screen orientation features to prevent crashes.
+        This version doesn&apos;t use screen orientation features to prevent crashes.
         Tap on a video to open in full-screen mode.
       </Text>
       
