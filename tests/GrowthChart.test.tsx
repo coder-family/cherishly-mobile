@@ -5,13 +5,13 @@ import GrowthChart from '../app/components/health/GrowthChart';
 import { store } from '../app/redux/store';
 import { GrowthRecord } from '../app/types/health';
 
+import * as healthService from '../app/services/healthService';
+
 // Mock the health service
 jest.mock('../app/services/healthService', () => ({
   getWHOStandardsInRange: jest.fn().mockResolvedValue([]),
   getAllWHOStandardData: jest.fn().mockResolvedValue([]),
 }));
-
-import * as healthService from '../app/services/healthService';
 
 describe('GrowthChart', () => {
   const mockGrowthData: GrowthRecord[] = [

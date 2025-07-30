@@ -144,6 +144,38 @@ export class ChildUtils {
   }
 
   /**
+   * Calculate age in years from birth date
+   */
+  static calculateAgeInYears(birthdate: string): number {
+    const birth = new Date(birthdate);
+    const today = new Date();
+    
+    let years = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      years--;
+    }
+    
+    return Math.max(0, years);
+  }
+
+  /**
+   * Get age range category based on birth date
+   * Returns one of: '0-3', '4-6', '7-9', '10-12', '13-15', '16-18'
+   */
+  static getAgeRange(birthdate: string): '0-3' | '4-6' | '7-9' | '10-12' | '13-15' | '16-18' {
+    const ageInYears = ChildUtils.calculateAgeInYears(birthdate);
+    
+    if (ageInYears <= 3) return '0-3';
+    if (ageInYears <= 6) return '4-6';
+    if (ageInYears <= 9) return '7-9';
+    if (ageInYears <= 12) return '10-12';
+    if (ageInYears <= 15) return '13-15';
+    return '16-18';
+  }
+
+  /**
    * Create a new child (can be extended for form handling)
    */
   static async createNewChild(
@@ -175,5 +207,7 @@ export const {
   handleChildrenError,
   getWelcomeMessage,
   isChildrenLoading,
+  calculateAgeInYears,
+  getAgeRange,
   createNewChild
 } = ChildUtils; 

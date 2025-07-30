@@ -69,7 +69,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { ResizeMode, Video } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import React, { useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -79,6 +79,13 @@ interface VideoPreviewProps {
 }
 
 const VideoPreview: React.FC<VideoPreviewProps> = ({ uri, onPressPlay }) => {
+  const player = useVideoPlayer({ uri }, (player) => {
+    // Set up the player for preview
+    player.loop = true;
+    player.muted = false; // Enable audio
+    player.volume = 1.0; // Set volume to maximum
+  });
+
   useEffect(() => {
     if (uri) {
       // ✅ TODO: Upload video to backend or Cloudinary
@@ -90,12 +97,11 @@ const VideoPreview: React.FC<VideoPreviewProps> = ({ uri, onPressPlay }) => {
 
   return (
     <View style={styles.container}>
-      <Video
-        source={{ uri }}
+      <VideoView
+        player={player}
         style={styles.video}
-        useNativeControls
-        resizeMode={ResizeMode.COVER}
-        isLooping
+        contentFit="cover"
+        nativeControls={true}
       />
       {onPressPlay && (
         <TouchableOpacity style={styles.playButton} onPress={onPressPlay}>

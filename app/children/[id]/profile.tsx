@@ -16,6 +16,7 @@ import EditMemoryModal from '../../components/child/EditMemoryModal';
 import HealthContent from '../../components/child/HealthContent';
 import MemoryItem from '../../components/child/MemoryItem';
 import AppHeader from '../../components/layout/AppHeader';
+import { QAContent } from '../../components/qa';
 import ErrorView from '../../components/ui/ErrorView';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import ModalConfirm from '../../components/ui/ModalConfirm';
@@ -781,23 +782,10 @@ export default function ChildProfileScreen() {
     );
   }
 
-     // Q&A content
-   function renderQAContent() {
-     return (
-       <View style={styles.contentContainer}>
-         <Text style={styles.contentTitle}>Questions & Answers</Text>
-         <View style={styles.placeholderContainer}>
-           <MaterialIcons name="help" size={48} color="#ccc" />
-           <Text style={styles.placeholderText}>
-             Q&A feature coming soon!
-           </Text>
-           <Text style={styles.placeholderSubtext}>
-             Ask questions about your child&apos;s development and get helpful responses.
-           </Text>
-         </View>
-       </View>
-     );
-   }
+       // Q&A content
+  function renderQAContent() {
+    return <QAContent childId={id!} useScrollView={true} />;
+  }
 
    // Profile content
    function renderProfileContent() {

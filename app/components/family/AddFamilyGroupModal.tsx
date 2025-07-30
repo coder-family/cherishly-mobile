@@ -1,16 +1,16 @@
 import { API_BASE_URL } from '@env';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { createFamilyGroup, fetchFamilyGroups } from '../../redux/slices/familySlice';
@@ -18,6 +18,9 @@ import { authService } from '../../services/authService';
 import ErrorText from '../form/ErrorText';
 import InputField from '../form/InputField';
 import AvatarUpload from '../media/AvatarUpload';
+
+// Use the same fallback as apiService
+const BASE_URL = API_BASE_URL || "https://growing-together-app.onrender.com/api";
 
 interface AddFamilyGroupModalProps {
   visible: boolean;
@@ -135,7 +138,7 @@ const AddFamilyGroupModal: React.FC<AddFamilyGroupModalProps> = ({
     // Use a separate axios instance for file uploads to avoid JSON content-type issues
     const token = await authService.getAccessToken();
     
-    const response = await fetch(`${API_BASE_URL}/family-groups/${groupId}/avatar`, {
+    const response = await fetch(`${BASE_URL}/family-groups/${groupId}/avatar`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
