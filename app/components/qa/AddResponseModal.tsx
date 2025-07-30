@@ -1,19 +1,19 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAppDispatch } from '../../redux/hooks';
 import { createResponse } from '../../redux/slices/promptResponseSlice';
 import { Prompt } from '../../services/promptService';
-import ImagePicker from '../media/ImagePicker';
+import MultiMediaPicker, { MediaFile } from '../media/MultiMediaPicker';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
 interface AddResponseModalProps {
@@ -33,7 +33,7 @@ export default function AddResponseModal({
 }: AddResponseModalProps) {
   const dispatch = useAppDispatch();
   const [content, setContent] = useState('');
-  const [attachments, setAttachments] = useState<any[]>([]);
+  const [attachments, setAttachments] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -44,11 +44,20 @@ export default function AddResponseModal({
 
     setLoading(true);
     try {
+      // Convert MediaFile objects to the format expected by the service
+      const convertedAttachments = attachments.map(file => ({
+        uri: file.uri,
+        type: file.type === 'image' ? 'image/jpeg' : 
+              file.type === 'video' ? 'video/mp4' : 
+              'audio/mpeg',
+        name: file.filename,
+      }));
+
       await dispatch(createResponse({
         promptId: prompt.id,
         childId,
         content: content.trim(),
-        attachments,
+        attachments: convertedAttachments as any,
       })).unwrap();
 
       // Reset form
@@ -87,12 +96,8 @@ export default function AddResponseModal({
     }
   };
 
-  const handleAddAttachment = (file: any) => {
-    setAttachments(prev => [...prev, file]);
-  };
-
-  const handleRemoveAttachment = (index: number) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index));
+  const handleMediaPicked = (files: MediaFile[]) => {
+    setAttachments(files);
   };
 
   return (
@@ -167,22 +172,12 @@ export default function AddResponseModal({
               Add photos, videos, or audio to support your response
             </Text>
             
-            <ImagePicker
-              onImagePicked={handleAddAttachment}
+            <MultiMediaPicker
+              onMediaPicked={handleMediaPicked}
+              maxFiles={5}
+              allowedTypes={['image', 'video', 'audio']}
+              maxFileSize={50}
             />
-            {attachments.length > 0 && (
-              <View style={styles.attachmentsPreview}>
-                <Text style={styles.attachmentsLabel}>Selected files:</Text>
-                {attachments.map((file, index) => (
-                  <View key={index} style={styles.attachmentItem}>
-                    <Text style={styles.attachmentName}>{file.name || `File ${index + 1}`}</Text>
-                    <TouchableOpacity onPress={() => handleRemoveAttachment(index)}>
-                      <MaterialIcons name="close" size={16} color="#f44336" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
           </View>
         </ScrollView>
       </View>
@@ -292,28 +287,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 12,
-  },
-  attachmentsPreview: {
-    marginTop: 12,
-  },
-  attachmentsLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  attachmentItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    padding: 8,
-    borderRadius: 6,
-    marginBottom: 4,
-  },
-  attachmentName: {
-    fontSize: 14,
-    color: '#333',
-    flex: 1,
   },
 }); 

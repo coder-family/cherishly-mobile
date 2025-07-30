@@ -54,6 +54,42 @@ export const deleteResponse = createAsyncThunk(
   }
 );
 
+export const addAttachments = createAsyncThunk(
+  'promptResponses/addAttachments',
+  async ({ responseId, files }: { responseId: string; files: File[] }, { rejectWithValue }) => {
+    try {
+      const result = await promptResponseService.addAttachments(responseId, files);
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to add attachments');
+    }
+  }
+);
+
+export const removeAttachments = createAsyncThunk(
+  'promptResponses/removeAttachments',
+  async ({ responseId, attachmentIds }: { responseId: string; attachmentIds: string[] }, { rejectWithValue }) => {
+    try {
+      const result = await promptResponseService.removeAttachments(responseId, attachmentIds);
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to remove attachments');
+    }
+  }
+);
+
+export const replaceAttachments = createAsyncThunk(
+  'promptResponses/replaceAttachments',
+  async ({ responseId, files }: { responseId: string; files: File[] }, { rejectWithValue }) => {
+    try {
+      const result = await promptResponseService.replaceAttachments(responseId, files);
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to replace attachments');
+    }
+  }
+);
+
 // State interface
 interface PromptResponseState {
   responses: PromptResponse[];
@@ -64,6 +100,7 @@ interface PromptResponseState {
   page: number;
   limit: number;
   hasMore: boolean;
+  deletingResponseId: string | null;
 }
 
 // Initial state
@@ -76,6 +113,7 @@ const initialState: PromptResponseState = {
   page: 1,
   limit: 10,
   hasMore: true,
+  deletingResponseId: null,
 };
 
 // Slice
@@ -194,9 +232,10 @@ const promptResponseSlice = createSlice({
 
     // deleteResponse
     builder
-      .addCase(deleteResponse.pending, (state) => {
+      .addCase(deleteResponse.pending, (state, action) => {
         state.loading = true;
         state.error = null;
+        state.deletingResponseId = action.meta.arg;
       })
       .addCase(deleteResponse.fulfilled, (state, action) => {
         state.loading = false;
@@ -206,10 +245,78 @@ const promptResponseSlice = createSlice({
           state.currentResponse = null;
         }
         state.total = Math.max(0, state.total - 1);
+        state.deletingResponseId = null;
       })
       .addCase(deleteResponse.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string || 'Failed to delete response';
+        state.deletingResponseId = null;
+      });
+
+    // addAttachments
+    builder
+      .addCase(addAttachments.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(addAttachments.fulfilled, (state, action) => {
+        state.loading = false;
+        const updatedResponse = action.payload;
+        const index = state.responses.findIndex(r => r.id === updatedResponse.id);
+        if (index !== -1) {
+          state.responses[index] = updatedResponse;
+        }
+        if (state.currentResponse?.id === updatedResponse.id) {
+          state.currentResponse = updatedResponse;
+        }
+      })
+      .addCase(addAttachments.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string || 'Failed to add attachments';
+      });
+
+    // removeAttachments
+    builder
+      .addCase(removeAttachments.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(removeAttachments.fulfilled, (state, action) => {
+        state.loading = false;
+        const updatedResponse = action.payload;
+        const index = state.responses.findIndex(r => r.id === updatedResponse.id);
+        if (index !== -1) {
+          state.responses[index] = updatedResponse;
+        }
+        if (state.currentResponse?.id === updatedResponse.id) {
+          state.currentResponse = updatedResponse;
+        }
+      })
+      .addCase(removeAttachments.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string || 'Failed to remove attachments';
+      });
+
+    // replaceAttachments
+    builder
+      .addCase(replaceAttachments.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(replaceAttachments.fulfilled, (state, action) => {
+        state.loading = false;
+        const updatedResponse = action.payload;
+        const index = state.responses.findIndex(r => r.id === updatedResponse.id);
+        if (index !== -1) {
+          state.responses[index] = updatedResponse;
+        }
+        if (state.currentResponse?.id === updatedResponse.id) {
+          state.currentResponse = updatedResponse;
+        }
+      })
+      .addCase(replaceAttachments.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string || 'Failed to replace attachments';
       });
   },
 });

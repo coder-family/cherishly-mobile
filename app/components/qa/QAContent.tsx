@@ -1,6 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -9,14 +10,14 @@ import {
   View
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
-import { fetchChildResponses } from '../../redux/slices/promptResponseSlice';
+import { deleteResponse, fetchChildResponses } from '../../redux/slices/promptResponseSlice';
 import { fetchPrompts } from '../../redux/slices/promptSlice';
 import { Prompt } from '../../services/promptService';
 import ErrorView from '../ui/ErrorView';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import AddResponseModal from './AddResponseModal';
 import AskChildModal from './AskChildModal';
-import CustomQuestionModal from './CustomQuestionModal';
+import EditResponseModal from './EditResponseModal';
 import QuestionAnswerCard from './QuestionAnswerCard';
 
 interface QAContentProps {
@@ -34,24 +35,39 @@ interface ListItem {
 }
 
 export default function QAContent({ childId, useScrollView = false }: QAContentProps) {
+  // Debug: Log the childId value
+  console.log('QAContent: Received childId:', childId);
+  console.log('QAContent: childId type:', typeof childId);
+  console.log('QAContent: childId length:', childId?.length);
+  
   const dispatch = useAppDispatch();
   const { prompts, loading: promptsLoading, error: promptsError, hasMore: promptsHasMore } = useAppSelector((state) => state.prompts);
-  const { responses, loading: responsesLoading, error: responsesError, hasMore: responsesHasMore } = useAppSelector((state) => state.promptResponses);
+  const { responses, loading: responsesLoading, error: responsesError, hasMore: responsesHasMore, deletingResponseId } = useAppSelector((state) => state.promptResponses);
+  const { currentChild } = useAppSelector((state) => state.children);
   
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [showAddResponseModal, setShowAddResponseModal] = useState(false);
+  const [showEditResponseModal, setShowEditResponseModal] = useState(false);
   const [showAskChildModal, setShowAskChildModal] = useState(false);
-  const [showCustomQuestionModal, setShowCustomQuestionModal] = useState(false);
+  const [selectedResponse, setSelectedResponse] = useState<any>(null);
   const [visibleCardsCount, setVisibleCardsCount] = useState(3); // Show 3 cards initially
   
   // Use ref to track if initial data has been loaded
   const initialDataLoaded = useRef(false);
+
+  // Function to close all modals
+  const closeAllModals = () => {
+    setSelectedPrompt(null);
+    setSelectedResponse(null);
+    setShowAskChildModal(false);
+  };
 
   // Load prompts and responses on mount
   useEffect(() => {
     if (childId && !initialDataLoaded.current) {
       console.log('QAContent: Loading initial data for childId:', childId);
       initialDataLoaded.current = true;
+      // Temporarily disable API calls
       dispatch(fetchPrompts({ isActive: true, limit: 20 }));
       dispatch(fetchChildResponses({ childId, limit: 20 }));
     }
@@ -61,6 +77,11 @@ export default function QAContent({ childId, useScrollView = false }: QAContentP
   useEffect(() => {
     console.log('QAContent: State updated - prompts:', prompts.length, 'responses:', responses.length);
   }, [prompts.length, responses.length]);
+
+  // Debug modal states
+  useEffect(() => {
+    console.log('QAContent: Modal states - Prompt:', selectedPrompt, 'Response:', selectedResponse, 'AskChild:', showAskChildModal);
+  }, [selectedPrompt, selectedResponse, showAskChildModal]);
 
   // Reset the ref when childId changes and clear data
   useEffect(() => {
@@ -76,6 +97,10 @@ export default function QAContent({ childId, useScrollView = false }: QAContentP
       if (loadMoreDataRef.current) {
         clearTimeout(loadMoreDataRef.current);
       }
+      // Clean up modal states on unmount
+      setSelectedPrompt(null);
+      setSelectedResponse(null);
+      setShowAskChildModal(false);
     };
   }, []);
 
@@ -88,38 +113,69 @@ export default function QAContent({ childId, useScrollView = false }: QAContentP
     setShowAddResponseModal(true);
   };
 
-  const handleResponseCreated = useCallback(() => {
-    console.log('QAContent: Response created, refreshing data...');
-    setShowAddResponseModal(false);
-    setSelectedPrompt(null);
-    // Refresh responses with a small delay to ensure backend has processed the request
-    if (childId) {
-      setTimeout(() => {
-        console.log('QAContent: Refreshing responses for childId:', childId);
-        dispatch(fetchChildResponses({ childId, limit: 20 }));
-      }, 1000); // 1 second delay
-    }
-  }, [childId, dispatch]);
+  const handleEditResponse = (response: any) => {
+    setSelectedResponse(response);
+    setShowEditResponseModal(true);
+  };
+
+  const handleDeleteResponse = async (response: any) => {
+    Alert.alert(
+      "Delete Response",
+      "Are you sure you want to delete this response? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await dispatch(deleteResponse(response.id)).unwrap();
+              // Refresh the responses after deletion
+              dispatch(fetchChildResponses({ childId, limit: 20 }));
+              Alert.alert("Success", "Response deleted successfully!");
+            } catch (error: any) {
+              Alert.alert("Error", "Failed to delete response. Please try again.");
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const handleAskChild = () => {
     setShowAskChildModal(true);
   };
 
-  const handleSystemQuestion = () => {
+  const handleAskChildSave = (question: Prompt | string, answer: string, attachment?: string) => {
+    console.log('QAContent: AskChild save called with:', { question, answer, attachment });
+    
+    // Refresh data after a short delay to ensure backend has processed the request
+    setTimeout(() => {
+      console.log('QAContent: Refreshing data after AskChild save');
+      dispatch(fetchPrompts({ isActive: true, limit: 20 }));
+      dispatch(fetchChildResponses({ childId, limit: 20 }));
+    }, 1000); // 1 second delay
+    
     setShowAskChildModal(false);
-    // TODO: Implement system question logic
-    console.log('System question selected');
   };
 
-  const handleCustomQuestion = () => {
-    setShowAskChildModal(false);
-    setShowCustomQuestionModal(true);
+  const handleResponseCreated = () => {
+    // Refresh data after a short delay to ensure backend has processed the request
+    setTimeout(() => {
+      console.log('QAContent: Refreshing responses for childId:', childId);
+      dispatch(fetchChildResponses({ childId, limit: 20 }));
+    }, 1000); // 1 second delay
   };
 
-  const handleCustomQuestionSubmit = (question: string) => {
-    setShowCustomQuestionModal(false);
-    // TODO: Implement custom question submission
-    console.log('Custom question submitted:', question);
+  const handleResponseUpdated = () => {
+    // Refresh data after a short delay to ensure backend has processed the request
+    setTimeout(() => {
+      console.log('QAContent: Refreshing responses for childId:', childId);
+      dispatch(fetchChildResponses({ childId, limit: 20 }));
+    }, 1000); // 1 second delay
   };
 
   const handleLoadMore = () => {
@@ -153,27 +209,18 @@ export default function QAContent({ childId, useScrollView = false }: QAContentP
         return;
       }
 
-      let hasMoreData = false;
-
-      if (promptsHasMore) {
+      // Load more prompts if available
+      if (promptsHasMore && prompts.length > 0) {
+        console.log('QAContent: Loading more prompts');
         const nextPage = Math.floor(prompts.length / 20) + 1;
-        console.log('QAContent: Loading more prompts, page:', nextPage);
-        dispatch(fetchPrompts({ isActive: true, page: nextPage, limit: 20 }));
-        hasMoreData = true;
-      }
-      
-      if (responsesHasMore) {
-        const nextPage = Math.floor(responses.length / 20) + 1;
-        console.log('QAContent: Loading more responses, page:', nextPage);
-        dispatch(fetchChildResponses({ childId, page: nextPage, limit: 20 }));
-        hasMoreData = true;
+        dispatch(fetchPrompts({ isActive: true, limit: 20, page: nextPage }));
       }
 
-      // Only log if we actually loaded more data
-      if (hasMoreData) {
-        console.log('QAContent: Loading more Q&A data...');
-      } else {
-        console.log('QAContent: No more data to load');
+      // Load more responses if available
+      if (responsesHasMore && responses.length > 0) {
+        console.log('QAContent: Loading more responses');
+        const nextPage = Math.floor(responses.length / 20) + 1;
+        dispatch(fetchChildResponses({ childId, limit: 20, page: nextPage }));
       }
     }, 300); // 300ms debounce
   }, [promptsLoading, responsesLoading, promptsHasMore, responsesHasMore, prompts.length, responses.length, childId, dispatch]);
@@ -197,8 +244,8 @@ export default function QAContent({ childId, useScrollView = false }: QAContentP
             onPress={handleAskChild}
             activeOpacity={0.8}
           >
-            <MaterialIcons name="add-circle" size={24} color="#fff" />
-            <Text style={styles.askButtonText}>Ask Child</Text>
+            <MaterialIcons name="add" size={20} color="#fff" />
+            <Text style={styles.askButtonText}>Ask Your Child</Text>
           </TouchableOpacity>
         );
       
@@ -209,7 +256,10 @@ export default function QAContent({ childId, useScrollView = false }: QAContentP
             response={item.response}
             onPress={() => item.prompt && handlePromptPress(item.prompt)}
             onAddResponse={() => item.prompt && handleAddResponse(item.prompt)}
+            onEditResponse={() => item.response && handleEditResponse(item.response)}
+            onDeleteResponse={() => item.response && handleDeleteResponse(item.response)}
             showAddButton={true}
+            isDeleting={deletingResponseId === item.response?.id}
           />
         );
       
@@ -291,16 +341,16 @@ export default function QAContent({ childId, useScrollView = false }: QAContentP
 
     if (typeof response.promptId === 'object' && response.promptId) {
       // Use embedded prompt information
-      const promptId = (response.promptId as any)._id;
+      const promptId = (response.promptId as any)._id || (response.promptId as any).id;
       promptToUse = {
         id: promptId,
-        title: (response.promptId as any).question || '',
-        content: (response.promptId as any).question || '',
+        title: (response.promptId as any).question || (response.promptId as any).title || '',
+        content: (response.promptId as any).question || (response.promptId as any).content || '',
         category: (response.promptId as any).category || '',
-        tags: [],
-        isActive: true,
-        createdAt: response.createdAt,
-        updatedAt: response.updatedAt,
+        tags: (response.promptId as any).tags || [],
+        isActive: (response.promptId as any).isActive !== undefined ? (response.promptId as any).isActive : true,
+        createdAt: (response.promptId as any).createdAt || response.createdAt,
+        updatedAt: (response.promptId as any).updatedAt || response.updatedAt,
       };
       console.log(`QAContent: Using embedded prompt for response ${response.id}:`, promptToUse);
     } else if (typeof response.promptId === 'string') {
@@ -423,7 +473,9 @@ export default function QAContent({ childId, useScrollView = false }: QAContentP
         return 'ask-button';
       case 'qa-card':
         // Use both prompt ID and response ID to ensure uniqueness
-        return `qa-card-${item.prompt?.id || 'unknown'}-${item.response?.id || index}`;
+        const promptId = item.prompt?.id || 'unknown';
+        const responseId = item.response?.id || index;
+        return `qa-card-${promptId}-${responseId}-${index}`;
       case 'load-more':
         return 'load-more';
       default:
@@ -449,19 +501,27 @@ export default function QAContent({ childId, useScrollView = false }: QAContentP
         />
       )}
 
+      {/* Edit Response Modal */}
+      {selectedResponse && (
+        <EditResponseModal
+          visible={showEditResponseModal}
+          response={selectedResponse}
+          onClose={() => {
+            setShowEditResponseModal(false);
+            setSelectedResponse(null);
+          }}
+          onSuccess={handleResponseUpdated}
+        />
+      )}
+
       {/* Ask Child Modal */}
       <AskChildModal
         visible={showAskChildModal}
         onClose={() => setShowAskChildModal(false)}
-        onSystemQuestion={handleSystemQuestion}
-        onCustomQuestion={handleCustomQuestion}
-      />
-
-      {/* Custom Question Modal */}
-      <CustomQuestionModal
-        visible={showCustomQuestionModal}
-        onClose={() => setShowCustomQuestionModal(false)}
-        onSubmit={handleCustomQuestionSubmit}
+        onSave={handleAskChildSave}
+        systemQuestions={prompts}
+        childId={childId}
+        childBirthdate={currentChild?.birthdate}
       />
     </View>
   );
@@ -582,5 +642,17 @@ const styles = StyleSheet.create({
   },
   scrollViewContent: {
     flexGrow: 1,
+  },
+  askButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0f0f0', // A light background for the removed button
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    alignSelf: 'center',
   },
 }); 

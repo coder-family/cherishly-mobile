@@ -24,7 +24,19 @@ export const createPrompt = createAsyncThunk(
       const result = await promptService.createPrompt(data);
       return result;
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to create prompt');
+      console.error('promptSlice: Error in createPrompt:', error);
+      console.error('promptSlice: Error response:', error.response);
+      console.error('promptSlice: Error data:', error.response?.data);
+      
+      // Preserve more error details
+      const errorDetails = {
+        message: error.message || 'Failed to create prompt',
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+      };
+      
+      return rejectWithValue(errorDetails);
     }
   }
 );

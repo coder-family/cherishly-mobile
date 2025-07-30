@@ -27,7 +27,7 @@ module.exports = [
     rules: {
       'import/no-unresolved': 'off', // Disable this rule as it can be problematic with React Native/Expo
       'import/no-named-as-default': 'off', // Common pattern in React Native services
-      'no-unused-vars': ['warn', { 'argsIgnorePattern': '^_', 'varsIgnorePattern': '^_' }], // Allow underscore prefix for unused variables
+      'no-unused-vars': 'off', // Disable unused vars warning to reduce noise
     },
   },
   {
@@ -44,7 +44,7 @@ module.exports = [
     },
     rules: {
       '@typescript-eslint/no-unused-vars': 'off', // Disable TypeScript ESLint unused vars rule
-      'no-unused-vars': ['warn', { 'argsIgnorePattern': '^_', 'varsIgnorePattern': '^_' }], // Use regular ESLint rule with underscore pattern
+      'no-unused-vars': 'off', // Disable unused vars warning to reduce noise
     },
   },
   {

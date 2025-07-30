@@ -1,10 +1,10 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Prompt, PromptResponse } from '../../services/promptService';
 import QAMediaViewer from './QAMediaViewer';
@@ -14,7 +14,10 @@ interface QuestionAnswerCardProps {
   response?: PromptResponse;
   onPress?: () => void;
   onAddResponse?: () => void;
+  onEditResponse?: () => void;
+  onDeleteResponse?: () => void;
   showAddButton?: boolean;
+  isDeleting?: boolean;
 }
 
 export default function QuestionAnswerCard({
@@ -22,7 +25,10 @@ export default function QuestionAnswerCard({
   response,
   onPress,
   onAddResponse,
+  onEditResponse,
+  onDeleteResponse,
   showAddButton = true,
+  isDeleting = false,
 }: QuestionAnswerCardProps) {
   const hasResponse = !!response;
   const hasAttachments = response?.attachments && response.attachments.length > 0;
@@ -106,16 +112,31 @@ export default function QuestionAnswerCard({
         </View>
       )}
 
-      {/* Action Button - Only show for answered questions */}
+      {/* Action Buttons - Only show for answered questions */}
       {showAddButton && hasResponse && (
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={onAddResponse}
-          activeOpacity={0.8}
-        >
-          <MaterialIcons name="edit" size={20} color="#fff" />
-          <Text style={styles.addButtonText}>Edit Response</Text>
-        </TouchableOpacity>
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={onEditResponse}
+            activeOpacity={0.8}
+            disabled={isDeleting}
+          >
+            <MaterialIcons name="edit" size={20} color="#fff" />
+            <Text style={styles.buttonText}>Edit</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.deleteButton, isDeleting && styles.disabledButton]}
+            onPress={onDeleteResponse}
+            activeOpacity={0.8}
+            disabled={isDeleting}
+          >
+            <MaterialIcons name="delete" size={20} color="#fff" />
+            <Text style={styles.buttonText}>
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Date */}
@@ -217,7 +238,12 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 4,
   },
-  addButton: {
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 12,
+  },
+  editButton: {
     backgroundColor: '#007AFF',
     flexDirection: 'row',
     alignItems: 'center',
@@ -225,9 +251,22 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    marginTop: 12,
+    width: '45%',
   },
-  addButtonText: {
+  deleteButton: {
+    backgroundColor: '#FF3B30',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    width: '45%',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  buttonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
@@ -241,4 +280,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
   },
-}); 
+});
