@@ -89,15 +89,6 @@ export interface FeedbackData {
 
 // Helper function to map API response to Prompt interface
 function mapPromptFromApi(apiPrompt: any): Prompt {
-  console.log('promptService: Mapping API prompt:', {
-    _id: apiPrompt._id,
-    id: apiPrompt.id,
-    title: apiPrompt.title,
-    question: apiPrompt.question,
-    content: apiPrompt.content,
-    category: apiPrompt.category
-  });
-  
   const mappedPrompt = {
     id: apiPrompt._id || apiPrompt.id || crypto.randomUUID(),
     title: apiPrompt.title || "",
@@ -109,7 +100,6 @@ function mapPromptFromApi(apiPrompt: any): Prompt {
     updatedAt: apiPrompt.updatedAt || "",
   };
   
-  console.log('promptService: Mapped prompt:', mappedPrompt);
   return mappedPrompt;
 }
 
@@ -118,8 +108,6 @@ export async function getPrompts(
   params: GetPromptsParams = {}
 ): Promise<{ prompts: Prompt[]; total: number; page: number; limit: number }> {
   try {
-    console.log('promptService: Getting prompts with params:', params);
-    
     const queryParams = new URLSearchParams();
 
     if (params.page) queryParams.append("page", params.page.toString());
@@ -132,14 +120,9 @@ export async function getPrompts(
 
     const response = await apiService.get(`/prompts?${queryParams.toString()}`);
     const data = response.data || response;
-    
-    console.log('promptService: Raw API response:', data);
-    console.log('promptService: Raw prompts array:', data.prompts);
 
     // Map the prompts to ensure they have the correct structure
     const mappedPrompts = (data.prompts || []).map(mapPromptFromApi);
-    
-    console.log('promptService: Mapped prompts:', mappedPrompts);
 
     return {
       prompts: mappedPrompts,
@@ -169,8 +152,6 @@ export async function getPrompt(promptId: string): Promise<Prompt> {
 }
 
 export async function createPrompt(data: CreatePromptData): Promise<Prompt> {
-  console.log('promptService: Creating prompt with data:', data);
-  
   // Try JSON approach instead of FormData
   const requestData = {
     title: data.title,
@@ -182,15 +163,10 @@ export async function createPrompt(data: CreatePromptData): Promise<Prompt> {
     tags: data.tags || [],
   };
   
-  console.log('promptService: Sending JSON data:', requestData);
-  console.log('promptService: Request data JSON:', JSON.stringify(requestData, null, 2));
-  
   try {
     // Use apiService with JSON data
     const response = await apiService.post("/prompts", requestData);
-    console.log('promptService: API response received:', response);
     const responseData = response.data || response;
-    console.log('promptService: Response data:', responseData);
     return mapPromptFromApi(responseData);
   } catch (error: any) {
     console.error('promptService: Error creating prompt:', error);

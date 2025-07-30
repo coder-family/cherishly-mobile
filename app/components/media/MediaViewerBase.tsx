@@ -4,15 +4,45 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { VideoView, useVideoPlayer } from "expo-video";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Dimensions,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
+
+// Sanitization utility function to prevent XSS
+const sanitizeText = (text: string | undefined | null): string => {
+  if (!text || typeof text !== 'string') {
+    return '';
+  }
+  
+  // Remove any HTML tags and potentially dangerous characters
+  return text
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/[<>]/g, '') // Remove remaining < and >
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+=/gi, '') // Remove event handlers
+    .trim();
+};
+
+// URL validation utility
+const isValidUrl = (url: string): boolean => {
+  if (!url || typeof url !== 'string') {
+    return false;
+  }
+  
+  try {
+    const parsedUrl = new URL(url);
+    // Only allow http, https, and data URLs
+    return ['http:', 'https:', 'data:'].includes(parsedUrl.protocol);
+  } catch {
+    return false;
+  }
+};
 
 // Generic attachment interface
 interface BaseAttachment {
