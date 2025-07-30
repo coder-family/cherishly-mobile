@@ -27,7 +27,7 @@ module.exports = [
     rules: {
       'import/no-unresolved': 'off', // Disable this rule as it can be problematic with React Native/Expo
       'import/no-named-as-default': 'off', // Common pattern in React Native services
-      'no-unused-vars': 'off', // Disable unused vars warning to reduce noise
+      'no-unused-vars': 'off', // Disable unused vars warning to reduce noisenp
     },
   },
   {

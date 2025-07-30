@@ -117,41 +117,55 @@ function mapPromptFromApi(apiPrompt: any): Prompt {
 export async function getPrompts(
   params: GetPromptsParams = {}
 ): Promise<{ prompts: Prompt[]; total: number; page: number; limit: number }> {
-  console.log('promptService: Getting prompts with params:', params);
-  
-  const queryParams = new URLSearchParams();
+  try {
+    console.log('promptService: Getting prompts with params:', params);
+    
+    const queryParams = new URLSearchParams();
 
-  if (params.page) queryParams.append("page", params.page.toString());
-  if (params.limit) queryParams.append("limit", params.limit.toString());
-  if (params.category) queryParams.append("category", params.category);
-  if (params.tags) queryParams.append("tags", params.tags.join(","));
-  if (params.isActive !== undefined)
-    queryParams.append("isActive", params.isActive.toString());
-  if (params.search) queryParams.append("search", params.search);
+    if (params.page) queryParams.append("page", params.page.toString());
+    if (params.limit) queryParams.append("limit", params.limit.toString());
+    if (params.category) queryParams.append("category", params.category);
+    if (params.tags) queryParams.append("tags", params.tags.join(","));
+    if (params.isActive !== undefined)
+      queryParams.append("isActive", params.isActive.toString());
+    if (params.search) queryParams.append("search", params.search);
 
-  const response = await apiService.get(`/prompts?${queryParams.toString()}`);
-  const data = response.data || response;
-  
-  console.log('promptService: Raw API response:', data);
-  console.log('promptService: Raw prompts array:', data.prompts);
+    const response = await apiService.get(`/prompts?${queryParams.toString()}`);
+    const data = response.data || response;
+    
+    console.log('promptService: Raw API response:', data);
+    console.log('promptService: Raw prompts array:', data.prompts);
 
-  // Map the prompts to ensure they have the correct structure
-  const mappedPrompts = (data.prompts || []).map(mapPromptFromApi);
-  
-  console.log('promptService: Mapped prompts:', mappedPrompts);
+    // Map the prompts to ensure they have the correct structure
+    const mappedPrompts = (data.prompts || []).map(mapPromptFromApi);
+    
+    console.log('promptService: Mapped prompts:', mappedPrompts);
 
-  return {
-    prompts: mappedPrompts,
-    total: data.total || 0,
-    page: data.currentPage || 1,
-    limit: data.limit || 10,
-  };
+    return {
+      prompts: mappedPrompts,
+      total: data.total || 0,
+      page: data.currentPage || 1,
+      limit: data.limit || 10,
+    };
+  } catch (error: any) {
+    console.error('promptService: Error getting prompts:', error);
+    console.error('promptService: Error response:', error.response);
+    console.error('promptService: Error data:', error.response?.data);
+    throw error;
+  }
 }
 
 export async function getPrompt(promptId: string): Promise<Prompt> {
-  const response = await apiService.get(`/prompts/${promptId}`);
-  const data = response.data || response;
-  return mapPromptFromApi(data);
+  try {
+    const response = await apiService.get(`/prompts/${promptId}`);
+    const data = response.data || response;
+    return mapPromptFromApi(data);
+  } catch (error: any) {
+    console.error('promptService: Error getting prompt:', error);
+    console.error('promptService: Error response:', error.response);
+    console.error('promptService: Error data:', error.response?.data);
+    throw error;
+  }
 }
 
 export async function createPrompt(data: CreatePromptData): Promise<Prompt> {
@@ -190,13 +204,27 @@ export async function updatePrompt(
   promptId: string,
   data: UpdatePromptData
 ): Promise<Prompt> {
-  const response = await apiService.put(`/prompts/${promptId}`, data);
-  const responseData = response.data || response;
-  return mapPromptFromApi(responseData);
+  try {
+    const response = await apiService.put(`/prompts/${promptId}`, data);
+    const responseData = response.data || response;
+    return mapPromptFromApi(responseData);
+  } catch (error: any) {
+    console.error('promptService: Error updating prompt:', error);
+    console.error('promptService: Error response:', error.response);
+    console.error('promptService: Error data:', error.response?.data);
+    throw error;
+  }
 }
 
 export async function deletePrompt(promptId: string): Promise<void> {
-  await apiService.delete(`/prompts/${promptId}`);
+  try {
+    await apiService.delete(`/prompts/${promptId}`);
+  } catch (error: any) {
+    console.error('promptService: Error deleting prompt:', error);
+    console.error('promptService: Error response:', error.response);
+    console.error('promptService: Error data:', error.response?.data);
+    throw error;
+  }
 }
 
 export async function getPromptResponses(
@@ -208,13 +236,20 @@ export async function getPromptResponses(
   page: number;
   limit: number;
 }> {
-  const queryParams = new URLSearchParams();
+  try {
+    const queryParams = new URLSearchParams();
 
-  if (params.page) queryParams.append("page", params.page.toString());
-  if (params.limit) queryParams.append("limit", params.limit.toString());
+    if (params.page) queryParams.append("page", params.page.toString());
+    if (params.limit) queryParams.append("limit", params.limit.toString());
 
-  const response = await apiService.get(
-    `/prompts/${promptId}/responses?${queryParams.toString()}`
-  );
-  return response.data || response;
+    const response = await apiService.get(
+      `/prompts/${promptId}/responses?${queryParams.toString()}`
+    );
+    return response.data || response;
+  } catch (error: any) {
+    console.error('promptService: Error getting prompt responses:', error);
+    console.error('promptService: Error response:', error.response);
+    console.error('promptService: Error data:', error.response?.data);
+    throw error;
+  }
 }
