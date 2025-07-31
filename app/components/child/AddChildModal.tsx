@@ -1,14 +1,14 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import React, { useState } from 'react';
 import {
-    Alert,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { createChild, uploadChildAvatar } from '../../redux/slices/childSlice';
@@ -134,7 +134,21 @@ const AddChildModal: React.FC<AddChildModalProps> = ({
     if (selectedDate) {
       const iso = selectedDate.toISOString();
       setDateOfBirth(iso.slice(0, 10));
-      setErrors(prev => ({ ...prev, dateOfBirth: '' }));
+    }
+  };
+
+  // Format date for display
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return "Select date of birth";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return dateString || "Select date of birth";
     }
   };
 
@@ -222,7 +236,7 @@ const AddChildModal: React.FC<AddChildModalProps> = ({
               onPress={() => setShowDatePicker(true)}
             >
               <Text style={styles.dateText}>
-                {dateOfBirth ? dateOfBirth : "YYYY-MM-DD"}
+                {formatDateForDisplay(dateOfBirth)}
               </Text>
             </TouchableOpacity>
             {errors.dateOfBirth && (

@@ -2,14 +2,14 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 import AddChildModal from "../components/child/AddChildModal";
 import ChildProfileCard from "../components/child/ChildProfileCard";
@@ -192,10 +192,10 @@ export default function HomeScreen() {
                 onPress={() => ChildUtils.handleChildCardPress(child.id, child.name)}
               >
                 <ChildProfileCard
+                  key={child.id}
                   avatarUrl={child.avatarUrl}
                   name={child.name}
                   birthdate={child.birthdate}
-                  bio={child.bio}
                 />
               </TouchableOpacity>
             ))}

@@ -83,6 +83,62 @@ const GrowthChartDemo: React.FC = () => {
       source: 'home',
       createdAt: '2024-01-15T00:00:00.000Z',
       updatedAt: '2024-01-15T00:00:00.000Z'
+    },
+    // Add data up to 10 years to test full range display
+    {
+      id: '8',
+      childId: 'child1',
+      type: 'weight',
+      value: 12.5,
+      unit: 'kg',
+      date: '2025-01-15', // 2 years
+      source: 'clinic',
+      createdAt: '2025-01-15T00:00:00.000Z',
+      updatedAt: '2025-01-15T00:00:00.000Z'
+    },
+    {
+      id: '9',
+      childId: 'child1',
+      type: 'weight',
+      value: 15.2,
+      unit: 'kg',
+      date: '2027-01-15', // 4 years
+      source: 'doctor',
+      createdAt: '2027-01-15T00:00:00.000Z',
+      updatedAt: '2027-01-15T00:00:00.000Z'
+    },
+    {
+      id: '10',
+      childId: 'child1',
+      type: 'weight',
+      value: 18.8,
+      unit: 'kg',
+      date: '2029-01-15', // 6 years
+      source: 'clinic',
+      createdAt: '2029-01-15T00:00:00.000Z',
+      updatedAt: '2029-01-15T00:00:00.000Z'
+    },
+    {
+      id: '11',
+      childId: 'child1',
+      type: 'weight',
+      value: 22.1,
+      unit: 'kg',
+      date: '2031-01-15', // 8 years
+      source: 'home',
+      createdAt: '2031-01-15T00:00:00.000Z',
+      updatedAt: '2031-01-15T00:00:00.000Z'
+    },
+    {
+      id: '12',
+      childId: 'child1',
+      type: 'weight',
+      value: 25.5,
+      unit: 'kg',
+      date: '2033-01-15', // 10 years
+      source: 'clinic',
+      createdAt: '2033-01-15T00:00:00.000Z',
+      updatedAt: '2033-01-15T00:00:00.000Z'
     }
   ];
 
@@ -146,7 +202,7 @@ const GrowthChartDemo: React.FC = () => {
       id: '13',
       childId: 'child1',
       type: 'height',
-      value: 74,
+      value: 75,
       unit: 'cm',
       date: '2023-11-30', // ~10.5 months (irregular)
       source: 'clinic',
@@ -157,12 +213,68 @@ const GrowthChartDemo: React.FC = () => {
       id: '14',
       childId: 'child1',
       type: 'height',
-      value: 76,
+      value: 78,
       unit: 'cm',
       date: '2024-01-15', // 12 months
       source: 'home',
       createdAt: '2024-01-15T00:00:00.000Z',
       updatedAt: '2024-01-15T00:00:00.000Z'
+    },
+    // Add height data up to 10 years to test full range display
+    {
+      id: '15',
+      childId: 'child1',
+      type: 'height',
+      value: 85,
+      unit: 'cm',
+      date: '2025-01-15', // 2 years
+      source: 'clinic',
+      createdAt: '2025-01-15T00:00:00.000Z',
+      updatedAt: '2025-01-15T00:00:00.000Z'
+    },
+    {
+      id: '16',
+      childId: 'child1',
+      type: 'height',
+      value: 95,
+      unit: 'cm',
+      date: '2027-01-15', // 4 years
+      source: 'doctor',
+      createdAt: '2027-01-15T00:00:00.000Z',
+      updatedAt: '2027-01-15T00:00:00.000Z'
+    },
+    {
+      id: '17',
+      childId: 'child1',
+      type: 'height',
+      value: 105,
+      unit: 'cm',
+      date: '2029-01-15', // 6 years
+      source: 'clinic',
+      createdAt: '2029-01-15T00:00:00.000Z',
+      updatedAt: '2029-01-15T00:00:00.000Z'
+    },
+    {
+      id: '18',
+      childId: 'child1',
+      type: 'height',
+      value: 115,
+      unit: 'cm',
+      date: '2031-01-15', // 8 years
+      source: 'home',
+      createdAt: '2031-01-15T00:00:00.000Z',
+      updatedAt: '2031-01-15T00:00:00.000Z'
+    },
+    {
+      id: '19',
+      childId: 'child1',
+      type: 'height',
+      value: 125,
+      unit: 'cm',
+      date: '2033-01-15', // 10 years
+      source: 'clinic',
+      createdAt: '2033-01-15T00:00:00.000Z',
+      updatedAt: '2033-01-15T00:00:00.000Z'
     }
   ];
 

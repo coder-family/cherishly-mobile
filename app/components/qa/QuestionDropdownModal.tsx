@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { fetchPrompts } from '../../redux/slices/promptSlice';
@@ -37,15 +37,15 @@ export default function QuestionDropdownModal({
 
   // Debug: Log prompts when they change
   useEffect(() => {
-    console.log('QuestionDropdownModal: Prompts loaded:', prompts.length);
-    if (prompts.length > 0) {
-      console.log('QuestionDropdownModal: First prompt:', {
-        id: prompts[0].id,
-        title: prompts[0].title,
-        content: prompts[0].content,
-        category: prompts[0].category
-      });
-    }
+    // console.log('QuestionDropdownModal: Prompts loaded:', prompts.length);
+    // if (prompts.length > 0) {
+    //   console.log('QuestionDropdownModal: First prompt:', {
+    //     id: prompts[0].id,
+    //     title: prompts[0].title,
+    //     content: prompts[0].content,
+    //     category: prompts[0].category
+    //   });
+    // }
   }, [prompts]);
 
   // Load page 1 when modal opens
@@ -130,3 +130,5 @@ const dropdownStyles = StyleSheet.create({
     fontStyle: 'italic',
   },
 });
+
+

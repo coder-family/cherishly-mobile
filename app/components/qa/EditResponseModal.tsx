@@ -1,14 +1,14 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAppDispatch } from '../../redux/hooks';
 import { addAttachments, removeAttachments, updateResponse } from '../../redux/slices/promptResponseSlice';
@@ -37,6 +37,13 @@ export default function EditResponseModal({
   // Reset form when modal opens/closes or when response changes
   useEffect(() => {
     if (visible && response) {
+      console.log('EditResponseModal: Loading response:', {
+        id: response.id,
+        content: response.content,
+        attachmentsCount: response.attachments?.length || 0,
+        attachments: response.attachments,
+        responseKeys: Object.keys(response)
+      });
       setContent(response.content || '');
       setAttachments(response.attachments || []);
     }
@@ -256,19 +263,51 @@ export default function EditResponseModal({
             
             {attachments.length > 0 && (
               <View style={styles.attachmentsList}>
-                {attachments.map((attachment, index) => (
-                  <View key={index} style={styles.attachmentItem}>
-                    <Text style={styles.attachmentName}>
-                      {attachment.name || attachment.filename || `Attachment ${index + 1}`}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => handleRemoveAttachment(index)}
-                      style={styles.removeButton}
-                    >
-                      <MaterialIcons name="close" size={16} color="#e74c3c" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+                <Text style={styles.attachmentsTitle}>
+                  Current Attachments ({attachments.length})
+                </Text>
+                {attachments.map((attachment, index) => {
+                  console.log('EditResponseModal: Rendering attachment:', {
+                    index,
+                    attachment,
+                    name: attachment.name,
+                    filename: attachment.filename,
+                    id: attachment.id
+                  });
+                  
+                  // Get display name for attachment
+                  const getDisplayName = (attachment: any) => {
+                    if (attachment.name) return attachment.name;
+                    if (attachment.filename) return attachment.filename;
+                    if (attachment.id) return `File ${index + 1}`;
+                    return `Attachment ${index + 1}`;
+                  };
+                  
+                  const displayName = getDisplayName(attachment);
+                  
+                  return (
+                    <View key={index} style={styles.attachmentItem}>
+                      <View style={styles.attachmentInfo}>
+                        <MaterialIcons 
+                          name="attach-file" 
+                          size={20} 
+                          color="#007AFF" 
+                          style={styles.attachmentIcon}
+                        />
+                        <Text style={styles.attachmentName} numberOfLines={1}>
+                          {displayName}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => handleRemoveAttachment(index)}
+                        style={styles.removeButton}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      >
+                        <MaterialIcons name="close" size={18} color="#e74c3c" />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
               </View>
             )}
           </View>
@@ -348,6 +387,12 @@ const styles = StyleSheet.create({
   attachmentsList: {
     marginTop: 12,
   },
+  attachmentsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
   attachmentItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -356,6 +401,14 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
+  },
+  attachmentInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  attachmentIcon: {
+    marginRight: 8,
   },
   attachmentName: {
     fontSize: 14,

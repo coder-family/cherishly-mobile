@@ -2,6 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Image,
   RefreshControl,
@@ -12,18 +13,24 @@ import {
   View
 } from 'react-native';
 import AddMemoryModal from '../../components/child/AddMemoryModal';
+import EditChildProfileModal from '../../components/child/EditChildProfileModal';
 import EditMemoryModal from '../../components/child/EditMemoryModal';
 import HealthContent from '../../components/child/HealthContent';
 import MemoryItem from '../../components/child/MemoryItem';
 import AppHeader from '../../components/layout/AppHeader';
 import { QAContent } from '../../components/qa';
+import EditResponseModal from '../../components/qa/EditResponseModal';
+import TimelineItem from '../../components/timeline/TimelineItem';
 import ErrorView from '../../components/ui/ErrorView';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import ModalConfirm from '../../components/ui/ModalConfirm';
 import SearchResults from '../../components/ui/SearchResults';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
-import { clearCurrentChild, fetchChild } from '../../redux/slices/childSlice';
+import { clearCurrentChild, deleteChild, fetchChild } from '../../redux/slices/childSlice';
+import { deleteGrowthRecord, deleteHealthRecord, fetchGrowthRecord, fetchGrowthRecords, fetchHealthRecords } from '../../redux/slices/healthSlice';
 import { clearMemories, deleteMemory, fetchMemories } from '../../redux/slices/memorySlice';
+import { deleteResponse, fetchChildResponses } from '../../redux/slices/promptResponseSlice';
+import { fetchPrompts } from '../../redux/slices/promptSlice';
 import { Memory } from '../../services/memoryService';
 import { SearchResult, searchService } from '../../services/searchService';
 
@@ -36,6 +43,9 @@ export default function ChildProfileScreen() {
   
   const { currentChild, loading, error } = useAppSelector((state) => state.children);
   const { memories, loading: memoriesLoading, error: memoriesError, hasMore } = useAppSelector((state) => state.memories);
+  const { responses } = useAppSelector((state) => state.promptResponses);
+  const { prompts } = useAppSelector((state) => state.prompts);
+  const { healthRecords, growthRecords } = useAppSelector((state) => state.health);
   const { currentUser } = useAppSelector((state) => state.user);
   const [activeTab, setActiveTab] = useState<TabType>('timeline');
 
@@ -59,6 +69,25 @@ export default function ChildProfileScreen() {
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const [showEditMemoryModal, setShowEditMemoryModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  // Child profile edit state
+  const [showEditChildModal, setShowEditChildModal] = useState(false);
+  const [showDeleteChildConfirm, setShowDeleteChildConfirm] = useState(false);
+  
+  // Timeline edit state
+  const [editingQAItem, setEditingQAItem] = useState<any>(null);
+  const [editingHealthItem, setEditingHealthItem] = useState<any>(null);
+  const [editingGrowthItem, setEditingGrowthItem] = useState<any>(null);
+  
+  // Q&A edit modal state
+  const [showEditResponseModal, setShowEditResponseModal] = useState(false);
+  const [editingResponse, setEditingResponse] = useState<any>(null);
+
+  // Handle edit completion from HealthContent
+  const handleHealthEditComplete = useCallback(() => {
+    setEditingHealthItem(null);
+    setEditingGrowthItem(null);
+  }, []);
 
   // Retry loading memories
   const retryLoadMemories = useCallback(() => {
@@ -89,6 +118,8 @@ export default function ChildProfileScreen() {
     // });
   }, [memories]);
 
+
+
   // Fetch child data when component mounts
   useEffect(() => {
     if (id) {
@@ -108,6 +139,19 @@ export default function ChildProfileScreen() {
       dispatch(clearMemories());
     };
   }, [id, dispatch]);
+
+  // Load Q&A and health data when timeline tab is active
+  useEffect(() => {
+    if (id && activeTab === 'timeline') {
+
+      // Load Q&A responses for this child
+      dispatch(fetchChildResponses({ childId: id, page: 1, limit: 50 }));
+      // Load health and growth records for this child
+      dispatch(fetchHealthRecords({ childId: id }));
+      dispatch(fetchGrowthRecords({ childId: id }));
+      dispatch(fetchPrompts({ isActive: true, limit: 50 })); // Load all active prompts
+    }
+  }, [id, activeTab, dispatch]);
 
   // Refresh memories when add memory modal closes
   useEffect(() => {
@@ -146,9 +190,51 @@ export default function ChildProfileScreen() {
     setShowAddMemoryModal(false);
   };
 
+  // Handle child profile edit
+  const handleChildEdit = () => {
+    setShowEditChildModal(true);
+  };
 
+  const handleChildEditClose = () => {
+    setShowEditChildModal(false);
+  };
 
+  const handleChildEditSuccess = () => {
+    setShowEditChildModal(false);
+    // Refresh child data
+    if (id) {
+      dispatch(fetchChild(id));
+    }
+  };
 
+  const handleChildDelete = () => {
+    setShowDeleteChildConfirm(true);
+  };
+
+  const confirmDeleteChild = async () => {
+    if (!id) return;
+    
+    try {
+      await dispatch(deleteChild(id)).unwrap();
+      setShowDeleteChildConfirm(false);
+      // Navigate back to home after successful deletion
+      router.push('/tabs/home');
+    } catch (error: any) {
+      let errorMessage = 'Failed to delete child';
+      
+      if (error?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (error?.status === 403) {
+        errorMessage = 'You do not have permission to delete this child.';
+      } else if (error?.status === 404) {
+        errorMessage = 'Child not found.';
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
+    }
+  };
 
   // Ensure unique memories and create unique keys
   const getUniqueMemories = () => {
@@ -189,10 +275,16 @@ export default function ChildProfileScreen() {
 
   const handleMemoryEdit = (memory: Memory) => {
     if (memory?.id) {
+      console.log('handleMemoryEdit: Memory to edit:', {
+        id: memory.id,
+        title: memory.title,
+        attachmentsCount: memory.attachments?.length || 0,
+        attachments: memory.attachments
+      });
       setEditingMemory(memory);
       setShowEditMemoryModal(true);
     } else {
-      // console.log('Edit memory: No ID available');
+      console.log('Edit memory: No ID available');
     }
   };
 
@@ -246,6 +338,70 @@ export default function ChildProfileScreen() {
       // console.log('Comment on memory:', memory.id);
     } else {
       // console.log('Comment on memory: No ID available');
+    }
+  };
+
+  // Q&A handlers
+  const handleQAEdit = (response: any) => {
+    // Find the actual response from Redux state
+    const actualResponse = responses.find(r => r.id === response.id);
+    if (actualResponse) {
+      console.log('handleQAEdit: Found actual response:', {
+        id: actualResponse.id,
+        content: actualResponse.content,
+        attachmentsCount: actualResponse.attachments?.length || 0,
+        attachments: actualResponse.attachments
+      });
+      setEditingResponse(actualResponse);
+    } else {
+      console.log('handleQAEdit: Response not found in Redux state, using timeline item');
+      setEditingResponse(response);
+    }
+    setShowEditResponseModal(true);
+  };
+
+  const handleEditResponseClose = () => {
+    setShowEditResponseModal(false);
+    setEditingResponse(null);
+  };
+
+  const handleEditResponseSuccess = () => {
+    setShowEditResponseModal(false);
+    setEditingResponse(null);
+    // Refresh Q&A data
+    if (id) {
+      dispatch(fetchChildResponses({ childId: id, page: 1, limit: 50 }));
+    }
+  };
+
+  const handleQADelete = async (response: any) => {
+    if (!response?.id) {
+      alert('Cannot delete: No response ID available');
+      return;
+    }
+
+    // Show confirmation dialog
+    const confirmed = confirm(`Are you sure you want to delete this Q&A response?\n\n"${response.content?.substring(0, 100)}${response.content?.length > 100 ? '...' : ''}"`);
+    
+    if (!confirmed) return;
+
+    try {
+      await dispatch(deleteResponse(response.id)).unwrap();
+      alert('Q&A response deleted successfully');
+    } catch (error: any) {
+      let errorMessage = 'Failed to delete Q&A response';
+      
+      if (error?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (error?.status === 403) {
+        errorMessage = 'You do not have permission to delete this response.';
+      } else if (error?.status === 404) {
+        errorMessage = 'Response not found. It may have already been deleted.';
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -313,9 +469,10 @@ export default function ChildProfileScreen() {
     });
   };
 
-  // Helper function to get display name (Child interface only has combined name)
-  const getDisplayName = (name: string) => {
-    return name;
+  // Helper function to get display name
+  const getDisplayName = (child: any) => {
+    if (!child) return '';
+    return child.nickname || `${child.firstName} ${child.lastName}`.trim();
   };
 
   // Get age in a human-readable format
@@ -420,14 +577,14 @@ export default function ChildProfileScreen() {
         <View style={styles.container}>
           {/* Fixed App Header */}
           <View style={styles.fixedAppHeader}>
-            <AppHeader
-              title={currentChild ? `${getDisplayName(currentChild.name)}'s Profile` : 'Child Profile'}
-              onBack={handleBack}
-              onSearchChange={handleSearch}
-              searchPlaceholder={`Search for ${currentChild ? getDisplayName(currentChild.name) : 'child'}'s memories, milestones, health records...`}
-              showBackButton={true}
-              canGoBack={true}
-            />
+                    <AppHeader
+          title={currentChild ? `${getDisplayName(currentChild)}'s Profile` : 'Child Profile'}
+          onBack={handleBack}
+          onSearchChange={handleSearch}
+          searchPlaceholder={`Search for ${currentChild ? getDisplayName(currentChild) : 'child'}'s memories, milestones, health records...`}
+          showBackButton={true}
+          canGoBack={true}
+        />
           </View>
 
           {/* Collapsible Header */}
@@ -451,12 +608,10 @@ export default function ChildProfileScreen() {
                   </View>
                 )}
                 <View style={styles.childDetails}>
-                  <Text style={styles.childName}>{getDisplayName(currentChild.name)}</Text>
+                  <Text style={styles.childName}>{getDisplayName(currentChild)}</Text>
                   <Text style={styles.childAge}>{getAge(currentChild.birthdate)}</Text>
                   <Text style={styles.childBirthdate}>Born {formatDate(currentChild.birthdate)}</Text>
-                  {currentChild.bio && (
-                    <Text style={styles.childBio}>{currentChild.bio}</Text>
-                  )}
+
                 </View>
               </View>
             </View>
@@ -532,10 +687,10 @@ export default function ChildProfileScreen() {
       <ScrollView style={styles.container}>
         {/* App Header */}
         <AppHeader
-          title={currentChild ? `${getDisplayName(currentChild.name)}'s Profile` : 'Child Profile'}
+          title={currentChild ? `${getDisplayName(currentChild)}'s Profile` : 'Child Profile'}
           onBack={handleBack}
           onSearchChange={handleSearch}
-          searchPlaceholder={`Search for ${currentChild ? getDisplayName(currentChild.name) : 'child'}'s memories, milestones, health records...`}
+          searchPlaceholder={`Search for ${currentChild ? getDisplayName(currentChild) : 'child'}'s memories, milestones, health records...`}
           showBackButton={true}
           canGoBack={true}
         />
@@ -551,12 +706,10 @@ export default function ChildProfileScreen() {
               </View>
             )}
             <View style={styles.childDetails}>
-              <Text style={styles.childName}>{getDisplayName(currentChild.name)}</Text>
+                              <Text style={styles.childName}>{getDisplayName(currentChild)}</Text>
               <Text style={styles.childAge}>{getAge(currentChild.birthdate)}</Text>
               <Text style={styles.childBirthdate}>Born {formatDate(currentChild.birthdate)}</Text>
-              {currentChild.bio && (
-                <Text style={styles.childBio}>{currentChild.bio}</Text>
-              )}
+              
             </View>
           </View>
         </View>
@@ -646,6 +799,33 @@ export default function ChildProfileScreen() {
           setEditingMemory(null);
         }}
       />
+
+      {/* Edit Response Modal */}
+      <EditResponseModal
+        visible={showEditResponseModal}
+        response={editingResponse}
+        onClose={handleEditResponseClose}
+        onSuccess={handleEditResponseSuccess}
+      />
+
+      {/* Edit Child Profile Modal */}
+      <EditChildProfileModal
+        visible={showEditChildModal}
+        child={currentChild}
+        onClose={handleChildEditClose}
+        onSuccess={handleChildEditSuccess}
+      />
+      
+      {/* Delete Child Confirmation Modal */}
+      <ModalConfirm
+        visible={showDeleteChildConfirm}
+        title="Delete Child"
+        message={`Are you sure you want to delete "${currentChild?.name}"? This action cannot be undone and will remove all associated data.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteChild}
+        onCancel={() => setShowDeleteChildConfirm(false)}
+      />
     </View>
   );
 
@@ -667,25 +847,342 @@ export default function ChildProfileScreen() {
 
   // Timeline content
   function renderTimelineContent() {
+    // Check if data is still loading
+    const isLoading = memoriesLoading || !id;
+    
+    if (isLoading) {
+      return (
+        <View style={styles.contentContainer}>
+          <Text style={styles.contentTitle}>Timeline</Text>
+          <LoadingSpinner message="Loading timeline..." />
+        </View>
+      );
+    }
+    
+    // Consolidate timeline items for this child
+    const timelineItems: any[] = [];
+    
+    // Add memories (already filtered by childId in Redux)
+    const processedMemoryIds = new Set();
+    memories.forEach(memory => {
+      if (!processedMemoryIds.has(memory.id)) {
+        processedMemoryIds.add(memory.id);
+
+        timelineItems.push({
+          id: memory.id,
+          type: 'memory',
+          title: memory.title,
+          content: memory.content,
+          date: memory.date,
+          createdAt: memory.createdAt,
+          media: memory.attachments,
+          creator: currentUser, // Add creator info
+          metadata: {
+            visibility: memory.visibility,
+            location: memory.location,
+            tags: memory.tags
+          }
+        });
+      }
+    });
+    
+    // Add Q&A responses for this child
+    const processedResponseIds = new Set();
+    responses.filter(response => response.childId === id).forEach(response => {
+      if (!processedResponseIds.has(response.id)) {
+        processedResponseIds.add(response.id);
+
+        // Get question information from promptId
+        let questionText = 'Question not available';
+        
+        // Check if promptId is an object with embedded prompt info
+        if (typeof response.promptId === 'object' && response.promptId) {
+          questionText = (response.promptId as any).question || (response.promptId as any).title || 'Question not available';
+        } else if (typeof response.promptId === 'string') {
+          // Try to find matching prompt from prompts state
+          const matchingPrompt = prompts.find((p: any) => p.id === response.promptId);
+          if (matchingPrompt) {
+            questionText = matchingPrompt.content || matchingPrompt.title || 'Question not available';
+          }
+        }
+
+        timelineItems.push({
+          id: response.id,
+          type: 'qa',
+          title: 'Q&A Response',
+          content: response.content,
+          date: new Date(response.createdAt).toISOString().split('T')[0],
+          createdAt: response.createdAt,
+          media: response.attachments,
+          metadata: {
+            promptId: response.promptId,
+            feedback: response.feedback,
+            question: questionText
+          }
+        });
+      }
+    });
+    
+    // Add health records for this child
+    const processedHealthIds = new Set();
+    healthRecords.filter(record => record.childId === id).forEach(record => {
+      if (!processedHealthIds.has(record.id)) {
+        processedHealthIds.add(record.id);
+        
+
+        
+        timelineItems.push({
+          id: record.id,
+          type: 'health',
+          title: record.title,
+          content: record.description,
+          date: record.startDate,
+          createdAt: record.createdAt,
+          media: record.attachments,
+          metadata: {
+            type: record.type,
+            endDate: record.endDate,
+            doctorName: record.doctorName,
+            location: record.location
+          }
+        });
+      }
+    });
+    
+    // Add growth records for this child
+    const processedGrowthIds = new Set();
+    growthRecords.filter(record => record.childId === id).forEach(record => {
+      if (!processedGrowthIds.has(record.id)) {
+        processedGrowthIds.add(record.id);
+        
+
+        
+        timelineItems.push({
+          id: record.id,
+          type: 'growth',
+          title: `${record.type.charAt(0).toUpperCase() + record.type.slice(1)}: ${record.value} ${record.unit}`,
+          content: record.notes || '',
+          date: record.date,
+          createdAt: record.createdAt,
+          media: [], // Growth records don't have attachments
+          metadata: {
+            type: record.type,
+            value: record.value,
+            unit: record.unit
+          }
+        });
+      }
+    });
+    
+    // Sort timeline items by date (newest first)
+    timelineItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
     return (
       <View style={styles.contentContainer}>
         <Text style={styles.contentTitle}>Timeline</Text>
-        <View style={styles.placeholderContainer}>
-          <MaterialIcons name="timeline" size={48} color="#ccc" />
-          <Text style={styles.placeholderText}>
-            Timeline feature coming soon!
-          </Text>
-          <Text style={styles.placeholderSubtext}>
-            This will show your child&apos;s important moments and milestones in chronological order.
-          </Text>
-        </View>
+        
+        {timelineItems.length === 0 ? (
+          <View style={styles.emptyState}>
+            <MaterialIcons name="timeline" size={48} color="#ccc" />
+            <Text style={styles.emptyStateText}>No timeline items yet</Text>
+            <Text style={styles.emptyStateSubtext}>
+              Add memories, health records, or Q&A responses to see them here
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.timelineContainer}>
+            {timelineItems.map((item, index) => {
+              const uniqueKey = `${item.type}-${item.id}-${index}`;
+              
+              switch (item.type) {
+                case 'memory':
+                  return (
+                    <TimelineItem 
+                      key={uniqueKey} 
+                      item={item}
+                      onPress={() => handleMemoryPress(item)}
+                      onEdit={() => {
+                        // Find the original memory from memories array
+                        const originalMemory = memories.find(m => m.id === item.id);
+                        if (originalMemory) {
+                          handleMemoryEdit(originalMemory);
+                        } else {
+                          handleMemoryEdit(item);
+                        }
+                      }}
+                      onDelete={() => handleMemoryDelete(item)}
+                      onLike={() => handleMemoryLike(item)}
+                      onComment={() => handleMemoryComment(item)}
+                    />
+                  );
+                case 'qa':
+                  return (
+                    <TimelineItem 
+                      key={uniqueKey} 
+                      item={item}
+                      onEdit={() => handleQAEdit(item)}
+                      onDelete={async () => {
+                        if (!item?.id) {
+                          alert('Cannot delete: No Q&A response ID available');
+                          return;
+                        }
+
+                        const confirmed = confirm(`Are you sure you want to delete this Q&A response?\n\n"${item.content}"`);
+                        
+                        if (!confirmed) return;
+
+                        try {
+                          await dispatch(deleteResponse(item.id)).unwrap();
+                          alert('Q&A response deleted successfully');
+                        } catch (error: any) {
+                          let errorMessage = 'Failed to delete Q&A response';
+                          
+                          if (error?.status === 401) {
+                            errorMessage = 'Authentication failed. Please log in again.';
+                          } else if (error?.status === 403) {
+                            errorMessage = 'You do not have permission to delete this response.';
+                          } else if (error?.status === 404) {
+                            errorMessage = 'Q&A response not found. It may have already been deleted.';
+                          } else if (error?.message) {
+                            errorMessage = error.message;
+                          }
+                          
+                          alert(errorMessage);
+                        }
+                      }}
+                    />
+                  );
+                case 'health':
+                  // For health records, use TimelineItem for now
+                  return (
+                    <TimelineItem 
+                      key={uniqueKey} 
+                      item={item}
+                      onEdit={() => {
+                        setEditingHealthItem(item);
+                        // Don't automatically switch to health tab - let user stay on timeline
+                      }}
+                      onDelete={async () => {
+                        if (!item?.id) {
+                          Alert.alert('Error', 'Cannot delete: No health record ID available');
+                          return;
+                        }
+
+                        Alert.alert(
+                          'Delete Health Record',
+                          `Are you sure you want to delete this health record?\n\n"${item.title}"`,
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Delete',
+                              style: 'destructive',
+                              onPress: async () => {
+                                try {
+                                  await dispatch(deleteHealthRecord(item.id)).unwrap();
+                                  Alert.alert('Success', 'Health record deleted successfully');
+                                } catch (error: any) {
+                                  let errorMessage = 'Failed to delete health record';
+                                  
+                                  if (error?.status === 401) {
+                                    errorMessage = 'Authentication failed. Please log in again.';
+                                  } else if (error?.status === 403) {
+                                    errorMessage = 'You do not have permission to delete this record.';
+                                  } else if (error?.status === 404) {
+                                    errorMessage = 'Health record not found. It may have already been deleted.';
+                                  } else if (error?.message) {
+                                    errorMessage = error.message;
+                                  }
+                                  
+                                  Alert.alert('Error', errorMessage);
+                                }
+                              },
+                            },
+                          ]
+                        );
+                      }}
+                    />
+                  );
+                case 'growth':
+                  // For growth records, use TimelineItem for now
+                  return (
+                    <TimelineItem 
+                      key={uniqueKey} 
+                      item={item}
+                      onEdit={async () => {
+                        // Fetch full record data before editing
+                        try {
+                          const fullRecord = await dispatch(fetchGrowthRecord(item.id)).unwrap();
+                          setEditingGrowthItem(fullRecord);
+                        } catch (error) {
+                          // Fallback to using the timeline item
+                          setEditingGrowthItem(item);
+                        }
+                        // Don't automatically switch to health tab - let user stay on timeline
+                      }}
+                      onDelete={async () => {
+                        if (!item?.id) {
+                          Alert.alert('Error', 'Cannot delete: No growth record ID available');
+                          return;
+                        }
+
+                        Alert.alert(
+                          'Delete Growth Record',
+                          `Are you sure you want to delete this growth record?\n\n"${item.title}"`,
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Delete',
+                              style: 'destructive',
+                              onPress: async () => {
+                                try {
+                                  await dispatch(deleteGrowthRecord(item.id)).unwrap();
+                                  Alert.alert('Success', 'Growth record deleted successfully');
+                                } catch (error: any) {
+                                  let errorMessage = 'Failed to delete growth record';
+                                  
+                                  if (error?.status === 401) {
+                                    errorMessage = 'Authentication failed. Please log in again.';
+                                  } else if (error?.status === 403) {
+                                    errorMessage = 'You do not have permission to delete this record.';
+                                  } else if (error?.status === 404) {
+                                    errorMessage = 'Growth record not found. It may have already been deleted.';
+                                  } else if (error?.message) {
+                                    errorMessage = error.message;
+                                  }
+                                  
+                                  Alert.alert('Error', errorMessage);
+                                }
+                              },
+                            },
+                          ]
+                        );
+                      }}
+                    />
+                  );
+                default:
+                  return (
+                    <TimelineItem key={uniqueKey} item={item} />
+                  );
+              }
+            })}
+          </View>
+        )}
+        
+        {/* Include HealthContent component for edit modals even when on timeline tab */}
+        <HealthContent 
+          childId={id!} 
+          editingHealthItem={editingHealthItem} 
+          editingGrowthItem={editingGrowthItem} 
+          onEditComplete={handleHealthEditComplete}
+          renderModalsOnly={true}
+        />
       </View>
     );
   }
 
   // Health content
   function renderHealthContent() {
-    return <HealthContent childId={id!} />;
+    return <HealthContent childId={id!} editingHealthItem={editingHealthItem} editingGrowthItem={editingGrowthItem} onEditComplete={handleHealthEditComplete} />;
   }
 
   // Memories content
@@ -784,7 +1281,7 @@ export default function ChildProfileScreen() {
 
        // Q&A content
   function renderQAContent() {
-    return <QAContent childId={id!} useScrollView={true} />;
+    return <QAContent childId={id!} useScrollView={true} editingItem={editingQAItem} />;
   }
 
    // Profile content
@@ -793,12 +1290,41 @@ export default function ChildProfileScreen() {
      
      return (
        <View style={styles.contentContainer}>
-         <Text style={styles.contentTitle}>Profile Details</Text>
+         <View style={styles.profileHeader}>
+           <Text style={styles.contentTitle}>Profile Details</Text>
+           <View style={styles.profileActions}>
+             <TouchableOpacity 
+               style={styles.editButton}
+               onPress={handleChildEdit}
+             >
+               <MaterialIcons name="edit" size={20} color="#4f8cff" />
+               <Text style={styles.editButtonText}>Edit</Text>
+             </TouchableOpacity>
+             <TouchableOpacity 
+               style={styles.deleteButton}
+               onPress={handleChildDelete}
+             >
+               <MaterialIcons name="delete" size={20} color="#e53935" />
+               <Text style={styles.deleteButtonText}>Delete</Text>
+             </TouchableOpacity>
+           </View>
+         </View>
+         
          <View style={styles.profileDetails}>
            <View style={styles.profileItem}>
-             <Text style={styles.profileLabel}>Full Name:</Text>
-             <Text style={styles.profileValue}>{currentChild.name}</Text>
+             <Text style={styles.profileLabel}>First Name:</Text>
+             <Text style={styles.profileValue}>{currentChild.firstName}</Text>
            </View>
+           <View style={styles.profileItem}>
+             <Text style={styles.profileLabel}>Last Name:</Text>
+             <Text style={styles.profileValue}>{currentChild.lastName}</Text>
+           </View>
+           {currentChild.nickname && (
+             <View style={styles.profileItem}>
+               <Text style={styles.profileLabel}>Nickname:</Text>
+               <Text style={styles.profileValue}>{currentChild.nickname}</Text>
+             </View>
+           )}
            <View style={styles.profileItem}>
              <Text style={styles.profileLabel}>Birthdate:</Text>
              <Text style={styles.profileValue}>{formatDate(currentChild.birthdate)}</Text>
@@ -807,12 +1333,22 @@ export default function ChildProfileScreen() {
              <Text style={styles.profileLabel}>Age:</Text>
              <Text style={styles.profileValue}>{getAge(currentChild.birthdate)}</Text>
            </View>
-           {currentChild.bio && (
+           {currentChild.gender && (
              <View style={styles.profileItem}>
-               <Text style={styles.profileLabel}>Bio:</Text>
-               <Text style={styles.profileValue}>{currentChild.bio}</Text>
+               <Text style={styles.profileLabel}>Gender:</Text>
+               <Text style={styles.profileValue}>
+                 {currentChild.gender.charAt(0).toUpperCase() + currentChild.gender.slice(1)}
+               </Text>
              </View>
            )}
+           <View style={styles.profileItem}>
+             <Text style={styles.profileLabel}>Created:</Text>
+             <Text style={styles.profileValue}>{formatDate(currentChild.createdAt)}</Text>
+           </View>
+           <View style={styles.profileItem}>
+             <Text style={styles.profileLabel}>Last Updated:</Text>
+             <Text style={styles.profileValue}>{formatDate(currentChild.updatedAt)}</Text>
+           </View>
          </View>
        </View>
      );
@@ -1038,5 +1574,64 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
+  timelineContainer: {
+    gap: 16,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    color: '#666',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 20,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  profileActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e0f7fa',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  editButtonText: {
+    color: '#00796b',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffebee',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  deleteButtonText: {
+    color: '#c62828',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
 }); 

@@ -53,7 +53,7 @@ export default function AskChildModal({
 
   // Debug: Log when selectedQuestion changes
   useEffect(() => {
-    console.log('AskChildModal: selectedQuestion changed:', selectedQuestion);
+    // console.log('AskChildModal: selectedQuestion changed:', selectedQuestion);
   }, [selectedQuestion]);
 
   useEffect(() => {
@@ -70,9 +70,9 @@ export default function AskChildModal({
     if (!answer.trim()) return;
 
     // Debug: Log the childId value
-    console.log('AskChildModal: childId value:', childId);
-    console.log('AskChildModal: childId type:', typeof childId);
-    console.log('AskChildModal: childId length:', childId?.length);
+    // console.log('AskChildModal: childId value:', childId);
+    // console.log('AskChildModal: childId type:', typeof childId);
+    // console.log('AskChildModal: childId length:', childId?.length);
 
     // Validate childId
     if (!childId || typeof childId !== 'string' || childId.trim() === '') {

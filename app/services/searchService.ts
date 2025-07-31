@@ -105,7 +105,6 @@ class SearchService {
       children.forEach(child => {
         const relevanceScore = this.calculateRelevance(query, [
           child.name,
-          child.bio || '',
           child.birthdate || ''
         ]);
 
@@ -114,8 +113,8 @@ class SearchService {
             id: child.id,
             type: 'child',
             title: child.name,
-            subtitle: child.bio || 'Your child',
-            content: `${child.name} ${child.bio || ''} ${child.birthdate || ''}`,
+            subtitle: 'Your child',
+            content: `${child.name} ${child.birthdate || ''}`,
             date: child.birthdate ? new Date(child.birthdate) : undefined,
             imageUrl: child.avatarUrl,
             route: `/children/${child.id}/profile`,

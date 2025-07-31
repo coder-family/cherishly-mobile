@@ -15,15 +15,16 @@ interface ReactNativeFile {
 
 // Helper function to map API response to PromptResponse interface
 function mapPromptResponseFromApi(apiResponse: any): PromptResponse {
-  console.log('promptResponseService: Mapping API response:', {
-    id: apiResponse.id || apiResponse._id,
-    promptId: apiResponse.promptId,
-    response: apiResponse.response,
-    content: apiResponse.response?.content,
-    child: apiResponse.child,
-    attachments: apiResponse.attachments,
-    attachmentsLength: apiResponse.attachments?.length
-  });
+  // console.log('promptResponseService: Mapping API response:', {
+  //   id: apiResponse.id || apiResponse._id,
+  //   promptId: apiResponse.promptId,
+  //   response: apiResponse.response,
+  //   content: apiResponse.response?.content,
+  //   directContent: apiResponse.content,
+  //   child: apiResponse.child,
+  //   attachments: apiResponse.attachments,
+  //   attachmentsLength: apiResponse.attachments?.length
+  // });
   
   // Map attachments to ensure they have the correct structure
   const mappedAttachments = (apiResponse.attachments || []).map((attachment: any) => ({
@@ -41,13 +42,18 @@ function mapPromptResponseFromApi(apiResponse: any): PromptResponse {
   if (apiResponse.response && typeof apiResponse.response === 'object') {
     // New structure: response.content
     content = apiResponse.response.content || '';
+    // console.log('promptResponseService: Using response.content:', content);
   } else if (typeof apiResponse.content === 'string') {
     // Old structure: direct content
     content = apiResponse.content;
+    // console.log('promptResponseService: Using direct content:', content);
   } else if (typeof apiResponse.response === 'string') {
     // Fallback: response as string
     content = apiResponse.response;
+    // console.log('promptResponseService: Using response as string:', content);
   }
+  
+  // console.log('promptResponseService: Final mapped content:', content);
   
   // Handle different promptId structures
   let promptId = '';
@@ -84,7 +90,7 @@ function mapPromptResponseFromApi(apiResponse: any): PromptResponse {
 
 // API functions
 export async function getChildResponses(params: GetResponsesParams): Promise<{ responses: PromptResponse[]; total: number; page: number; limit: number }> {
-  console.log('promptResponseService: Getting child responses for:', params);
+  // console.log('promptResponseService: Getting child responses for:', params);
 
   try {
     // Use the correct endpoint: /responses/child/:childId
@@ -96,7 +102,7 @@ export async function getChildResponses(params: GetResponsesParams): Promise<{ r
       }
     });
 
-    console.log('promptResponseService: Raw response:', response);
+    // console.log('promptResponseService: Raw response:', response);
 
     // Handle different response structures
     let responses: PromptResponse[] = [];
@@ -308,11 +314,17 @@ export async function updateResponse(responseId: string, data: UpdatePromptRespo
   // Create FormData for text content only
   const formData = new FormData();
   
-  // Add text fields - backend expects 'response' field as JSON
+  // Add text fields - send content directly
   if (data.content) {
+    // Send as JSON field that backend expects with type
     formData.append('response', JSON.stringify({ 
-      content: data.content 
+      content: data.content,
+      type: 'text'
     }));
+    console.log('promptResponseService: Sending content to backend as JSON:', { 
+      content: data.content,
+      type: 'text'
+    });
   }
 
   // Use fetch for multipart/form-data
@@ -320,6 +332,10 @@ export async function updateResponse(responseId: string, data: UpdatePromptRespo
   
   const url = `${BASE_URL}/responses/${responseId}`;
   console.log('promptResponseService: Updating response at:', url);
+  
+  // Log the FormData contents
+  console.log('promptResponseService: FormData contents:');
+  console.log('promptResponseService: Content being sent:', data.content);
   
   const response = await fetch(url, {
     method: 'PUT',
@@ -366,7 +382,16 @@ export async function updateResponse(responseId: string, data: UpdatePromptRespo
     responseData = result.data || result;
   }
   
-  return mapPromptResponseFromApi(responseData);
+  console.log('promptResponseService: Extracted responseData:', responseData);
+  
+  const mappedResponse = mapPromptResponseFromApi(responseData);
+  console.log('promptResponseService: Mapped response:', {
+    id: mappedResponse.id,
+    content: mappedResponse.content,
+    originalContent: responseData.content || responseData.response?.content
+  });
+  
+  return mappedResponse;
 }
 
 export async function addFeedback(responseId: string, feedback: FeedbackData): Promise<PromptResponse> {

@@ -138,20 +138,20 @@ const promptResponseSlice = createSlice({
     // fetchChildResponses
     builder
       .addCase(fetchChildResponses.pending, (state) => {
-        console.log('promptResponseSlice: fetchChildResponses.pending');
+        // console.log('promptResponseSlice: fetchChildResponses.pending');
         state.loading = true;
         state.error = null;
       })
       .addCase(fetchChildResponses.fulfilled, (state, action) => {
-        console.log('promptResponseSlice: fetchChildResponses.fulfilled with payload:', action.payload);
+        // console.log('promptResponseSlice: fetchChildResponses.fulfilled with payload:', action.payload);
         state.loading = false;
         const { responses, total, page, limit } = action.payload;
         if (page === 1) {
           state.responses = responses;
-          console.log('promptResponseSlice: Replaced responses, new count:', responses.length);
+          // console.log('promptResponseSlice: Replaced responses, new count:', responses.length);
         } else {
           state.responses = [...state.responses, ...responses];
-          console.log('promptResponseSlice: Added responses, total count:', state.responses.length);
+                      // console.log('promptResponseSlice: Added responses, total count:', state.responses.length);
         }
         state.total = total;
         state.page = page;
@@ -193,17 +193,25 @@ const promptResponseSlice = createSlice({
         state.error = null;
       })
       .addCase(updateResponse.fulfilled, (state, action) => {
+        console.log('promptResponseSlice: updateResponse.fulfilled with payload:', action.payload);
         state.loading = false;
         const updatedResponse = action.payload;
         const index = state.responses.findIndex(r => r.id === updatedResponse.id);
         if (index !== -1) {
+          console.log('promptResponseSlice: Updating response at index:', index);
+          console.log('promptResponseSlice: Old content:', state.responses[index].content);
+          console.log('promptResponseSlice: New content:', updatedResponse.content);
           state.responses[index] = updatedResponse;
+          console.log('promptResponseSlice: Response updated successfully');
+        } else {
+          console.log('promptResponseSlice: Response not found in state, ID:', updatedResponse.id);
         }
         if (state.currentResponse?.id === updatedResponse.id) {
           state.currentResponse = updatedResponse;
         }
       })
       .addCase(updateResponse.rejected, (state, action) => {
+        console.error('promptResponseSlice: updateResponse.rejected with error:', action.payload);
         state.loading = false;
         state.error = action.payload as string || 'Failed to update response';
       });

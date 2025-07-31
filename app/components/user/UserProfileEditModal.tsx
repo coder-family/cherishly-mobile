@@ -2,17 +2,18 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native';
 import { useAppDispatch } from '../../redux/hooks';
 import { updateUser, uploadUserAvatar } from '../../redux/slices/userSlice';
 import GenderPicker from '../form/GenderPicker';
-import InputField from '../form/InputField';
 import AvatarUpload from '../media/AvatarUpload';
 
 interface User {
@@ -96,9 +97,9 @@ const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
         ).unwrap();
         avatarUrl = uploadResult.avatar;
         setAvatar(avatarUrl);
-        setPendingAvatar(undefined);
       }
-      
+
+      // Update user data
       await dispatch(
         updateUser({
           userId,
@@ -110,118 +111,137 @@ const UserProfileEditModal: React.FC<UserProfileEditModalProps> = ({
           },
         })
       ).unwrap();
-      
-      Alert.alert("Success", "Profile updated successfully!");
+
+      Alert.alert("Success", "Profile updated successfully");
       onClose();
-    } catch (err: any) {
-      setError(err?.message || "Update failed");
+    } catch (error: any) {
+      setError(error.message || "Failed to update profile");
     }
   };
 
   const handleChangePassword = () => {
-    onClose();
     router.push("/change-password");
+    onClose();
   };
 
-  const userId = currentUser?.id || user?.id || '';
+  // Format date for display
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return "Select date of birth";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return dateString.slice(0, 10) || "Select date of birth";
+    }
+  };
 
   return (
     <Modal
       visible={visible}
-      animationType="slide"
       transparent
+      animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.sectionTitle}>Update Your Info</Text>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback>
+            <View style={styles.modalContent}>
+              <Text style={styles.sectionTitle}>Edit Profile</Text>
+              
+              <Text style={styles.inputLabel}>Avatar</Text>
+              <AvatarUpload
+                userId={userData?.id || ''}
+                initialUri={pendingAvatar ?? avatar}
+                onAvatarPicked={(uri) => {
+                  setPendingAvatar(uri);
+                }}
+              />
+              
+              <Text style={styles.inputLabel}>First Name</Text>
+              <TextInput
+                style={styles.inputField}
+                value={name}
+                onChangeText={setName}
+                placeholder="Enter first name"
+              />
+              
+              <Text style={styles.inputLabel}>Last Name</Text>
+              <TextInput
+                style={styles.inputField}
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Enter last name"
+              />
+              
+              <Text style={styles.inputLabel}>Gender</Text>
+              <GenderPicker
+                value={gender}
+                onSelect={(value: string) => setGender(value)}
+              />
+              
+              <Text style={styles.inputLabel}>Date of Birth</Text>
+              <TouchableOpacity
+                onPress={() => setShowDatePicker(true)}
+                style={[styles.inputField, { justifyContent: "center" }]}
+              >
+                <Text>{formatDateForDisplay(dateOfBirth)}</Text>
+              </TouchableOpacity>
           
-          <Text style={styles.inputLabel}>Avatar</Text>
-          <AvatarUpload
-            userId={userId}
-            initialUri={pendingAvatar ?? avatar}
-            onAvatarPicked={(uri) => {
-              setPendingAvatar(uri);
-            }}
-          />
-          
-          <Text style={styles.inputLabel}>First Name</Text>
-          <InputField
-            value={name}
-            onChangeText={setName}
-            placeholder="Enter your first name"
-          />
-          
-          <Text style={styles.inputLabel}>Last Name</Text>
-          <InputField
-            value={lastName}
-            onChangeText={setLastName}
-            placeholder="Enter your last name"
-          />
-          
-          <Text style={styles.inputLabel}>Gender</Text>
-          <GenderPicker
-            value={gender}
-            onSelect={(value: string) => setGender(value)}
-          />
-          
-          <Text style={styles.inputLabel}>Date of Birth</Text>
-          <TouchableOpacity
-            onPress={() => setShowDatePicker(true)}
-            style={[styles.inputField, { justifyContent: "center" }]}
-          >
-            <Text>{dateOfBirth ? dateOfBirth.slice(0, 10) : "YYYY-MM-DD"}</Text>
-          </TouchableOpacity>
-          
-          {showDatePicker && (
-            <DateTimePicker
-              value={dateOfBirth ? new Date(dateOfBirth) : new Date()}
-              mode="date"
-              display="default"
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(false);
-                if (selectedDate) {
-                  const iso = selectedDate.toISOString();
-                  setDateOfBirth(iso.slice(0, 10));
-                }
-              }}
-              maximumDate={new Date()}
-            />
-          )}
-          
-          {/* Change Password Button */}
-          <TouchableOpacity
-            style={[styles.saveButton, { marginTop: 8, marginBottom: 0 }]}
-            onPress={handleChangePassword}
-          >
-            <Text style={styles.saveButtonText}>Change Password</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[styles.saveButton, { flex: 1, marginRight: 8 }]}
-              onPress={handleSave}
-              disabled={loading}
-            >
-              <Text style={styles.saveButtonText}>
-                {loading ? "Saving..." : "Save Changes"}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.cancelButton, { flex: 1, marginLeft: 8 }]}
-              onPress={onClose}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {(error || userError) && (
-            <Text style={styles.errorText}>
-              {error || userError}
-            </Text>
-          )}
+              {showDatePicker && (
+                <DateTimePicker
+                  value={dateOfBirth ? new Date(dateOfBirth) : new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (selectedDate) {
+                      const iso = selectedDate.toISOString();
+                      setDateOfBirth(iso.slice(0, 10));
+                    }
+                  }}
+                  maximumDate={new Date()}
+                />
+              )}
+              
+              {/* Change Password Button */}
+              <TouchableOpacity
+                style={[styles.saveButton, { marginTop: 8, marginBottom: 0 }]}
+                onPress={handleChangePassword}
+              >
+                <Text style={styles.saveButtonText}>Change Password</Text>
+              </TouchableOpacity>
+              
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={[styles.saveButton, { flex: 1, marginRight: 8 }]}
+                  onPress={handleSave}
+                  disabled={loading}
+                >
+                  <Text style={styles.saveButtonText}>
+                    {loading ? "Saving..." : "Save Changes"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.cancelButton, { flex: 1, marginLeft: 8 }]}
+                  onPress={onClose}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {(error || userError) && (
+                <Text style={styles.errorText}>
+                  {error || userError}
+                </Text>
+              )}
+            </View>
+          </TouchableWithoutFeedback>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 };

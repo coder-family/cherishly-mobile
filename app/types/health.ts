@@ -71,6 +71,16 @@ export interface CreateWHOStandardData {
 }
 
 // Health Record Types
+export interface HealthRecordAttachment {
+  id: string;
+  publicId: string;
+  url: string;
+  type: 'image' | 'video' | 'audio';
+  filename: string;
+  size: number;
+  createdAt: string;
+}
+
 export interface HealthRecord {
   id: string;
   childId: string;
@@ -81,7 +91,7 @@ export interface HealthRecord {
   endDate?: string;
   doctorName?: string;
   location?: string;
-  attachments?: string[];
+  attachments?: HealthRecordAttachment[];
   createdAt: string;
   updatedAt: string;
 }
@@ -106,7 +116,7 @@ export interface UpdateHealthRecordData {
   endDate?: string;
   doctorName?: string;
   location?: string;
-  attachments?: string[];
+  attachments?: HealthRecordAttachment[];
 }
 
 // Chart Data Types
