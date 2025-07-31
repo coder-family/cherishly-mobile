@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Dimensions, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { HealthRecord } from '../../types/health';
 
@@ -33,7 +33,9 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
     attachments: record.attachments,
     attachmentsLength: record.attachments?.length || 0,
     attachmentsType: typeof record.attachments,
-    isAttachmentsArray: Array.isArray(record.attachments)
+    isAttachmentsArray: Array.isArray(record.attachments),
+    hasOnEdit: !!onEdit,
+    hasOnDelete: !!onDelete
   });
 
   const handleMediaPress = (mediaUrl: string) => {
@@ -210,6 +212,9 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
     return /\.(mp4|mov|avi|mkv|webm)$/i.test(url);
   };
 
+  // Debug actions rendering
+  console.log('[HEALTH-RECORD-ITEM] Rendering actions, onEdit:', !!onEdit, 'onDelete:', !!onDelete);
+
   return (
     <View style={styles.container}>
       {/* Timeline line */}
@@ -240,20 +245,42 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
             </View>
           </View>
           <View style={styles.actions}>
+            {/* Simple test button */}
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: 'red' }]} 
+              onPress={() => {
+                console.log('[HEALTH-RECORD-ITEM] RED TEST BUTTON PRESSED!');
+                Alert.alert('RED BUTTON', 'RED BUTTON WORKS!');
+              }}
+            >
+              <Text style={{ color: 'white', fontSize: 12 }}>TEST</Text>
+            </TouchableOpacity>
+            
+            {/* Test button */}
+            <TouchableOpacity 
+              style={styles.actionButton} 
+              onPress={() => {
+                console.log('[HEALTH-RECORD-ITEM] Test button pressed!');
+                Alert.alert('Test', 'Button works!');
+              }}
+            >
+              <MaterialIcons name="info" size={18} color="blue" />
+            </TouchableOpacity>
+            
             {onEdit && (
               <TouchableOpacity 
-                style={styles.actionButton} 
+                style={[styles.actionButton, { backgroundColor: 'green' }]} 
                 onPress={() => onEdit(record)}
               >
-                <MaterialIcons name="edit" size={18} color={Colors.light.textSecondary} />
+                <MaterialIcons name="edit" size={18} color="white" />
               </TouchableOpacity>
             )}
             {onDelete && (
               <TouchableOpacity 
-                style={styles.actionButton} 
+                style={[styles.actionButton, { backgroundColor: 'orange' }]} 
                 onPress={() => onDelete(record.id)}
               >
-                <MaterialIcons name="delete" size={18} color="#EF4444" />
+                <MaterialIcons name="delete" size={18} color="white" />
               </TouchableOpacity>
             )}
           </View>

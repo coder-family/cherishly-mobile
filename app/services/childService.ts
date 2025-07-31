@@ -14,7 +14,6 @@ export interface ApiChild {
   nickname?: string;
   dateOfBirth: string;
   avatar?: string;
-  bio?: string;
   createdBy: string;
   familyGroupId?: string;
   gender?: string;
@@ -26,10 +25,12 @@ export interface ApiChild {
 // Transformed child for UI components
 export interface Child {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  nickname?: string;
+  name: string; // Display name (nickname or firstName + lastName)
   birthdate: string;
   avatarUrl?: string;
-  bio?: string;
   gender?: string;
   parentId: string;
   createdAt: string;
@@ -41,7 +42,6 @@ export interface CreateChildData {
   lastName: string;
   nickname?: string;
   dateOfBirth: string;
-  bio?: string;
   avatar?: string;
   gender?: string;
 }
@@ -51,19 +51,22 @@ export interface UpdateChildData {
   lastName?: string;
   nickname?: string;
   dateOfBirth?: string;
-  bio?: string;
   avatar?: string;
   gender?: string;
 }
 
 // Transform API child to UI child format
 function transformChild(apiChild: ApiChild): Child {
+  const displayName = apiChild.nickname || `${apiChild.firstName} ${apiChild.lastName}`.trim();
+  
   return {
     id: apiChild._id,
-    name: apiChild.nickname || `${apiChild.firstName} ${apiChild.lastName}`.trim(),
+    firstName: apiChild.firstName,
+    lastName: apiChild.lastName,
+    nickname: apiChild.nickname,
+    name: displayName, // Keep for backward compatibility
     birthdate: apiChild.dateOfBirth,
     avatarUrl: apiChild.avatar,
-    bio: apiChild.bio,
     gender: apiChild.gender,
     parentId: apiChild.createdBy,
     createdAt: apiChild.createdAt,
@@ -109,9 +112,97 @@ export async function createChild(data: CreateChildData): Promise<Child> {
 }
 
 export async function updateChild(childId: string, data: UpdateChildData): Promise<Child> {
-  const response = await apiService.patch(`/children/${childId}`, data);
-  const apiChild: ApiChild = response.data || response;
-  return transformChild(apiChild);
+  try {
+    conditionalLog.child('Updating child:', { childId, data });
+    
+    // Check if avatar is a local URI (needs to be uploaded)
+    if (data.avatar && data.avatar.startsWith('file://')) {
+      conditionalLog.child('Avatar detected, uploading with child data');
+      
+      // Create FormData for file upload with child data
+      const formData = new FormData();
+      
+      // Add avatar file
+      const fileName = data.avatar.split('/').pop() || 'avatar.jpg';
+      formData.append('avatar', {
+        uri: data.avatar,
+        type: 'image/jpeg',
+        name: fileName,
+      } as any);
+      
+      // Add other data as form fields
+      const { avatar, ...otherData } = data;
+      Object.keys(otherData).forEach(key => {
+        const value = (otherData as any)[key];
+        if (value !== undefined) {
+          formData.append(key, value);
+          conditionalLog.child(`Added form field: ${key} = ${value}`);
+        }
+      });
+
+      conditionalLog.child('FormData created with avatar and child data:', { 
+        hasAvatar: !!data.avatar,
+        otherFields: Object.keys(otherData),
+        formDataEntries: 'FormData created'
+      });
+
+      // Use fetch for FormData upload
+      const token = await authService.getAccessToken();
+      const response = await fetch(`${BASE_URL}/children/${childId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
+      });
+
+      conditionalLog.child('Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        conditionalLog.child('Error response text:', errorText);
+        conditionalLog.child('Response headers:', response.headers);
+        conditionalLog.child('Response status:', response.status);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+          conditionalLog.child('Parsed error data:', errorData);
+        } catch {
+          errorData = { message: errorText || 'Failed to update child' };
+          conditionalLog.child('Failed to parse error as JSON, using raw text');
+        }
+        
+        throw new Error(errorData.message || `HTTP ${response.status}: Failed to update child`);
+      }
+
+      const responseText = await response.text();
+      conditionalLog.child('Response text:', responseText);
+      
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (error) {
+        conditionalLog.child('Failed to parse response as JSON:', error);
+        throw new Error('Invalid response format from server');
+      }
+      
+      const apiChild: ApiChild = responseData.data || responseData;
+      conditionalLog.child('Child updated successfully with avatar:', { childId, updatedChild: apiChild });
+      return transformChild(apiChild);
+    } else {
+      conditionalLog.child('Regular JSON update without avatar');
+      // Regular JSON update without avatar
+      const response = await apiService.put(`/children/${childId}`, data);
+      const apiChild: ApiChild = response.data || response;
+      conditionalLog.child('Child updated successfully:', { childId, updatedChild: apiChild });
+      return transformChild(apiChild);
+    }
+  } catch (error) {
+    conditionalLog.child('Error updating child:', { childId, error, data });
+    throw error;
+  }
 }
 
 export async function deleteChild(childId: string): Promise<void> {

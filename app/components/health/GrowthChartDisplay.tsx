@@ -61,8 +61,12 @@ const GrowthChartDisplay: React.FC<GrowthChartDisplayProps> = ({
     withDots: true, // Ensure dots are visible for each data point
     withInnerLines: true, // Show grid lines
     withOuterLines: true, // Show outer boundary lines
-    // Handle null values properly - don't connect them or show dots
+    // Handle negative values properly - don't connect them or show dots
     connectNulls: false,
+    // Set minimum Y value to hide negative values used for missing data
+    yAxisMin: type === "weight" ? 0 : 50,
+    // Set maximum Y value to ensure proper scaling
+    yAxisMax: type === "weight" ? 50 : 160,
   };
 
   return (

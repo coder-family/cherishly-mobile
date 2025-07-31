@@ -91,7 +91,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
   // Ensure attachments are valid and have required fields
   const safeAttachments = useMemo(() => {
     if (!attachments || !Array.isArray(attachments)) {
-      console.log('MediaViewerBase: attachments is null/undefined or not an array:', attachments);
+  
       return [];
     }
     
@@ -103,16 +103,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
         return typeOrder[a.type] - typeOrder[b.type];
       });
     
-    console.log('MediaViewerBase: safeAttachments processed:', {
-      originalCount: attachments.length,
-      filteredCount: filtered.length,
-      attachments: filtered.map(att => ({
-        id: att.id,
-        url: att.url,
-        type: att.type,
-        hasId: !!att.id
-      }))
-    });
+
     
     return filtered;
   }, [attachments]);
@@ -120,19 +111,12 @@ export default function MediaViewerBase<T extends BaseAttachment>({
   // Create video players for all video attachments at the top level
   const videoAttachments = safeAttachments.filter(att => att.type === 'video');
   
-  console.log('MediaViewerBase: videoAttachments found:', {
-    count: videoAttachments.length,
-    videos: videoAttachments.map(v => ({
-      id: v.id,
-      url: v.url,
-      hasId: !!v.id
-    }))
-  });
+
   
   // Create individual video players at the top level with unique keys - always create all 5
   const player1 = useVideoPlayer({ uri: videoAttachments[0]?.url || '' }, (player) => {
     if (videoAttachments[0]) {
-      console.log('MediaViewerBase: player1 initialized for:', videoAttachments[0].url);
+
       player.loop = false;
       player.muted = false; // Enable audio
       player.volume = 1.0; // Set volume to maximum
@@ -141,7 +125,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
   
   const player2 = useVideoPlayer({ uri: videoAttachments[1]?.url || '' }, (player) => {
     if (videoAttachments[1]) {
-      console.log('MediaViewerBase: player2 initialized for:', videoAttachments[1].url);
+
       player.loop = false;
       player.muted = false; // Enable audio
       player.volume = 1.0; // Set volume to maximum
@@ -150,7 +134,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
   
   const player3 = useVideoPlayer({ uri: videoAttachments[2]?.url || '' }, (player) => {
     if (videoAttachments[2]) {
-      console.log('MediaViewerBase: player3 initialized for:', videoAttachments[2].url);
+
       player.loop = false;
       player.muted = false; // Enable audio
       player.volume = 1.0; // Set volume to maximum
@@ -159,7 +143,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
   
   const player4 = useVideoPlayer({ uri: videoAttachments[3]?.url || '' }, (player) => {
     if (videoAttachments[3]) {
-      console.log('MediaViewerBase: player4 initialized for:', videoAttachments[3].url);
+
       player.loop = false;
       player.muted = false; // Enable audio
       player.volume = 1.0; // Set volume to maximum
@@ -168,7 +152,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
   
   const player5 = useVideoPlayer({ uri: videoAttachments[4]?.url || '' }, (player) => {
     if (videoAttachments[4]) {
-      console.log('MediaViewerBase: player5 initialized for:', videoAttachments[4].url);
+
       player.loop = false;
       player.muted = false; // Enable audio
       player.volume = 1.0; // Set volume to maximum
@@ -186,16 +170,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
     player: players[index]
   }));
 
-  console.log('MediaViewerBase: videoPlayers created:', {
-    count: videoPlayers.length,
-    players: videoPlayers.map(vp => ({
-      attachmentId: vp.attachment.id,
-      attachmentUrl: vp.attachment.url,
-      hasPlayer: !!vp.player,
-      hasId: !!vp.attachment.id,
-      fallbackId: vp.attachment.id === vp.attachment.url ? 'using URL as ID' : 'using original ID'
-    }))
-  });
+
 
   // Helper function to get video player
   const getVideoPlayer = useCallback((attachment: T) => {
@@ -203,13 +178,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
     if (!attachment.id) {
       const videoPlayer = videoPlayers.find(vp => vp.attachment.url === attachment.url);
       
-      console.log('MediaViewerBase: getVideoPlayer called for (no ID):', {
-        attachmentId: attachment.id,
-        attachmentUrl: attachment.url,
-        foundPlayer: !!videoPlayer,
-        foundPlayerAttachmentId: videoPlayer?.attachment.id,
-        foundPlayerAttachmentUrl: videoPlayer?.attachment.url
-      });
+
       
       return videoPlayer?.player || null;
     }
@@ -219,13 +188,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
       vp.attachment.id === attachment.id || vp.attachment.url === attachment.url
     );
     
-    console.log('MediaViewerBase: getVideoPlayer called for (with ID):', {
-      attachmentId: attachment.id,
-      attachmentUrl: attachment.url,
-      foundPlayer: !!videoPlayer,
-      foundPlayerAttachmentId: videoPlayer?.attachment.id,
-      foundPlayerAttachmentUrl: videoPlayer?.attachment.url
-    });
+
     
     return videoPlayer?.player || null;
   }, [videoPlayers]);
@@ -246,7 +209,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
       // Lock to landscape
       await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
       setIsLandscape(true);
-      console.log('MediaViewerBase: Locked to landscape mode');
+
     } catch (error) {
       console.warn('MediaViewerBase: Failed to lock to landscape:', error);
       // Fallback - just set the state without actually changing orientation
@@ -265,7 +228,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
       // Unlock orientation to allow all orientations
       await ScreenOrientation.unlockAsync();
       setIsLandscape(false);
-      console.log('MediaViewerBase: Unlocked orientation');
+
     } catch (error) {
       console.warn('MediaViewerBase: Failed to unlock orientation:', error);
       // Fallback - just set the state without actually changing orientation
@@ -275,13 +238,13 @@ export default function MediaViewerBase<T extends BaseAttachment>({
 
   // Control playing status - track which video is currently playing
   const handleVideoPlay = useCallback((videoId: string) => {
-    console.log('MediaViewerBase: handleVideoPlay called with videoId:', videoId);
+
     setPlayingVideoId(videoId);
   }, []);
 
   // Stop all videos when modal closes
   const handleModalClose = useCallback(() => {
-    console.log('MediaViewerBase: handleModalClose called, current modalKey:', modalKey);
+
     setShowFullScreen(false);
     setPlayingVideoId(null);
     
@@ -293,29 +256,24 @@ export default function MediaViewerBase<T extends BaseAttachment>({
     // Force remount of video components by updating modal key
     setModalKey(prev => {
       const newKey = prev + 1;
-      console.log('MediaViewerBase: modalKey updated from', prev, 'to', newKey);
+
       return newKey;
     });
   }, [modalKey, unlockOrientation, enableOrientationControl]);
 
   // Reset video player when modal opens
   const handleModalOpen = useCallback((attachment: T) => {
-    console.log('MediaViewerBase: handleModalOpen called for:', {
-      attachmentId: attachment.id,
-      attachmentUrl: attachment.url,
-      currentModalKey: modalKey
-    });
     
     // Force video player reset by incrementing modalOpeningKey and updating timestamp
     setModalOpeningKey(prev => {
       const newKey = prev + 1;
-      console.log('MediaViewerBase: modalOpeningKey updated from', prev, 'to', newKey);
+
       return newKey;
     });
     
     // Update video timestamp to force remounting
     setVideoTimestamp(Date.now());
-    console.log('MediaViewerBase: videoTimestamp updated to:', Date.now());
+
     
     const actualIndex = safeAttachments.findIndex(att => att.id === attachment.id);
     setSelectedAttachment(attachment);
@@ -424,14 +382,6 @@ export default function MediaViewerBase<T extends BaseAttachment>({
     const videoId = attachment.id || attachment.url;
     const isMuted = mutedStates[videoId] ?? false; // Default to false (unmuted)
     
-    console.log('MediaViewerBase: renderVideoPreview called for:', {
-      attachmentId: attachment.id,
-      attachmentUrl: attachment.url,
-      videoId,
-      index,
-      isMuted,
-      modalKey
-    });
     
     // Get video player using the helper function
     const player = getVideoPlayer(attachment);
@@ -439,11 +389,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
     const toggleAudio = () => {
       if (player) {
         const newMutedState = !isMuted;
-        console.log('MediaViewerBase: toggleAudio called:', { 
-          videoId, 
-          oldMuted: isMuted, 
-          newMuted: newMutedState 
-        });
+
         player.muted = newMutedState;
         setMutedStates((prev: Record<string, boolean>) => ({
           ...prev,
@@ -508,7 +454,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
       style={styles.audioPreview}
       onPress={() => {
         // Handle audio playback if needed
-        console.log('Audio clicked:', attachment);
+
       }}
     >
       <MaterialIcons name="audiotrack" size={24} color="#4f8cff" />
@@ -675,15 +621,6 @@ export default function MediaViewerBase<T extends BaseAttachment>({
                   const videoId = attachment.id || attachment.url;
                   const isMuted = mutedStates[videoId] ?? false;
                   
-                  console.log('MediaViewerBase: Full screen video (clone last) rendering:', {
-                    attachmentId: attachment.id,
-                    attachmentUrl: attachment.url,
-                    videoId,
-                    hasPlayer: !!player,
-                    modalKey,
-                    isMuted
-                  });
-                  
                   const toggleAudio = () => {
                     if (player) {
                       const newMutedState = !isMuted;
@@ -774,16 +711,6 @@ export default function MediaViewerBase<T extends BaseAttachment>({
                   const videoId = attachment.id || attachment.url;
                   const isMuted = mutedStates[videoId] ?? false;
                   
-                  console.log('MediaViewerBase: Full screen video (original) rendering:', {
-                    attachmentId: attachment.id,
-                    attachmentUrl: attachment.url,
-                    videoId,
-                    hasPlayer: !!player,
-                    modalKey,
-                    isMuted,
-                    index
-                  });
-                  
                   const toggleAudio = () => {
                     if (player) {
                       const newMutedState = !isMuted;
@@ -873,15 +800,6 @@ export default function MediaViewerBase<T extends BaseAttachment>({
                   const player = getVideoPlayer(attachment);
                   const videoId = attachment.id || attachment.url;
                   const isMuted = mutedStates[videoId] ?? false;
-                  
-                  console.log('MediaViewerBase: Full screen video (clone first) rendering:', {
-                    attachmentId: attachment.id,
-                    attachmentUrl: attachment.url,
-                    videoId,
-                    hasPlayer: !!player,
-                    modalKey,
-                    isMuted
-                  });
                   
                   const toggleAudio = () => {
                     if (player) {

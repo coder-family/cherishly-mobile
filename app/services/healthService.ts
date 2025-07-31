@@ -1,17 +1,24 @@
 import {
-    CreateGrowthRecordData,
-    CreateHealthRecordData,
-    GrowthAnalysis,
-    GrowthFilter,
-    GrowthRecord,
-    HealthFilter,
-    HealthRecord,
-    UpdateGrowthRecordData,
-    UpdateHealthRecordData,
-    WHOStandardGrowthData
+  CreateGrowthRecordData,
+  CreateHealthRecordData,
+  GrowthAnalysis,
+  GrowthFilter,
+  GrowthRecord,
+  HealthFilter,
+  HealthRecord,
+  HealthRecordAttachment,
+  UpdateGrowthRecordData,
+  UpdateHealthRecordData,
+  WHOStandardGrowthData
 } from '../types/health';
 import { conditionalLog } from '../utils/logUtils';
 import apiService from './apiService';
+import authService from './authService';
+
+import { API_BASE_URL } from '@env';
+
+// Use the same fallback as apiService
+const BASE_URL = API_BASE_URL || "https://growing-together-app.onrender.com/api";
 
 // Data transformation functions to convert MongoDB format to TypeScript interface
 const transformGrowthRecord = (record: any): GrowthRecord => ({
@@ -26,6 +33,47 @@ const transformGrowthRecord = (record: any): GrowthRecord => ({
   createdAt: record.createdAt,
   updatedAt: record.updatedAt,
 });
+
+// Helper function to map attachment from API response to frontend interface
+function mapHealthRecordAttachment(att: any): HealthRecordAttachment {
+  let attachmentId = att._id || att.id;
+  
+  // Priority 2: Use publicId field if available
+  if (!attachmentId) {
+    attachmentId = att.publicId;
+  }
+  
+  // Priority 3: Extract from Cloudinary URL (fallback only)
+  if (!attachmentId && att.url) {
+    const urlMatch = att.url.match(/\/upload\/v\d+\/[^\/]+\/([^\/]+)\.[^\/]+$/);
+    if (urlMatch) {
+      attachmentId = urlMatch[1];
+    } else {
+      const altMatches = [
+        att.url.match(/\/upload\/[^\/]+\/([^\/]+)\.[^\/]+$/),
+        att.url.match(/\/upload\/v\d+\/[^\/]+\/[^\/]+\/([^\/]+)\.[^\/]+$/),
+        att.url.match(/\/([^\/]+)\.[^\/]+$/)
+      ];
+      
+      for (let i = 0; i < altMatches.length; i++) {
+        if (altMatches[i]) {
+          attachmentId = altMatches[i][1];
+          break;
+        }
+      }
+    }
+  }
+  
+  return {
+    id: attachmentId || `attachment_${Date.now()}`,
+    publicId: att.publicId || attachmentId || `attachment_${Date.now()}`,
+    url: att.url,
+    type: att.type || 'image',
+    filename: att.filename || 'attachment',
+    size: att.size || 0,
+    createdAt: att.createdAt || new Date().toISOString(),
+  };
+}
 
 const transformHealthRecord = (record: any): HealthRecord => {
   console.log('[HEALTH-SERVICE] Transforming health record:', {
@@ -48,7 +96,7 @@ const transformHealthRecord = (record: any): HealthRecord => {
     endDate: record.endDate,
     doctorName: record.doctorName || record.doctor, // Also map 'doctor' to 'doctorName'
     location: record.location,
-    attachments: record.attachments,
+    attachments: record.attachments?.map((att: any) => mapHealthRecordAttachment(att)) || [],
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
@@ -567,4 +615,162 @@ export function getGrowthChartData(growthRecords: GrowthRecord[]) {
     height: heightData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
     weight: weightData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   };
+}
+
+// Health Record Attachment Management
+export async function updateHealthRecordAttachments(
+  recordId: string, 
+  attachments: any[], 
+  action: 'add' | 'remove' | 'replace' = 'add', 
+  attachmentIds: string[] = []
+): Promise<HealthRecord> {
+  const token = await authService.getAccessToken();
+  
+  if (!token) {
+    throw new Error('Authentication token not available');
+  }
+
+  conditionalLog.health(`[HEALTH-ATTACHMENTS] Starting attachment update:`, {
+    recordId,
+    action,
+    attachmentsCount: attachments.length,
+    attachmentIdsCount: attachmentIds.length,
+    attachments: attachments.map(f => ({ name: f.name, type: f.type, size: f.size }))
+  });
+
+  // Handle remove action using the unified attachments endpoint
+  if (action === 'remove' && attachmentIds.length > 0) {
+    try {
+      conditionalLog.health(`[HEALTH-ATTACHMENTS] Removing attachments:`, attachmentIds);
+      
+      const response = await fetch(`${BASE_URL}/health-records/${recordId}/attachments`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'remove',
+          attachmentIds: attachmentIds
+        }),
+      });
+
+      conditionalLog.health(`[HEALTH-ATTACHMENTS] Remove response status:`, response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        conditionalLog.health(`[HEALTH-ATTACHMENTS] Remove error response:`, errorText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { message: errorText };
+        }
+        throw new Error(errorData.error || errorData.message || `Delete attachments failed: ${response.statusText}`);
+      }
+
+      const responseData = await response.json();
+      conditionalLog.health(`[HEALTH-ATTACHMENTS] Remove success response:`, responseData);
+      
+      // Handle the actual backend response structure: { success: true, data: { healthRecord: {...} } }
+      let healthRecord = responseData.data?.healthRecord || responseData.data || responseData.healthRecord || responseData;
+
+      // If the backend doesn't return the full health record object, fetch it separately
+      if (!healthRecord || (!healthRecord._id && !healthRecord.id)) {
+        try {
+          const updatedHealthRecordResponse = await apiService.get(`/health-records/${recordId}`);
+          healthRecord = updatedHealthRecordResponse.data || updatedHealthRecordResponse;
+        } catch (fetchError) {
+          throw new Error(`Delete attachments completed but failed to retrieve updated health record. Please refresh to see changes.`);
+        }
+      }
+
+      return transformHealthRecord(healthRecord);
+    } catch (error) {
+      conditionalLog.health(`[HEALTH-ATTACHMENTS] Remove error:`, error);
+      throw error;
+    }
+  }
+
+  // Handle add and replace actions using the PATCH endpoint
+  const formData = new FormData();
+  
+  // Add the required parameters for the backend
+  formData.append('action', action);
+  conditionalLog.health(`[HEALTH-ATTACHMENTS] Added action to FormData:`, action);
+  
+  // Add attachments if this is an add or replace action
+  if (action === 'add' || action === 'replace') {
+    attachments.forEach((file, index) => {
+      conditionalLog.health(`[HEALTH-ATTACHMENTS] Adding attachment ${index}:`, {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        uri: file.uri ? file.uri.substring(0, 50) + '...' : 'no uri'
+      });
+      
+      conditionalLog.health(`[HEALTH-ATTACHMENTS] File object for FormData:`, file);
+      
+      // Append the file to FormData - use the file directly
+      formData.append('attachments', file as any);
+    });
+  }
+
+  conditionalLog.health(`[HEALTH-ATTACHMENTS] Making request to:`, `${BASE_URL}/health-records/${recordId}/attachments`);
+  conditionalLog.health(`[HEALTH-ATTACHMENTS] Request method: PATCH`);
+  conditionalLog.health(`[HEALTH-ATTACHMENTS] Action:`, action);
+  conditionalLog.health(`[HEALTH-ATTACHMENTS] Attachments to upload:`, attachments.map(f => ({ name: f.name, type: f.type, size: f.size })));
+
+  const response = await fetch(`${BASE_URL}/health-records/${recordId}/attachments`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      // Don't set Content-Type for FormData, let the browser set it with boundary
+    },
+    body: formData,
+  });
+
+  conditionalLog.health(`[HEALTH-ATTACHMENTS] Response status:`, response.status);
+  conditionalLog.health(`[HEALTH-ATTACHMENTS] Response statusText:`, response.statusText);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    conditionalLog.health(`[HEALTH-ATTACHMENTS] Raw error response:`, errorText);
+    
+    let errorData;
+    try {
+      errorData = JSON.parse(errorText);
+    } catch {
+      errorData = { message: errorText };
+    }
+    
+    conditionalLog.health(`[HEALTH-ATTACHMENTS] Parsed error data:`, errorData);
+    conditionalLog.health(`[HEALTH-ATTACHMENTS] Request details for debugging:`, {
+      url: `${BASE_URL}/health-records/${recordId}/attachments`,
+      method: 'PATCH',
+      action,
+      attachmentCount: attachments.length
+    });
+    
+    throw new Error(errorData.error || errorData.message || `Attachment ${action} failed: ${response.statusText}`);
+  }
+
+  const responseData = await response.json();
+  conditionalLog.health(`[HEALTH-ATTACHMENTS] Success response data:`, responseData);
+  
+  // Handle the actual backend response structure: { success: true, data: { healthRecord: {...} } }
+  let healthRecord = responseData.data?.healthRecord || responseData.data || responseData.healthRecord || responseData;
+
+  // If the backend doesn't return the full health record object, fetch it separately
+  if (!healthRecord || (!healthRecord._id && !healthRecord.id)) {
+    try {
+      const updatedHealthRecordResponse = await apiService.get(`/health-records/${recordId}`);
+      healthRecord = updatedHealthRecordResponse.data || updatedHealthRecordResponse;
+    } catch (fetchError) {
+      throw new Error(`Attachment ${action} completed but failed to retrieve updated health record. Please refresh to see changes.`);
+    }
+  }
+
+  return transformHealthRecord(healthRecord);
 } 

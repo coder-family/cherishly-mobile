@@ -4,16 +4,16 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native';
 import * as yup from 'yup';
 import { Colors } from '../../constants/Colors';
@@ -41,7 +41,7 @@ const schema = yup.object().shape({
 interface EditGrowthRecordModalProps {
   visible: boolean;
   onClose: () => void;
-  record: GrowthRecord | null;
+  record: (GrowthRecord & { metadata?: { type: string; value: number; unit: string } }) | null;
   onSuccess: () => void;
 }
 
@@ -76,14 +76,45 @@ const EditGrowthRecordModal: React.FC<EditGrowthRecordModalProps> = ({
 
   // Pre-populate form when record changes
   useEffect(() => {
-    if (record) {
-      setSelectedType(record.type as 'height' | 'weight');
-      setValue('type', record.type);
-      setValue('value', record.value.toString());
-      setValue('unit', record.unit);
-      setValue('date', record.date);
-      setValue('source', record.source);
-      setValue('notes', record.notes || '');
+    console.log('[EDIT-GROWTH] ^^^^^^Record received for pre-populate:', record);
+    if (record && record.id) {
+      // Handle both direct record format and timeline item format
+      const actualType = record.metadata?.type || record.type;
+      const actualValue = record.metadata?.value || record.value;
+      const actualUnit = record.metadata?.unit || record.unit;
+      const actualSource = record.source || 'home';
+      const actualNotes = record.notes || '';
+      
+      console.log('[EDIT-GROWTH] #######Pre-populating with values:', {
+        type: actualType,
+        value: actualValue,
+        unit: actualUnit,
+        date: record.date,
+        source: actualSource,
+        notes: actualNotes
+      });
+      
+      setSelectedType(actualType as 'height' | 'weight');
+      setValue('type', actualType || 'height');
+      setValue('value', actualValue?.toString() || '');
+      setValue('unit', actualUnit || 'cm');
+      // Format date properly - handle both ISO string and date string
+      let formattedDate = new Date().toISOString().split('T')[0];
+      if (record.date) {
+        try {
+          const date = new Date(record.date);
+          if (!isNaN(date.getTime())) {
+            formattedDate = date.toISOString().split('T')[0];
+          }
+        } catch (e) {
+          console.log('[EDIT-GROWTH] Error parsing date:', record.date, e);
+        }
+      }
+      setValue('date', formattedDate);
+      setValue('source', actualSource);
+      setValue('notes', actualNotes);
+    } else {
+      console.log('[EDIT-GROWTH] No valid record provided for pre-populate');
     }
   }, [record, setValue]);
 
@@ -94,11 +125,20 @@ const EditGrowthRecordModal: React.FC<EditGrowthRecordModalProps> = ({
   };
 
   const onSubmit = async (data: any) => {
-    if (!record) return;
+    console.log('[EDIT-GROWTH] @@@@@@@Submit called with data:', data);
+    console.log('[EDIT-GROWTH] @@@@@@Record:', record);
+    
+    if (!record) {
+      console.log('[EDIT-GROWTH] %%%%%%%No record provided for submit');
+      return;
+    }
 
     try {
+      // Ensure type is either 'height' or 'weight', not 'growth'
+      const actualType = data.type === 'growth' ? (record.metadata?.type || 'height') : data.type;
+      
       const updateData: UpdateGrowthRecordData = {
-        type: data.type,
+        type: actualType,
         value: parseFloat(data.value),
         unit: data.unit,
         date: data.date,
@@ -106,15 +146,20 @@ const EditGrowthRecordModal: React.FC<EditGrowthRecordModalProps> = ({
         notes: data.notes,
       };
       
+      console.log('[EDIT-GROWTH] Update data:', updateData);
+      console.log('[EDIT-GROWTH] Record ID:', record.id);
+      
       await dispatch(updateGrowthRecord({ recordId: record.id, data: updateData })).unwrap();
       onSuccess();
       Alert.alert('Success', 'Growth record updated successfully!');
-    } catch (_error) {
+    } catch (error) {
+      console.log('[EDIT-GROWTH] Error updating record:', error);
       Alert.alert('Error', 'Failed to update growth record. Please try again.');
     }
   };
 
   const handleClose = () => {
+    console.log('[EDIT-GROWTH] &&&&&&&Closing modal, resetting form');
     reset();
     onClose();
   };

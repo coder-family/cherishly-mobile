@@ -23,6 +23,7 @@ import QuestionAnswerCard from './QuestionAnswerCard';
 interface QAContentProps {
   childId: string;
   useScrollView?: boolean; // New prop to handle nesting issue
+  editingItem?: any; // Item to be edited from timeline
 }
 
 type ListItemType = 'header' | 'qa-card' | 'ask-button' | 'load-more';
@@ -34,11 +35,11 @@ interface ListItem {
   response?: any;
 }
 
-export default function QAContent({ childId, useScrollView = false }: QAContentProps) {
+export default function QAContent({ childId, useScrollView = false, editingItem }: QAContentProps) {
   // Debug: Log the childId value
-  console.log('QAContent: Received childId:', childId);
-  console.log('QAContent: childId type:', typeof childId);
-  console.log('QAContent: childId length:', childId?.length);
+  // console.log('QAContent: Received childId:', childId);
+  // console.log('QAContent: childId type:', typeof childId);
+  // console.log('QAContent: childId length:', childId?.length);
   
   const dispatch = useAppDispatch();
   const { prompts, loading: promptsLoading, error: promptsError, hasMore: promptsHasMore } = useAppSelector((state) => state.prompts);
@@ -65,7 +66,7 @@ export default function QAContent({ childId, useScrollView = false }: QAContentP
   // Load prompts and responses on mount
   useEffect(() => {
     if (childId && !initialDataLoaded.current) {
-      console.log('QAContent: Loading initial data for childId:', childId);
+      // console.log('QAContent: Loading initial data for childId:', childId);
       initialDataLoaded.current = true;
       // Temporarily disable API calls
       dispatch(fetchPrompts({ isActive: true, limit: 20 }));
@@ -75,13 +76,22 @@ export default function QAContent({ childId, useScrollView = false }: QAContentP
 
   // Debug effect to log state changes
   useEffect(() => {
-    console.log('QAContent: State updated - prompts:', prompts.length, 'responses:', responses.length);
+    // console.log('QAContent: State updated - prompts:', prompts.length, 'responses:', responses.length);
   }, [prompts.length, responses.length]);
 
   // Debug modal states
   useEffect(() => {
-    console.log('QAContent: Modal states - Prompt:', selectedPrompt, 'Response:', selectedResponse, 'AskChild:', showAskChildModal);
+    // console.log('QAContent: Modal states - Prompt:', selectedPrompt, 'Response:', selectedResponse, 'AskChild:', showAskChildModal);
   }, [selectedPrompt, selectedResponse, showAskChildModal]);
+
+  // Handle editing item from timeline
+  useEffect(() => {
+    if (editingItem && editingItem.id) {
+      // console.log('QAContent: Received editing item from timeline:', editingItem);
+      setSelectedResponse(editingItem);
+      setShowEditResponseModal(true);
+    }
+  }, [editingItem]);
 
   // Reset the ref when childId changes and clear data
   useEffect(() => {

@@ -134,9 +134,11 @@ export const useChartData = (
   const chartData = useMemo((): ChartData => {
     // Determine interval based on mode
     const interval = selectedMode === "yearly" ? 12 : 6; // 12 months for yearly, 6 months for half-yearly
-    const maxAge = 120; // 10 years
+    
+    // Always use 10 years (120 months) as maximum to ensure full range display
+    const maxAge = 120;
 
-    // Create age labels based on mode
+    // Create age labels based on mode - always show full range to 10 years
     const labels: string[] = [];
     for (let age = 0; age <= maxAge; age += interval) {
       const years = (age / 12).toFixed(1);
@@ -233,7 +235,7 @@ export const useChartData = (
     // User data (red dots) - Dataset 2: Discrete measurements only
     if (userChartData.length > 0) {
       // Create user dataset that aligns with chart labels
-      const userValues: (number | null)[] = [];
+      const userValues: number[] = [];
 
       for (let age = 0; age <= maxAge; age += interval) {
         const dataPoint = userChartData.find(
@@ -244,16 +246,16 @@ export const useChartData = (
           const clampedValue = clampValue(dataPoint.value);
           userValues.push(clampedValue);
         } else {
-          // Use null for missing data points (will not connect)
-          userValues.push(null as any);
+          // Use a very low value that will be hidden by yAxisMin
+          userValues.push(type === "weight" ? -5 : -20);
         }
       }
 
       // User dataset - aligned with chart labels
       datasets.push({
-        data: userValues as number[],
+        data: userValues,
         color: (opacity = 1) => `rgba(255, 0, 0, ${opacity})`, // Bright Red for user data
-        strokeWidth: 2, // Thin line to connect real data points
+        strokeWidth: 0, // No line connection - only dots
         withDots: true,
       });
     }

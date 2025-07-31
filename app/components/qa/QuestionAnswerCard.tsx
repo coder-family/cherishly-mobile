@@ -34,17 +34,17 @@ export default function QuestionAnswerCard({
   const hasAttachments = response?.attachments && response.attachments.length > 0;
 
   // Debug logging
-  console.log('QuestionAnswerCard: Rendering card with:', {
-    promptId: prompt.id,
-    promptContent: prompt.content,
-    promptTitle: prompt.title,
-    responseContent: response?.content,
-    hasResponse,
-    hasAttachments,
-    attachments: response?.attachments,
-    attachmentsLength: response?.attachments?.length,
-    firstAttachment: response?.attachments?.[0]
-  });
+  // console.log('QuestionAnswerCard: Rendering card with:', {
+  //   promptId: prompt.id,
+  //   promptContent: prompt.content,
+  //   promptTitle: prompt.title,
+  //   responseContent: response?.content,
+  //   hasResponse,
+  //   hasAttachments,
+  //   attachments: response?.attachments,
+  //   attachmentsLength: response?.attachments?.length,
+  //   firstAttachment: response?.attachments?.[0]
+  // });
 
   return (
     <TouchableOpacity
@@ -281,3 +281,4 @@ const styles = StyleSheet.create({
     color: '#999',
   },
 });
+
