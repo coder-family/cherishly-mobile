@@ -13,6 +13,7 @@ import GrowthChart from '../health/GrowthChart';
 import HealthRecordItem from '../health/HealthRecordItem';
 import ErrorView from '../ui/ErrorView';
 import SectionCard from '../ui/SectionCard';
+import VisibilityBadge from '../ui/VisibilityBadge';
 
 interface HealthContentProps {
   childId: string;
@@ -52,54 +53,6 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
   const healthLoading = healthState?.loading || false;
   const healthError = healthState?.error || null;
 
-  // Debug logging for health data - COMMENTED OUT TO REDUCE NOISE
-  // console.log('[HEALTH-CONTENT-DEBUG] Health state:', {
-  //   childId,
-  //   healthStateExists: !!healthState,
-  //   growthRecordsLength: growthRecords?.length || 0,
-  //   healthRecordsLength: healthRecords?.length || 0,
-  //   healthLoading,
-  //   healthError,
-  //   firstGrowthRecord: growthRecords?.[0] ? {
-  //     id: growthRecords[0].id,
-  //     type: growthRecords[0].type,
-  //     value: growthRecords[0].value,
-  //     date: growthRecords[0].date
-  //   } : 'none'
-  // });
-
-  // Log growth records count from backend - COMMENTED OUT TO REDUCE NOISE
-  // console.log('[HEALTH-UI] Growth records count from backend:', {
-  //   childId,
-  //   growthRecordsCount: growthRecords.length,
-  //   growthRecords: growthRecords.map(record => ({
-  //     id: record.id,
-  //     type: record.type,
-  //     value: record.value,
-  //     unit: record.unit,
-  //     date: record.date
-  //   }))
-  // });
-
-  // Additional verification logging for height data specifically - COMMENTED OUT TO REDUCE NOISE
-  // const heightRecords = growthRecords.filter(record => record.type === 'height');
-  // const heightValues = heightRecords.map(record => record.value);
-  // const latestHeight = heightValues.length > 0 ? heightValues[heightValues.length - 1] : 0;
-  // const averageHeight = heightValues.length > 0 ? heightValues.reduce((a, b) => a + b, 0) / heightValues.length : 0;
-  
-  // console.log('[HEALTH-UI] Height data verification:', {
-  //   heightRecordsCount: heightRecords.length,
-  //   heightValues: heightValues,
-  //   latestHeight: latestHeight,
-  //   averageHeight: averageHeight,
-  //   heightRecords: heightRecords.map(record => ({
-  //     id: record.id,
-  //     value: record.value,
-  //     date: record.date,
-  //     unit: record.unit
-  //   }))
-  // });
-
   // Get child data for age calculation
   const { currentChild } = useAppSelector((state) => state.children);
 
@@ -123,19 +76,15 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
   // Consolidated data fetching function
   const fetchHealthData = useCallback(() => {
     if (childId) {
-      // console.log('[HEALTH-FETCH] Dispatching fetch actions for childId:', childId, 'with filter:', healthFilter);
       // Fetch all growth records without filter to get both height and weight data
       dispatch(fetchGrowthRecords({ childId }));
       dispatch(fetchHealthRecords({ childId, filter: healthFilter }));
-    } else {
-      // console.log('[HEALTH-FETCH] No childId provided, skipping fetch');
     }
   }, [childId, dispatch, healthFilter]);
 
   // Load health data for this child
   useEffect(() => {
     if (childId) {
-      // console.log('[HEALTH-CONTENT] Loading health data for childId:', childId);
       dispatch(fetchHealthRecords({ childId, filter: healthFilter }));
       dispatch(fetchGrowthRecords({ childId, filter: growthFilter }));
     }
@@ -143,70 +92,44 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
 
   // Handle editing items from timeline
   useEffect(() => {
-    // console.log('[HEALTH-CONTENT] editingHealthItem changed:', editingHealthItem);
     if (editingHealthItem && editingHealthItem.id) {
-      console.log('[HEALTH-CONTENT] Received health item to edit from timeline:', editingHealthItem);
       setHealthRecordToEdit(editingHealthItem);
       setShowEditHealthModal(true);
     } else if (!editingHealthItem && showEditHealthModal && healthRecordToEdit === null) {
       // Only close modal if editingHealthItem is reset AND healthRecordToEdit is null
       // This prevents closing modal when editing directly from Health tab
-      console.log('[HEALTH-CONTENT] Editing health item reset, closing modal');
       setShowEditHealthModal(false);
     }
   }, [editingHealthItem, showEditHealthModal, healthRecordToEdit]);
 
   useEffect(() => {
     if (editingGrowthItem && editingGrowthItem.id) {
-      console.log('[HEALTH-CONTENT] Received growth item to edit from timeline:', editingGrowthItem);
       setRecordToEdit(editingGrowthItem);
       setShowEditGrowthModal(true);
     } else if (!editingGrowthItem && showEditGrowthModal && recordToEdit === null) {
       // Only close modal if editingGrowthItem is reset AND recordToEdit is null
       // This prevents closing modal when editing directly from Health tab
-      console.log('[HEALTH-CONTENT] Editing growth item reset, closing modal');
       setShowEditGrowthModal(false);
     }
   }, [editingGrowthItem, showEditGrowthModal, recordToEdit]);
 
-  // Debug state changes - COMMENTED OUT
-  // useEffect(() => {
-  //   console.log('[HEALTH-CONTENT] 🎯 recordToEdit changed:', recordToEdit ? {
-  //     id: recordToEdit.id,
-  //     type: recordToEdit.type,
-  //     value: recordToEdit.value
-  //   } : 'null');
-  // }, [recordToEdit]);
+  // Handle edit completion from timeline
+  useEffect(() => {
+    if (editingHealthItem) {
+      // Handle health item edit from timeline
+    } else {
+      // Reset editing health item
+    }
+  }, [editingHealthItem]);
 
-  // useEffect(() => {
-  //   console.log('[HEALTH-CONTENT] 🎯 showEditGrowthModal changed:', showEditGrowthModal);
-  // }, [showEditGrowthModal]);
-
-  // useEffect(() => {
-  //   console.log('[HEALTH-CONTENT] 🎯 editingGrowthItem changed:', editingGrowthItem ? {
-  //     id: editingGrowthItem.id,
-  //     type: editingGrowthItem.type
-  //   } : 'null');
-  // }, [editingGrowthItem]);
-
-  // useEffect(() => {
-  //   console.log('[HEALTH-CONTENT] 🎯 healthRecordToEdit changed:', healthRecordToEdit ? {
-  //     id: healthRecordToEdit.id,
-  //     title: healthRecordToEdit.title,
-  //     type: healthRecordToEdit.type
-  //   } : 'null');
-  // }, [healthRecordToEdit]);
-
-  // useEffect(() => {
-  //   console.log('[HEALTH-CONTENT] 🎯 showEditHealthModal changed:', showEditHealthModal);
-  // }, [editingHealthItem]);
-
-  // useEffect(() => {
-  //   console.log('[HEALTH-CONTENT] 🎯 editingHealthItem changed:', editingHealthItem ? {
-  //     id: editingHealthItem.id,
-  //     type: editingHealthItem.type
-  //   } : 'null');
-  // }, [editingHealthItem]);
+  // Handle growth item edit from timeline
+  useEffect(() => {
+    if (editingGrowthItem) {
+      // Handle growth item edit from timeline
+    } else {
+      // Reset editing growth item
+    }
+  }, [editingGrowthItem]);
 
   // Fetch health data when component mounts or filter changes
   useEffect(() => {
@@ -272,7 +195,6 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
 
   // Handle edit modal
   const handleEditGrowthRecord = useCallback((record: GrowthRecord) => {
-    console.log('[HEALTH-CONTENT] $$$$$$handleEditGrowthRecord called with record:', record);
     setRecordToEdit(record);
     setShowEditGrowthModal(true);
   }, []);
@@ -348,22 +270,6 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
 
   const childAgeInMonths = getChildAgeInMonths();
   const childGender = currentChild?.gender as 'male' | 'female' || 'male';
-
-  // Debug modal state - COMMENTED OUT
-  // console.log('[HEALTH-CONTENT] 🎯 Modal state:', {
-  //   showEditHealthModal,
-  //   showEditGrowthModal,
-  //   healthRecordToEdit: healthRecordToEdit ? {
-  //     id: healthRecordToEdit.id,
-  //     title: healthRecordToEdit.title,
-  //     type: healthRecordToEdit.type
-  //   } : null,
-  //   recordToEdit: recordToEdit ? {
-  //     id: recordToEdit.id,
-  //     type: recordToEdit.type,
-  //     value: recordToEdit.value
-  //   } : null
-  // });
 
   if (renderModalsOnly) {
     return (
@@ -456,6 +362,7 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
               <Text style={styles.tableHeaderText}>Value</Text>
               <Text style={styles.tableHeaderText}>Unit</Text>
               <Text style={styles.tableHeaderText}>Age</Text>
+              <Text style={styles.tableHeaderText}>Visibility</Text>
               <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Actions</Text>
             </View>
             
@@ -465,13 +372,6 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
               const recordAgeInMonths = currentChild?.birthdate ? 
                 Math.max(0, (recordDate.getFullYear() - new Date(currentChild.birthdate).getFullYear()) * 12 + 
                 (recordDate.getMonth() - new Date(currentChild.birthdate).getMonth())) : 0;
-              
-              // console.log('[HEALTH-CONTENT] Rendering growth record:', {
-              //   id: record.id,
-              //   type: record.type,
-              //   value: record.value,
-              //   hasEditHandler: !!handleEditGrowthRecord
-              // });
               
               return (
                 <View key={record.id} style={styles.tableRow}>
@@ -498,13 +398,12 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
                   <Text style={styles.tableCell}>
                     {recordAgeInMonths}m
                   </Text>
+                  <View style={styles.tableCell}>
+                    {record.visibility && (
+                      <VisibilityBadge visibility={record.visibility} size="small" />
+                    )}
+                  </View>
                   <View style={[styles.actionButtons, { flex: 1.2 }]}>
-                    {/* Debug info - COMMENTED OUT TO REDUCE NOISE */}
-                    {/* {__DEV__ && (
-                      <Text style={{ fontSize: 8, color: 'red' }}>
-                        EDIT BTN
-                      </Text>
-                    )} */}
                     <TouchableOpacity
                       style={[styles.actionButton, styles.editButton]}
                       onPress={() => handleEditGrowthRecord(record)}

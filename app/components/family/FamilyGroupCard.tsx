@@ -1,23 +1,27 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface FamilyGroupCardProps {
+  id: string;
   name: string;
   avatarUrl?: string;
   description?: string;
   memberCount?: number;
   subtitle?: string;
+  onPress?: () => void;
 }
 
 const FamilyGroupCard: React.FC<FamilyGroupCardProps> = ({ 
+  id,
   name, 
   avatarUrl, 
   description, 
   memberCount, 
-  subtitle: _subtitle = "Family Group" 
+  subtitle: _subtitle = "Family Group",
+  onPress
 }) => (
-  <View style={styles.card}>
+  <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
     {avatarUrl ? (
       <Image source={{ uri: avatarUrl }} style={styles.avatar} />
     ) : (
@@ -38,7 +42,7 @@ const FamilyGroupCard: React.FC<FamilyGroupCardProps> = ({
     <View style={styles.chevron}>
       <MaterialIcons name="chevron-right" size={24} color="#666" />
     </View>
-  </View>
+  </TouchableOpacity>
 );
 
 const styles = StyleSheet.create({

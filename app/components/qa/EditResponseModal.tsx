@@ -36,18 +36,12 @@ export default function EditResponseModal({
 
   // Reset form when modal opens/closes or when response changes
   useEffect(() => {
-    if (visible && response) {
-      console.log('EditResponseModal: Loading response:', {
-        id: response.id,
-        content: response.content,
-        attachmentsCount: response.attachments?.length || 0,
-        attachments: response.attachments,
-        responseKeys: Object.keys(response)
-      });
+    if (response) {
+      // Load response data into form
       setContent(response.content || '');
       setAttachments(response.attachments || []);
     }
-  }, [visible, response]);
+  }, [response]);
 
   const handleSubmit = async () => {
     if (!content.trim()) {
@@ -73,19 +67,10 @@ export default function EditResponseModal({
         !attachments.some(att => att.id === orig.id)
       );
 
-      console.log('EditResponseModal: Attachment analysis:', {
-        totalAttachments: attachments.length,
-        originalAttachments: originalAttachments.length,
-        newAttachments: newAttachments.length,
-        removedAttachments: removedAttachments.length,
-        newAttachmentsDetails: newAttachments
-      });
-
       // Handle attachment changes using PATCH route with appropriate actions
       if (newAttachments.length > 0 || removedAttachments.length > 0) {
         if (newAttachments.length > 0 && removedAttachments.length === 0) {
           // Only adding new attachments - use 'add' action
-          console.log('EditResponseModal: Adding new attachments:', newAttachments);
           await dispatch(addAttachments({
             responseId: response.id,
             files: newAttachments
@@ -95,7 +80,6 @@ export default function EditResponseModal({
           const attachmentIdsToRemove = removedAttachments.map(att => att.publicId || att.id);
           
           if (attachmentIdsToRemove.length > 0) {
-            console.log('EditResponseModal: Removing attachments:', attachmentIdsToRemove);
             await dispatch(removeAttachments({
               responseId: response.id,
               attachmentIds: attachmentIdsToRemove
@@ -107,7 +91,6 @@ export default function EditResponseModal({
           const attachmentIdsToRemove = removedAttachments.map(att => att.publicId || att.id);
           
           if (attachmentIdsToRemove.length > 0) {
-            console.log('EditResponseModal: Removing attachments:', attachmentIdsToRemove);
             await dispatch(removeAttachments({
               responseId: response.id,
               attachmentIds: attachmentIdsToRemove
@@ -116,7 +99,6 @@ export default function EditResponseModal({
           
           // Then add new attachments
           if (newAttachments.length > 0) {
-            console.log('EditResponseModal: Adding new attachments after removal:', newAttachments);
             await dispatch(addAttachments({
               responseId: response.id,
               files: newAttachments
@@ -170,20 +152,12 @@ export default function EditResponseModal({
       name: `attachment_${Date.now()}.jpg`, // Generate unique name
     };
     
-    console.log('EditResponseModal: Adding attachment:', {
-      uri: fileObject.uri,
-      type: fileObject.type,
-      name: fileObject.name
-    });
-    
     // Check file size before adding
     try {
       const response = await fetch(uri);
       const blob = await response.blob();
       const fileSize = blob.size;
       const fileSizeMB = (fileSize / (1024 * 1024)).toFixed(2);
-      
-      console.log('EditResponseModal: File size:', fileSize, 'bytes,', fileSizeMB, 'MB');
       
       if (fileSize > 10 * 1024 * 1024) { // 10MB limit
         Alert.alert(
@@ -267,13 +241,6 @@ export default function EditResponseModal({
                   Current Attachments ({attachments.length})
                 </Text>
                 {attachments.map((attachment, index) => {
-                  console.log('EditResponseModal: Rendering attachment:', {
-                    index,
-                    attachment,
-                    name: attachment.name,
-                    filename: attachment.filename,
-                    id: attachment.id
-                  });
                   
                   // Get display name for attachment
                   const getDisplayName = (attachment: any) => {

@@ -21,18 +21,24 @@ import { API_BASE_URL } from '@env';
 const BASE_URL = API_BASE_URL || "https://growing-together-app.onrender.com/api";
 
 // Data transformation functions to convert MongoDB format to TypeScript interface
-const transformGrowthRecord = (record: any): GrowthRecord => ({
-  id: record._id || record.id,
-  childId: record.child || record.childId,
-  type: record.type,
-  value: record.value,
-  unit: record.unit,
-  date: record.date,
-  source: record.source,
-  notes: record.notes,
-  createdAt: record.createdAt,
-  updatedAt: record.updatedAt,
-});
+const transformGrowthRecord = (record: any): GrowthRecord => {
+  // Handle nested response structure
+  const growthRecord = record.growthRecord || record;
+  
+  return {
+    id: growthRecord._id || growthRecord.id,
+    childId: growthRecord.child || growthRecord.childId,
+    type: growthRecord.type,
+    value: growthRecord.value,
+    unit: growthRecord.unit,
+    date: growthRecord.date,
+    source: growthRecord.source,
+    notes: growthRecord.notes,
+    visibility: growthRecord.visibility || 'private',
+    createdAt: growthRecord.createdAt,
+    updatedAt: growthRecord.updatedAt,
+  };
+};
 
 // Helper function to map attachment from API response to frontend interface
 function mapHealthRecordAttachment(att: any): HealthRecordAttachment {
@@ -76,29 +82,23 @@ function mapHealthRecordAttachment(att: any): HealthRecordAttachment {
 }
 
 const transformHealthRecord = (record: any): HealthRecord => {
-  console.log('[HEALTH-SERVICE] Transforming health record:', {
-    rawRecord: record,
-    startDate: record.startDate,
-    date: record.date, // API uses 'date' field
-    endDate: record.endDate,
-    attachments: record.attachments,
-    attachmentsType: typeof record.attachments,
-    isAttachmentsArray: Array.isArray(record.attachments)
-  });
+  // Handle nested response structure
+  const healthRecord = record.healthRecord || record;
   
   return {
-    id: record._id || record.id,
-    childId: record.child || record.childId,
-    type: record.type,
-    title: record.title,
-    description: record.description,
-    startDate: record.startDate || record.date, // Use 'date' field if 'startDate' is not available
-    endDate: record.endDate,
-    doctorName: record.doctorName || record.doctor, // Also map 'doctor' to 'doctorName'
-    location: record.location,
-    attachments: record.attachments?.map((att: any) => mapHealthRecordAttachment(att)) || [],
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt,
+    id: healthRecord._id || healthRecord.id,
+    childId: healthRecord.child || healthRecord.childId,
+    type: healthRecord.type,
+    title: healthRecord.title,
+    description: healthRecord.description,
+    startDate: healthRecord.startDate || healthRecord.date, // Use 'date' field if 'startDate' is not available
+    endDate: healthRecord.endDate,
+    doctorName: healthRecord.doctorName || healthRecord.doctor, // Also map 'doctor' to 'doctorName'
+    location: healthRecord.location,
+    attachments: healthRecord.attachments?.map((att: any) => mapHealthRecordAttachment(att)) || [],
+    visibility: healthRecord.visibility || 'private',
+    createdAt: healthRecord.createdAt,
+    updatedAt: healthRecord.updatedAt,
   };
 };
 
@@ -473,15 +473,17 @@ export async function createGrowthRecord(data: CreateGrowthRecordData): Promise<
     // console.log('[HEALTH-DEBUG] Transformed record:', JSON.stringify(transformed, null, 2));
     return transformed;
   } catch (error: any) {
-    console.error('[HEALTH-DEBUG] Error creating growth record:', error);
+    conditionalLog.health('Error creating growth record:', error);
     throw error;
   }
 }
 
 export async function updateGrowthRecord(recordId: string, data: UpdateGrowthRecordData): Promise<GrowthRecord> {
   try {
+    conditionalLog.health('Updating growth record:', { recordId, data });
     const response = await apiService.put(`/growth-records/${recordId}`, data);
     const rawData = response.data || response;
+    conditionalLog.health('API response:', rawData);
     return transformGrowthRecord(rawData);
   } catch (error) {
     conditionalLog.health('Error updating growth record:', error);
@@ -574,8 +576,10 @@ export async function createHealthRecord(data: CreateHealthRecordData): Promise<
 
 export async function updateHealthRecord(recordId: string, data: UpdateHealthRecordData): Promise<HealthRecord> {
   try {
+    conditionalLog.health('Updating health record:', { recordId, data });
     const response = await apiService.put(`/health-records/${recordId}`, data);
     const rawData = response.data || response;
+    conditionalLog.health('API response:', rawData);
     return transformHealthRecord(rawData);
   } catch (error) {
     conditionalLog.health('Error updating health record:', error);

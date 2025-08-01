@@ -21,6 +21,10 @@ const exampleVideos = [
 ];
 
 export default function VideoPlayerExampleSafe() {
+  const handleVideoPress = (attachment: any, index: number) => {
+    // Handle video press
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Safe Video Player (No Orientation)</Text>
@@ -31,9 +35,7 @@ export default function VideoPlayerExampleSafe() {
       
       <MediaViewerBaseSafe
         attachments={exampleVideos}
-        onAttachmentPress={(attachment, index) => {
-          console.log('Video pressed:', attachment.fileName, 'at index:', index);
-        }}
+        onAttachmentPress={handleVideoPress}
       />
     </View>
   );

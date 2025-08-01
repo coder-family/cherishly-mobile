@@ -61,6 +61,11 @@ export default function QuestionDropdownModal({
     }
   };
 
+  const handleItemSelect = (item: any) => {
+    onSelect(item);
+    onClose();
+  };
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={dropdownStyles.container}>
@@ -73,14 +78,7 @@ export default function QuestionDropdownModal({
             <TouchableOpacity
               style={dropdownStyles.item}
               onPress={() => {
-                console.log('QuestionDropdownModal: Item selected:', {
-                  id: item.id,
-                  title: item.title,
-                  content: item.content,
-                  category: item.category
-                });
-                onSelect(item);
-                onClose();
+                handleItemSelect(item);
               }}
             >
               <Text style={dropdownStyles.itemText}>

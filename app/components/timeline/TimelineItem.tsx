@@ -4,6 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useThemeColor } from '../../hooks/useThemeColor';
 import MemoryMediaViewer from '../child/MemoryMediaViewer';
 import Avatar from '../ui/Avatar';
+import VisibilityToggle from '../ui/VisibilityToggle';
 
 export interface TimelineItemData {
   id: string;
@@ -17,6 +18,7 @@ export interface TimelineItemData {
   media?: any[];
   metadata?: any;
   creator?: any; // Add creator info for memory items
+  visibility?: 'private' | 'public';
 }
 
 interface TimelineItemProps {
@@ -26,6 +28,7 @@ interface TimelineItemProps {
   onDelete?: (item: TimelineItemData) => void;
   onLike?: (item: TimelineItemData) => void;
   onComment?: (item: TimelineItemData) => void;
+  onVisibilityUpdate?: (itemId: string, visibility: 'private' | 'public') => Promise<void>;
 }
 
 const TimelineItem: React.FC<TimelineItemProps> = ({ 
@@ -34,7 +37,8 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
   onEdit, 
   onDelete, 
   onLike, 
-  onComment 
+  onComment,
+  onVisibilityUpdate
 }) => {
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -193,6 +197,15 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
               ))}
             </View>
           )}
+
+          {/* Visibility Controls */}
+          {item.visibility && onVisibilityUpdate && (
+            <VisibilityToggle
+              visibility={item.visibility}
+              onUpdate={(newVisibility) => onVisibilityUpdate(item.id, newVisibility)}
+              size="small"
+            />
+          )}
         </View>
 
         {/* Interaction Bar */}
@@ -293,6 +306,15 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
             {item.content || 'No answer content'}
           </Text>
 
+          {/* Visibility Controls */}
+          {item.visibility && onVisibilityUpdate && (
+            <VisibilityToggle
+              visibility={item.visibility}
+              onUpdate={(newVisibility) => onVisibilityUpdate(item.id, newVisibility)}
+              size="small"
+            />
+          )}
+
           {/* Media Preview */}
           {item.media && item.media.length > 0 && (
             <View style={styles.mediaSection}>
@@ -364,6 +386,15 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
         <Text style={[styles.content, { color: textColor }]} numberOfLines={3}>
           {item.content}
         </Text>
+      )}
+      
+      {/* Visibility Controls */}
+      {item.visibility && onVisibilityUpdate && (
+        <VisibilityToggle
+          visibility={item.visibility}
+          onUpdate={(newVisibility) => onVisibilityUpdate(item.id, newVisibility)}
+          size="small"
+        />
       )}
       
       {/* Media Section - Sử dụng MemoryMediaViewer để đảm bảo tính thống nhất với MemoryItem */}

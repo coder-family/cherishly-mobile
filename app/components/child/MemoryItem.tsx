@@ -6,9 +6,12 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useAppDispatch } from '../../redux/hooks';
+import { updateMemory } from '../../redux/slices/memorySlice';
 import { Memory } from '../../services/memoryService';
 import { User } from '../../services/userService';
 import Avatar from '../ui/Avatar';
+import VisibilityToggle from '../ui/VisibilityToggle';
 import MemoryMediaViewer from './MemoryMediaViewer';
 
 interface MemoryItemProps {
@@ -30,6 +33,19 @@ export default function MemoryItem({
   onLike, 
   onComment 
 }: MemoryItemProps) {
+  const dispatch = useAppDispatch();
+
+  const handleVisibilityUpdate = async (newVisibility: 'private' | 'public') => {
+    try {
+      await dispatch(updateMemory({
+        memoryId: memory.id,
+        data: { visibility: newVisibility }
+      })).unwrap();
+    } catch (error) {
+      throw error; // Re-throw to let VisibilityToggle handle the error
+    }
+  };
+
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -98,16 +114,25 @@ export default function MemoryItem({
           </Text>
         )}
         
-        <Text style={styles.description}>
+        <Text style={styles.description} numberOfLines={3}>
           {memory.content}
         </Text>
+
+                  {/* Visibility Controls */}
+          <VisibilityToggle
+            visibility={memory.visibility || 'private'}
+            onUpdate={handleVisibilityUpdate}
+            size="small"
+          />
+
+        {/* Tags */}
+        {renderTags()}
         
         {/* Media Attachments */}
         {memory.attachments && memory.attachments.length > 0 && (
           <MemoryMediaViewer attachments={memory.attachments} />
         )}
 
-        {renderTags()}
       </View>
 
       {/* Interaction Bar */}
@@ -235,6 +260,7 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 20,
   },
+
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',

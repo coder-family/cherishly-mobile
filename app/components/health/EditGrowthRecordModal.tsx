@@ -1,10 +1,10 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { yupResolver } from '@hookform/resolvers/yup';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -24,6 +24,7 @@ import ErrorText from '../form/ErrorText';
 import FormWrapper from '../form/FormWrapper';
 import InputField from '../form/InputField';
 import PrimaryButton from '../form/PrimaryButton';
+import VisibilityToggle, { VisibilityType } from '../ui/VisibilityToggle';
 
 const schema = yup.object().shape({
   type: yup.string().required('Type is required'),
@@ -54,6 +55,7 @@ const EditGrowthRecordModal: React.FC<EditGrowthRecordModalProps> = ({
   const dispatch = useAppDispatch();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedType, setSelectedType] = useState<'height' | 'weight'>('height');
+  const [visibility, setVisibility] = useState<VisibilityType>('private');
 
   const {
     control,
@@ -74,47 +76,34 @@ const EditGrowthRecordModal: React.FC<EditGrowthRecordModalProps> = ({
     },
   });
 
+  // Load default visibility when modal opens
+  useEffect(() => {
+    if (visible) {
+      const loadDefaultVisibility = async () => {
+        try {
+          const savedVisibility = await AsyncStorage.getItem('defaultVisibility');
+          if (savedVisibility && (savedVisibility === 'private' || savedVisibility === 'public')) {
+            setVisibility(savedVisibility as VisibilityType);
+          }
+        } catch (error) {
+          console.error('Failed to load default visibility:', error);
+        }
+      };
+      
+      loadDefaultVisibility();
+    }
+  }, [visible]);
+
   // Pre-populate form when record changes
   useEffect(() => {
-    console.log('[EDIT-GROWTH] ^^^^^^Record received for pre-populate:', record);
-    if (record && record.id) {
-      // Handle both direct record format and timeline item format
-      const actualType = record.metadata?.type || record.type;
-      const actualValue = record.metadata?.value || record.value;
-      const actualUnit = record.metadata?.unit || record.unit;
-      const actualSource = record.source || 'home';
-      const actualNotes = record.notes || '';
-      
-      console.log('[EDIT-GROWTH] #######Pre-populating with values:', {
-        type: actualType,
-        value: actualValue,
-        unit: actualUnit,
-        date: record.date,
-        source: actualSource,
-        notes: actualNotes
-      });
-      
-      setSelectedType(actualType as 'height' | 'weight');
-      setValue('type', actualType || 'height');
-      setValue('value', actualValue?.toString() || '');
-      setValue('unit', actualUnit || 'cm');
-      // Format date properly - handle both ISO string and date string
-      let formattedDate = new Date().toISOString().split('T')[0];
-      if (record.date) {
-        try {
-          const date = new Date(record.date);
-          if (!isNaN(date.getTime())) {
-            formattedDate = date.toISOString().split('T')[0];
-          }
-        } catch (e) {
-          console.log('[EDIT-GROWTH] Error parsing date:', record.date, e);
-        }
-      }
-      setValue('date', formattedDate);
-      setValue('source', actualSource);
-      setValue('notes', actualNotes);
-    } else {
-      console.log('[EDIT-GROWTH] No valid record provided for pre-populate');
+    if (record) {
+      // Load record data into form
+      setValue('type', record.type);
+      setValue('value', record.value.toString());
+      setValue('unit', record.unit);
+      setValue('date', record.date);
+      setValue('source', record.source);
+      setValue('notes', record.notes || '');
     }
   }, [record, setValue]);
 
@@ -125,11 +114,8 @@ const EditGrowthRecordModal: React.FC<EditGrowthRecordModalProps> = ({
   };
 
   const onSubmit = async (data: any) => {
-    console.log('[EDIT-GROWTH] @@@@@@@Submit called with data:', data);
-    console.log('[EDIT-GROWTH] @@@@@@Record:', record);
     
     if (!record) {
-      console.log('[EDIT-GROWTH] %%%%%%%No record provided for submit');
       return;
     }
 
@@ -144,22 +130,19 @@ const EditGrowthRecordModal: React.FC<EditGrowthRecordModalProps> = ({
         date: data.date,
         source: data.source,
         notes: data.notes,
+        visibility: visibility, // Add visibility to update data
       };
       
-      console.log('[EDIT-GROWTH] Update data:', updateData);
-      console.log('[EDIT-GROWTH] Record ID:', record.id);
-      
       await dispatch(updateGrowthRecord({ recordId: record.id, data: updateData })).unwrap();
-      onSuccess();
-      Alert.alert('Success', 'Growth record updated successfully!');
+      
+      // Close modal and reset form
+      handleClose();
     } catch (error) {
-      console.log('[EDIT-GROWTH] Error updating record:', error);
-      Alert.alert('Error', 'Failed to update growth record. Please try again.');
+      // Handle error
     }
   };
 
   const handleClose = () => {
-    console.log('[EDIT-GROWTH] &&&&&&&Closing modal, resetting form');
     reset();
     onClose();
   };
@@ -374,6 +357,17 @@ const EditGrowthRecordModal: React.FC<EditGrowthRecordModalProps> = ({
                   numberOfLines={3}
                 />
               )}
+            />
+
+            {/* Visibility Toggle */}
+            <VisibilityToggle
+              visibility={visibility}
+              onUpdate={async (newVisibility: 'private' | 'public') => {
+                setVisibility(newVisibility);
+                // Optionally save to AsyncStorage
+                await AsyncStorage.setItem('defaultVisibility', newVisibility);
+              }}
+              size="small"
             />
 
             <PrimaryButton

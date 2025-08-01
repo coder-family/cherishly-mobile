@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
-    Alert,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 interface AppHeaderProps {
@@ -39,13 +38,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   const router = useRouter();
   const [searchText, setSearchText] = useState('');
 
-  // Debug logging for props
-  // console.log('=== APP HEADER DEBUG ===');
-  // console.log('showBackButton:', showBackButton);
-  // console.log('canGoBack:', canGoBack);
-  // console.log('onBack provided:', !!onBack);
-  // console.log('title:', title);
-
   const handleSearchChange = (text: string) => {
     setSearchText(text);
     if (onSearchChange) {
@@ -53,36 +45,23 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     }
   };
 
-  const handleBack = () => {
-    // console.log('=== HANDLE BACK CALLED ===');
-    // console.log('=== CHILD PROFILE BACK PRESSED ===');
-    // console.log('onBack prop:', !!onBack);
-    // console.log('canGoBack prop:', canGoBack);
-    
+  const handleBack = useCallback(() => {
     try {
       if (onBack) {
-        // console.log('Executing custom onBack function');
         onBack();
-      } else {
-        // console.log('Executing router.back()');
+      } else if (canGoBack) {
         router.back();
+      } else {
+        router.push('/tabs/home');
       }
-      // console.log('Back navigation completed successfully');
     } catch (error) {
-      console.error('=== BACK NAVIGATION ERROR ===');
-      console.error('Error details:', error);
-      
-      // Fallback: navigate to home
       try {
-        // console.log('Attempting fallback navigation to home');
         router.push('/tabs/home');
       } catch (fallbackError) {
-        console.error('Fallback navigation failed:', fallbackError);
-        Alert.alert('Navigation Error', 'Unable to navigate. Please restart the app.');
+        // Final fallback - do nothing
       }
     }
-  };
-
+  }, [onBack, canGoBack, router]);
 
 
   return (
@@ -92,14 +71,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         <View style={styles.searchRow}>
           {/* Back Arrow */}
           {showBackButton && (() => {
-            // console.log('=== RENDERING BACK BUTTON ===');
-            // console.log('showBackButton is true, rendering button');
             return true;
           })() && (
             <TouchableOpacity 
               onPress={() => {
-                // console.log('=== TOUCHABLE OPACITY PRESSED ===');
-                // console.log('handleBack about to be called');
                 handleBack();
               }} 
               style={[
@@ -111,8 +86,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               activeOpacity={0.7}
               hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
               testID="back-button"
-              onPressIn={() => {/* console.log('=== BACK BUTTON PRESS IN ===') */}}
-              onPressOut={() => {/* console.log('=== BACK BUTTON PRESS OUT ===') */}}
+              onPressIn={() => {}}
+              onPressOut={() => {}}
             >
               <Ionicons 
                 name="arrow-back" 

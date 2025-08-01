@@ -6,7 +6,10 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useAppDispatch } from '../../redux/hooks';
+import { updateResponse } from '../../redux/slices/promptResponseSlice';
 import { Prompt, PromptResponse } from '../../services/promptService';
+import VisibilityToggle from '../ui/VisibilityToggle';
 import QAMediaViewer from './QAMediaViewer';
 
 interface QuestionAnswerCardProps {
@@ -30,21 +33,23 @@ export default function QuestionAnswerCard({
   showAddButton = true,
   isDeleting = false,
 }: QuestionAnswerCardProps) {
+  const dispatch = useAppDispatch();
+
+  const handleVisibilityUpdate = async (newVisibility: 'private' | 'public') => {
+    if (!response) return;
+    
+    try {
+      await dispatch(updateResponse({
+        responseId: response.id,
+        data: { visibility: newVisibility }
+      })).unwrap();
+    } catch (error) {
+      throw error; // Re-throw to let VisibilityToggle handle the error
+    }
+  };
+
   const hasResponse = !!response;
   const hasAttachments = response?.attachments && response.attachments.length > 0;
-
-  // Debug logging
-  // console.log('QuestionAnswerCard: Rendering card with:', {
-  //   promptId: prompt.id,
-  //   promptContent: prompt.content,
-  //   promptTitle: prompt.title,
-  //   responseContent: response?.content,
-  //   hasResponse,
-  //   hasAttachments,
-  //   attachments: response?.attachments,
-  //   attachmentsLength: response?.attachments?.length,
-  //   firstAttachment: response?.attachments?.[0]
-  // });
 
   return (
     <TouchableOpacity
@@ -90,6 +95,15 @@ export default function QuestionAnswerCard({
           <Text style={styles.answerText} numberOfLines={4}>
             {response.content || 'No answer content'}
           </Text>
+
+                      {/* Visibility Controls */}
+            {response && (
+              <VisibilityToggle
+                visibility={response.visibility || 'private'}
+                onUpdate={handleVisibilityUpdate}
+                size="small"
+              />
+            )}
 
           {/* Media Preview */}
           {hasAttachments && response?.attachments && (
@@ -280,5 +294,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
   },
+
 });
 

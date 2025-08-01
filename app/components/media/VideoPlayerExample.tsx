@@ -21,6 +21,10 @@ const exampleVideos = [
 ];
 
 export default function VideoPlayerExample() {
+  const handleVideoPress = (attachment: any, index: number) => {
+    // Handle video press
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>YouTube-like Video Player</Text>
@@ -32,9 +36,7 @@ export default function VideoPlayerExample() {
       <MediaViewerBase
         attachments={exampleVideos}
         enableOrientationControl={true} // Enable orientation features for testing
-        onAttachmentPress={(attachment, index) => {
-          console.log('Video pressed:', attachment.fileName, 'at index:', index);
-        }}
+        onAttachmentPress={handleVideoPress}
       />
     </View>
   );

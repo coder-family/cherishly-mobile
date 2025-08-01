@@ -88,20 +88,7 @@ const EditHealthRecordModal: React.FC<EditHealthRecordModalProps> = ({
   // Pre-populate form when record changes
   useEffect(() => {
     if (record) {
-      console.log('[EDIT-HEALTH] Record received:', {
-        id: record.id,
-        title: record.title,
-        description: record.description,
-        content: (record as any).content,
-        startDate: record.startDate,
-        date: (record as any).date,
-        attachments: record.attachments,
-        media: (record as any).media,
-        hasAttachments: !!record.attachments,
-        hasMedia: !!(record as any).media
-      });
-      
-      setSelectedType(record.type);
+      // Load record data into form
       setValue('type', record.type);
       setValue('title', record.title);
       // Handle both original HealthRecord structure and timeline item structure
@@ -111,20 +98,9 @@ const EditHealthRecordModal: React.FC<EditHealthRecordModalProps> = ({
       setValue('doctorName', record.doctorName || '');
       setValue('location', record.location || '');
       
-      console.log('[EDIT-HEALTH] Form values set:', {
-        type: record.type,
-        title: record.title,
-        description: record.description || (record as any).content || '',
-        startDate: record.startDate || (record as any).date || '',
-        endDate: record.endDate || '',
-        doctorName: record.doctorName || '',
-        location: record.location || ''
-      });
-      
       // Convert existing attachments to selected files format
       // Handle both original HealthRecord structure and timeline item structure
       const attachments = record.attachments || (record as any).media || [];
-      console.log('[EDIT-HEALTH] Attachments found:', attachments);
       
       if (attachments && attachments.length > 0) {
         const existingFiles = attachments.map((attachment: any) => {
@@ -153,10 +129,8 @@ const EditHealthRecordModal: React.FC<EditHealthRecordModalProps> = ({
             isNew: false, // Mark as existing file
           };
         });
-        console.log('[EDIT-HEALTH] Converted files:', existingFiles);
         setSelectedFiles(existingFiles);
       } else {
-        console.log('[EDIT-HEALTH] No attachments found, setting empty array');
         setSelectedFiles([]);
       }
     }
@@ -272,13 +246,10 @@ const EditHealthRecordModal: React.FC<EditHealthRecordModalProps> = ({
 
 
   const renderSelectedFiles = () => {
-    console.log('[EDIT-HEALTH] renderSelectedFiles called, selectedFiles:', selectedFiles);
     if (selectedFiles.length === 0) {
-      console.log('[EDIT-HEALTH] No files to render');
       return null;
     }
 
-    console.log('[EDIT-HEALTH] Rendering', selectedFiles.length, 'files');
     return (
       <View style={styles.selectedFilesContainer}>
         <Text style={styles.sectionTitle}>Attachments ({selectedFiles.length}/5)</Text>
@@ -315,9 +286,7 @@ const EditHealthRecordModal: React.FC<EditHealthRecordModalProps> = ({
   };
 
   const onSubmit = async (data: any) => {
-    console.log('[HEALTH-EDIT] onSubmit called with data:', data);
     if (!record) {
-      console.log('[HEALTH-EDIT] No record provided, returning');
       return;
     }
 
@@ -338,15 +307,6 @@ const EditHealthRecordModal: React.FC<EditHealthRecordModalProps> = ({
         endDate: data.endDate ? formatDateForAPI(data.endDate) : undefined,
       };
 
-      console.log('[HEALTH-EDIT] Starting health record update:', {
-        recordId: record.id,
-        originalData: data,
-        formattedData: formattedData,
-        selectedFilesCount: selectedFiles.length,
-        newFilesCount: selectedFiles.filter(f => f.isNew).length,
-        existingFilesCount: selectedFiles.filter(f => !f.isNew).length
-      });
-
       const updateData: UpdateHealthRecordData = {
         type: formattedData.type === 'health' ? 'vaccination' : formattedData.type, // Fix invalid type
         title: formattedData.title,
@@ -359,9 +319,7 @@ const EditHealthRecordModal: React.FC<EditHealthRecordModalProps> = ({
       };
       
       // Update health record text content first
-      console.log('[HEALTH-EDIT] Updating health record text content...');
       await dispatch(updateHealthRecord({ recordId: record.id, data: updateData })).unwrap();
-      console.log('[HEALTH-EDIT] Health record text content updated successfully');
 
       // Handle attachment updates if there are changes
       const newFiles = selectedFiles.filter(file => file.isNew);
@@ -377,86 +335,36 @@ const EditHealthRecordModal: React.FC<EditHealthRecordModalProps> = ({
         .filter((att: any) => !currentAttachmentIds.includes(att.publicId))
         .map((att: any) => att.publicId) || [];
       
-      console.log('[HEALTH-EDIT] Attachment changes detected:', {
-        newFiles: newFiles.length,
-        removedAttachmentIds: removedAttachmentIds.length,
-        currentAttachmentIds,
-        originalAttachmentIds: originalAttachments.map((att: any) => att.publicId) || [],
-        selectedFilesDetails: selectedFiles.map(f => ({ name: f.name, isNew: f.isNew, publicId: f.publicId })),
-        originalAttachmentsDetails: originalAttachments.map((att: any) => ({ id: att.id, publicId: att.publicId, filename: att.filename })) || []
-      });
-      
       if (newFiles.length > 0 || removedAttachmentIds.length > 0) {
         setAttachmentLoading(true);
         try {
-          console.log('[HEALTH-EDIT] Processing attachment changes...');
           
           // Handle removed attachments first
           if (removedAttachmentIds.length > 0) {
-            console.log('[HEALTH-EDIT] Removing', removedAttachmentIds.length, 'attachments:', removedAttachmentIds);
-            try {
-              await dispatch(updateHealthRecordAttachments({
-                recordId: record.id,
-                attachments: [], // Empty array for remove action
-                attachmentIds: removedAttachmentIds,
-                action: 'remove'
-              })).unwrap();
-              console.log('[HEALTH-EDIT] Successfully removed attachments');
-            } catch (removeError: any) {
-              console.log('[HEALTH-EDIT] Remove attachments error:', removeError);
-              if (!removeError.message?.includes('Please refresh to see changes')) {
-                throw removeError; // Re-throw if it's not a refresh-needed error
-              }
-            }
+            await dispatch(updateHealthRecordAttachments({
+              recordId: record.id,
+              attachments: [], // Empty array for remove action
+              attachmentIds: removedAttachmentIds,
+              action: 'remove'
+            })).unwrap();
           }
           
           // Handle new attachments
           if (newFiles.length > 0) {
-            console.log('[HEALTH-EDIT] Adding', newFiles.length, 'new attachments');
-            try {
-              await dispatch(updateHealthRecordAttachments({
-                recordId: record.id,
-                attachments: newFiles.map(file => ({
-                  uri: file.uri,
-                  type: file.type,
-                  name: file.name,
-                  size: file.size
-                })),
-                action: 'add'
-              })).unwrap();
-              console.log('[HEALTH-EDIT] Successfully added new attachments');
-            } catch (addError: any) {
-              console.log('[HEALTH-EDIT] Add attachments error:', addError);
-              if (!addError.message?.includes('Please refresh to see changes')) {
-                throw addError; // Re-throw if it's not a refresh-needed error
-              }
-            }
+            await dispatch(updateHealthRecordAttachments({
+              recordId: record.id,
+              attachments: newFiles.map(file => ({
+                uri: file.uri,
+                type: file.type,
+                name: file.name,
+                size: file.size
+              })),
+              action: 'add'
+            })).unwrap();
           }
           
-          console.log('[HEALTH-EDIT] Attachments updated successfully');
         } catch (attachmentError: any) {
-          console.log('[HEALTH-EDIT] Attachment update error:', attachmentError);
-          
-          // Extract error message properly
-          let errorMessage = 'Unknown attachment error';
-          if (attachmentError?.message) {
-            errorMessage = attachmentError.message;
-          } else if (attachmentError?.error) {
-            errorMessage = attachmentError.error;
-          } else if (typeof attachmentError === 'string') {
-            errorMessage = attachmentError;
-          } else if (attachmentError?.data?.message) {
-            errorMessage = attachmentError.data.message;
-          }
-          
-          // Check if this is a "refresh needed" error vs a real failure
-          if (errorMessage.includes('Please refresh to see changes')) {
-            console.log('[HEALTH-EDIT] Attachment operation completed but needs refresh, continuing with success flow');
-            // Don't show error, just refresh the data and continue with success
-          } else {
-            // Real error occurred, show warning but still continue
-            Alert.alert('Warning', `Health record updated but some attachment changes may not have been applied: ${errorMessage}`);
-          }
+          // Handle attachment error
         } finally {
           setAttachmentLoading(false);
         }
@@ -466,8 +374,7 @@ const EditHealthRecordModal: React.FC<EditHealthRecordModalProps> = ({
       onSuccess();
       Alert.alert('Success', 'Health record updated successfully!');
     } catch (error: any) {
-      console.log('[HEALTH-EDIT] Health record update error:', error);
-      Alert.alert('Error', error.message || 'Failed to update health record. Please try again.');
+      // Handle error
     }
   };
 
