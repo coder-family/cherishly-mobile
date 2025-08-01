@@ -91,6 +91,7 @@ describe('Health Service', () => {
         date: '2024-05-15',
         source: 'home',
         notes: 'Test record',
+        visibility: 'private',
         createdAt: '2024-05-15T10:00:00Z',
         updatedAt: '2024-05-15T10:00:00Z'
       });
@@ -105,7 +106,13 @@ describe('Health Service', () => {
         notes: 'Updated record',
       };
 
-      const mockResponse = { data: { id: recordId, ...updateData } };
+      const mockResponse = { 
+        data: { 
+          id: recordId, 
+          ...updateData,
+          visibility: 'private'
+        } 
+      };
       (apiService.put as jest.Mock).mockResolvedValue(mockResponse);
 
       const result = await updateGrowthRecord(recordId, updateData);

@@ -15,16 +15,10 @@ import type {
 export const fetchGrowthRecords = createAsyncThunk(
   'health/fetchGrowthRecords',
   async ({ childId, filter }: { childId: string; filter?: GrowthFilter }) => {
-    // console.log('[REDUX-HEALTH] Fetching growth records for childId:', childId, 'with filter:', filter);
     try {
       const result = await healthService.getGrowthRecords(childId, filter);
-      // console.log('[REDUX-HEALTH] Successfully fetched growth records:', {
-      //   count: result?.length || 0,
-      //   first: result?.[0] ? { id: result[0].id, type: result[0].type, value: result[0].value, date: result[0].date } : 'none'
-      // });
       return result;
     } catch (error) {
-      // console.log('[REDUX-HEALTH] Error fetching growth records:', error);
       throw error;
     }
   }
@@ -40,7 +34,12 @@ export const createGrowthRecord = createAsyncThunk(
 export const updateGrowthRecord = createAsyncThunk(
   'health/updateGrowthRecord',
   async ({ recordId, data }: { recordId: string; data: UpdateGrowthRecordData }) => {
-    return await healthService.updateGrowthRecord(recordId, data);
+    try {
+      const result = await healthService.updateGrowthRecord(recordId, data);
+      return result;
+    } catch (error) {
+      throw error;
+    }
   }
 );
 
@@ -148,19 +147,10 @@ const healthSlice = createSlice({
       .addCase(fetchGrowthRecords.pending, (state) => {
         state.loading = true;
         state.error = null;
-        // console.log('[HEALTH-REDUX] Fetching growth records...', {
-        //   currentCount: state.growthRecords.length,
-        //   timestamp: new Date().toISOString()
-        // });
       })
       .addCase(fetchGrowthRecords.fulfilled, (state, action) => {
         state.growthRecords = action.payload;
         state.loading = false;
-        // console.log('[HEALTH-REDUX] Growth records fetched:', {
-        //   count: action.payload.length,
-        //   firstRecord: action.payload[0] ? { id: action.payload[0].id, type: action.payload[0].type, value: action.payload[0].value } : null,
-        //   timestamp: new Date().toISOString()
-        // });
       })
       .addCase(fetchGrowthRecords.rejected, (state, action) => {
         state.loading = false;

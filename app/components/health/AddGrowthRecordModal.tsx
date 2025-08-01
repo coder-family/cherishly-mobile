@@ -1,7 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { yupResolver } from '@hookform/resolvers/yup';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   Alert,
@@ -24,6 +25,7 @@ import ErrorText from '../form/ErrorText';
 import FormWrapper from '../form/FormWrapper';
 import InputField from '../form/InputField';
 import PrimaryButton from '../form/PrimaryButton';
+import VisibilityToggle, { VisibilityType } from '../ui/VisibilityToggle';
 
 const schema = yup.object().shape({
   type: yup.string().required('Type is required'),
@@ -54,6 +56,25 @@ const AddGrowthRecordModal: React.FC<AddGrowthRecordModalProps> = ({
   const dispatch = useAppDispatch();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedType, setSelectedType] = useState<'height' | 'weight'>('height');
+  const [visibility, setVisibility] = useState<VisibilityType>('private');
+
+  // Load default visibility when modal opens
+  useEffect(() => {
+    if (visible) {
+      const loadDefaultVisibility = async () => {
+        try {
+          const savedVisibility = await AsyncStorage.getItem('defaultVisibility');
+          if (savedVisibility && (savedVisibility === 'private' || savedVisibility === 'public')) {
+            setVisibility(savedVisibility as VisibilityType);
+          }
+        } catch (error) {
+          console.error('Failed to load default visibility:', error);
+        }
+      };
+      
+      loadDefaultVisibility();
+    }
+  }, [visible]);
 
   const {
     control,
@@ -92,6 +113,7 @@ const AddGrowthRecordModal: React.FC<AddGrowthRecordModalProps> = ({
         date: data.date,
         source: data.source,
         notes: data.notes,
+        visibility: visibility, // Add visibility to the data
       };
       await dispatch(createGrowthRecord(growthData)).unwrap();
       reset();
@@ -316,6 +338,18 @@ const AddGrowthRecordModal: React.FC<AddGrowthRecordModalProps> = ({
                   numberOfLines={3}
                 />
               )}
+            />
+
+            {/* Visibility Toggle */}
+            <VisibilityToggle
+              value={visibility}
+              onChange={(newVisibility) => {
+                setVisibility(newVisibility);
+                // Optionally save to AsyncStorage
+                AsyncStorage.setItem('defaultVisibility', newVisibility);
+              }}
+              label="Growth Record Visibility"
+              description="Choose who can see this growth record"
             />
 
             <PrimaryButton

@@ -3,27 +3,34 @@ import apiService from './apiService';
 
 // Utility function to transform API response to FamilyGroup interface
 function transformFamilyGroupData(group: any): FamilyGroup {
+  // Handle nested response structure from getFamilyGroupDetails
+  const groupData = group.group || group;
+  const members = group.members || groupData.members || [];
+  
+  // Use createdBy as ownerId since that's what's stored in MongoDB
+  const ownerId = groupData.createdBy || group.createdBy || group.ownerId;
+
   return {
-    id: group._id || group.id,
-    name: group.name,
-    description: group.description,
-    avatarUrl: group.avatar || group.avatarUrl,
-    ownerId: group.createdBy || group.ownerId,
-    members: group.members?.map((member: any) => ({
+    id: groupData._id || group._id || group.id,
+    name: groupData.name || group.name,
+    description: groupData.description || group.description,
+    avatarUrl: groupData.avatar || group.avatar || group.avatarUrl,
+    ownerId: ownerId,
+    members: members.map((member: any) => ({
       id: member._id || member.id,
       userId: member.userId?._id || member.userId?.id || member.userId,
-      groupId: group._id || group.id,
+      groupId: groupData._id || group._id || group.id,
       role: member.role === 'admin' ? 'admin' : member.role === 'owner' ? 'owner' : 'member',
       joinedAt: member.joinedAt,
-      user: member.userId ? {
+      user: member.userId && typeof member.userId === 'object' ? {
         id: member.userId._id || member.userId.id,
         firstName: member.userId.firstName,
         lastName: member.userId.lastName,
         avatarUrl: member.userId.avatar || member.userId.avatarUrl,
       } : undefined,
-    })) || [],
-    createdAt: group.createdAt,
-    updatedAt: group.updatedAt,
+    })),
+    createdAt: groupData.createdAt || group.createdAt,
+    updatedAt: groupData.updatedAt || group.updatedAt,
   };
 }
 
@@ -119,9 +126,13 @@ export async function getPrimaryFamilyGroup(): Promise<FamilyGroup | null> {
 }
 
 export async function getFamilyGroup(groupId: string): Promise<FamilyGroup> {
-  const response = await apiService.get(`/family-groups/${groupId}`);
-  const group = response.data || response;
-  return transformFamilyGroupData(group);
+  try {
+    const response = await apiService.get(`/family-groups/${groupId}/details`);
+    const group = response.data || response;
+    return group;
+  } catch (error) {
+    throw error;
+  }
 }
 
 export async function createFamilyGroup(data: CreateFamilyGroupData): Promise<FamilyGroup> {
@@ -152,4 +163,26 @@ export async function leaveFamilyGroup(groupId: string): Promise<void> {
 
 export async function inviteToFamilyGroup(groupId: string, email: string): Promise<void> {
   await apiService.post(`/family-groups/${groupId}/invite`, { email });
+}
+
+// Helper function to get user info by ID
+export async function getUserInfo(userId: string): Promise<{
+  id: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl?: string;
+} | null> {
+  try {
+    const response = await apiService.get(`/users/${userId}`);
+    const user = response.data || response;
+    return {
+      id: user._id || user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      avatarUrl: user.avatar || user.avatarUrl,
+    };
+  } catch (error) {
+    console.warn(`Failed to get user info for ${userId}:`, error);
+    return null;
+  }
 } 

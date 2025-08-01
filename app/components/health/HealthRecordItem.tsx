@@ -1,8 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Alert, Dimensions, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
+import { useAppDispatch } from '../../redux/hooks';
+import { updateHealthRecord } from '../../redux/slices/healthSlice';
 import { HealthRecord } from '../../types/health';
+import VisibilityToggle from '../ui/VisibilityToggle';
 
 interface HealthRecordItemProps {
   record: HealthRecord;
@@ -17,26 +20,22 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
   onDelete,
   isLast = false
 }) => {
+  const dispatch = useAppDispatch();
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
   const [showMediaModal, setShowMediaModal] = useState(false);
 
-  // Debug logging to understand the data
-  console.log('[HEALTH-RECORD-ITEM] Record data:', {
-    id: record.id,
-    type: record.type,
-    title: record.title,
-    description: record.description,
-    startDate: record.startDate,
-    endDate: record.endDate,
-    doctorName: record.doctorName,
-    location: record.location,
-    attachments: record.attachments,
-    attachmentsLength: record.attachments?.length || 0,
-    attachmentsType: typeof record.attachments,
-    isAttachmentsArray: Array.isArray(record.attachments),
-    hasOnEdit: !!onEdit,
-    hasOnDelete: !!onDelete
-  });
+  const handleVisibilityUpdate = async (newVisibility: 'private' | 'public') => {
+    try {
+      const result = await dispatch(updateHealthRecord({
+        recordId: record.id,
+        data: { visibility: newVisibility }
+      })).unwrap();
+      
+      // Success - no alert needed, toggle switch provides visual feedback
+    } catch (error) {
+      throw error; // Re-throw to let VisibilityToggle handle the error
+    }
+  };
 
   const handleMediaPress = (mediaUrl: string) => {
     setSelectedMedia(mediaUrl);
@@ -75,16 +74,10 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
   };
 
   const formatDate = (dateString: string) => {
-    console.log('[HEALTH-RECORD-ITEM] Formatting date:', {
-      dateString,
-      type: typeof dateString,
-      length: dateString?.length
-    });
     
     try {
       // Handle empty or null dates
       if (!dateString || dateString.trim() === '') {
-        console.log('[HEALTH-RECORD-ITEM] Empty date string');
         return 'No Date';
       }
       
@@ -106,18 +99,8 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
         }
       }
       
-      console.log('[HEALTH-RECORD-ITEM] Parsed date:', {
-        date,
-        isValid: !isNaN(date.getTime()),
-        timestamp: date.getTime(),
-        year: date.getFullYear(),
-        month: date.getMonth(),
-        day: date.getDate()
-      });
-      
       // Check if date is valid
       if (isNaN(date.getTime())) {
-        console.log('[HEALTH-RECORD-ITEM] Invalid date detected');
         return 'Invalid Date';
       }
       
@@ -127,10 +110,8 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
         day: 'numeric',
       });
       
-      console.log('[HEALTH-RECORD-ITEM] Formatted date:', formatted);
       return formatted;
     } catch (error) {
-      console.log('[HEALTH-RECORD-ITEM] Date formatting error:', error);
       return 'Invalid Date';
     }
   };
@@ -212,9 +193,6 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
     return /\.(mp4|mov|avi|mkv|webm)$/i.test(url);
   };
 
-  // Debug actions rendering
-  console.log('[HEALTH-RECORD-ITEM] Rendering actions, onEdit:', !!onEdit, 'onDelete:', !!onDelete);
-
   return (
     <View style={styles.container}>
       {/* Timeline line */}
@@ -243,47 +221,37 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
                 {record.type.charAt(0).toUpperCase() + record.type.slice(1)}
               </Text>
             </View>
-          </View>
-          <View style={styles.actions}>
-            {/* Simple test button */}
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: 'red' }]} 
-              onPress={() => {
-                console.log('[HEALTH-RECORD-ITEM] RED TEST BUTTON PRESSED!');
-                Alert.alert('RED BUTTON', 'RED BUTTON WORKS!');
-              }}
-            >
-              <Text style={{ color: 'white', fontSize: 12 }}>TEST</Text>
-            </TouchableOpacity>
             
-            {/* Test button */}
-            <TouchableOpacity 
-              style={styles.actionButton} 
-              onPress={() => {
-                console.log('[HEALTH-RECORD-ITEM] Test button pressed!');
-                Alert.alert('Test', 'Button works!');
-              }}
-            >
-              <MaterialIcons name="info" size={18} color="blue" />
-            </TouchableOpacity>
-            
-            {onEdit && (
-              <TouchableOpacity 
-                style={[styles.actionButton, { backgroundColor: 'green' }]} 
-                onPress={() => onEdit(record)}
-              >
-                <MaterialIcons name="edit" size={18} color="white" />
-              </TouchableOpacity>
-            )}
-            {onDelete && (
-              <TouchableOpacity 
-                style={[styles.actionButton, { backgroundColor: 'orange' }]} 
-                onPress={() => onDelete(record.id)}
-              >
-                <MaterialIcons name="delete" size={18} color="white" />
-              </TouchableOpacity>
-            )}
+            {/* Visibility Controls */}
+            <VisibilityToggle
+              visibility={record.visibility || 'private'}
+              onUpdate={handleVisibilityUpdate}
+              size="small"
+            />
           </View>
+          {/* Action buttons */}
+          {(onEdit || onDelete) && (
+            <View style={styles.actionButtons}>
+              {onEdit && (
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: getTypeColor(record.type) }]}
+                  onPress={() => onEdit(record)}
+                >
+                  <MaterialIcons name="edit" size={16} color="white" />
+                  <Text style={styles.actionButtonText}>Edit</Text>
+                </TouchableOpacity>
+              )}
+              {onDelete && (
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: '#ff4757' }]}
+                  onPress={() => onDelete(record.id)}
+                >
+                  <MaterialIcons name="delete" size={16} color="white" />
+                  <Text style={styles.actionButtonText}>Delete</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
 
         <Text style={styles.title}>{record.title}</Text>
@@ -348,21 +316,11 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
                     } else if (attachmentObj.path) {
                       attachmentUrl = attachmentObj.path;
                     } else {
-                      console.log('[HEALTH-RECORD-ITEM] Unknown attachment object format:', attachment);
                       return null;
                     }
                   } else if (typeof attachment !== 'string') {
-                    console.log('[HEALTH-RECORD-ITEM] Unknown attachment format:', attachment);
                     return null;
                   }
-                  
-                  console.log('[HEALTH-RECORD-ITEM] Processing attachment:', {
-                    index,
-                    originalAttachment: attachment,
-                    attachmentUrl,
-                    type: typeof attachmentUrl,
-                    isImage: isImageFile(attachmentUrl)
-                  });
                   
                   const isImage = isImageFile(attachmentUrl);
                   return (
@@ -500,12 +458,23 @@ const styles = StyleSheet.create({
     color: 'white',
     textTransform: 'uppercase',
   },
+
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   actionButton: {
     padding: 4,
+    marginLeft: 4,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  actionButtonText: {
+    fontSize: 12,
+    color: 'white',
     marginLeft: 4,
   },
   title: {

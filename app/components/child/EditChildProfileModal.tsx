@@ -2,13 +2,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useAppDispatch } from '../../redux/hooks';
 import { updateChild } from '../../redux/slices/childSlice';
@@ -96,7 +96,6 @@ export default function EditChildProfileModal({
   };
 
   const handleAvatarPicked = (uri: string) => {
-    console.log('Avatar picked:', uri);
     setAvatarUri(uri);
   };
 
@@ -117,7 +116,6 @@ export default function EditChildProfileModal({
         // Try sending date in YYYY-MM-DD format instead of ISO string
         const date = new Date(formData.dateOfBirth);
         updateData.dateOfBirth = date.toISOString().split('T')[0];
-        console.log('Date converted to YYYY-MM-DD:', updateData.dateOfBirth);
       } else {
         updateData.dateOfBirth = child.birthdate;
       }
@@ -133,22 +131,8 @@ export default function EditChildProfileModal({
 
       // Add avatar to update data if changed
       if (avatarUri && avatarUri !== child.avatarUrl) {
-        console.log('Avatar changed:', { old: child.avatarUrl, new: avatarUri });
         updateData.avatar = avatarUri;
       }
-
-      console.log('Update data being sent:', updateData);
-      console.log('Date format:', formData.dateOfBirth);
-      console.log('Gender value:', formData.gender);
-      console.log('Child ID:', child.id);
-      console.log('Original child data:', {
-        firstName: child.firstName,
-        lastName: child.lastName,
-        birthdate: child.birthdate,
-        gender: child.gender
-      });
-      console.log('Form data:', formData);
-      console.log('Avatar URI:', avatarUri);
 
       // Call Redux action to update child
       await dispatch(updateChild({ childId: child.id, data: updateData })).unwrap();
@@ -157,7 +141,6 @@ export default function EditChildProfileModal({
       onSuccess();
       onClose();
     } catch (error: any) {
-      console.error('Error updating child profile:', error);
       Alert.alert('Error', error.message || 'Failed to update child profile');
     } finally {
       setLoading(false);
@@ -169,8 +152,6 @@ export default function EditChildProfileModal({
     if (selectedDate) {
       // Format date as ISO string to match backend format
       const isoDate = selectedDate.toISOString();
-      console.log('Selected date:', selectedDate);
-      console.log('ISO date:', isoDate);
       setFormData(prev => ({
         ...prev,
         dateOfBirth: isoDate

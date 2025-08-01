@@ -27,9 +27,9 @@ import ModalConfirm from '../../components/ui/ModalConfirm';
 import SearchResults from '../../components/ui/SearchResults';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { clearCurrentChild, deleteChild, fetchChild } from '../../redux/slices/childSlice';
-import { deleteGrowthRecord, deleteHealthRecord, fetchGrowthRecord, fetchGrowthRecords, fetchHealthRecords } from '../../redux/slices/healthSlice';
-import { clearMemories, deleteMemory, fetchMemories } from '../../redux/slices/memorySlice';
-import { deleteResponse, fetchChildResponses } from '../../redux/slices/promptResponseSlice';
+import { deleteGrowthRecord, deleteHealthRecord, fetchGrowthRecord, fetchGrowthRecords, fetchHealthRecords, updateGrowthRecord, updateHealthRecord } from '../../redux/slices/healthSlice';
+import { clearMemories, deleteMemory, fetchMemories, updateMemory } from '../../redux/slices/memorySlice';
+import { deleteResponse, fetchChildResponses, updateResponse } from '../../redux/slices/promptResponseSlice';
 import { fetchPrompts } from '../../redux/slices/promptSlice';
 import { Memory } from '../../services/memoryService';
 import { SearchResult, searchService } from '../../services/searchService';
@@ -275,16 +275,10 @@ export default function ChildProfileScreen() {
 
   const handleMemoryEdit = (memory: Memory) => {
     if (memory?.id) {
-      console.log('handleMemoryEdit: Memory to edit:', {
-        id: memory.id,
-        title: memory.title,
-        attachmentsCount: memory.attachments?.length || 0,
-        attachments: memory.attachments
-      });
       setEditingMemory(memory);
       setShowEditMemoryModal(true);
     } else {
-      console.log('Edit memory: No ID available');
+      // Handle case where memory has no ID
     }
   };
 
@@ -293,7 +287,7 @@ export default function ChildProfileScreen() {
       setEditingMemory(memory);
       setShowDeleteConfirm(true);
     } else {
-      // console.log('Delete memory: No ID available');
+      // Handle case where memory has no ID
     }
   };
 
@@ -302,11 +296,10 @@ export default function ChildProfileScreen() {
     
     try {
       await dispatch(deleteMemory(editingMemory.id)).unwrap();
+      Alert.alert('Success', 'Memory deleted successfully');
       setShowDeleteConfirm(false);
       setEditingMemory(null);
-      // No need to manually refetch, Redux will update the state automatically
     } catch (error: any) {
-      // console.error('Delete memory error:', error); // Commented out - not related to health/growth
       let errorMessage = 'Failed to delete memory';
       
       if (error?.status === 401) {
@@ -319,25 +312,52 @@ export default function ChildProfileScreen() {
         errorMessage = error.message;
       }
       
-      alert(errorMessage);
+      Alert.alert('Error', errorMessage);
     }
   };
 
   const handleMemoryLike = (memory: any) => {
-    // Handle memory like (to be implemented)
     if (memory?.id) {
-      // console.log('Like memory:', memory.id);
+      // Handle memory like (to be implemented)
     } else {
-      // console.log('Like memory: No ID available');
+      // Handle case where memory has no ID
     }
   };
 
   const handleMemoryComment = (memory: any) => {
-    // Handle memory comment (to be implemented)
-    if (memory?.id) {
-      // console.log('Comment on memory:', memory.id);
-    } else {
-      // console.log('Comment on memory: No ID available');
+    // TODO: Implement comment functionality
+  };
+
+  const handleVisibilityUpdate = async (itemId: string, visibility: 'private' | 'public') => {
+    try {
+      // Find the item type and update accordingly
+      const memory = memories.find(m => m.id === itemId);
+      if (memory) {
+        await dispatch(updateMemory({ memoryId: itemId, data: { visibility } })).unwrap();
+        return;
+      }
+      
+      const response = responses.find(r => r.id === itemId);
+      if (response) {
+        await dispatch(updateResponse({ responseId: itemId, data: { visibility } })).unwrap();
+        return;
+      }
+      
+      const healthRecord = healthRecords.find(h => h.id === itemId);
+      if (healthRecord) {
+        await dispatch(updateHealthRecord({ recordId: itemId, data: { visibility } })).unwrap();
+        return;
+      }
+      
+      const growthRecord = growthRecords.find(g => g.id === itemId);
+      if (growthRecord) {
+        await dispatch(updateGrowthRecord({ recordId: itemId, data: { visibility } })).unwrap();
+        return;
+      }
+      
+      // Item not found
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -346,15 +366,15 @@ export default function ChildProfileScreen() {
     // Find the actual response from Redux state
     const actualResponse = responses.find(r => r.id === response.id);
     if (actualResponse) {
-      console.log('handleQAEdit: Found actual response:', {
-        id: actualResponse.id,
-        content: actualResponse.content,
-        attachmentsCount: actualResponse.attachments?.length || 0,
-        attachments: actualResponse.attachments
-      });
+      // console.log('handleQAEdit: Found actual response:', {
+      //   id: actualResponse.id,
+      //   content: actualResponse.content,
+      //   attachmentsCount: actualResponse.attachments?.length || 0,
+      //   attachments: actualResponse.attachments
+      // });
       setEditingResponse(actualResponse);
     } else {
-      console.log('handleQAEdit: Response not found in Redux state, using timeline item');
+      // console.log('handleQAEdit: Response not found in Redux state, using timeline item');
       setEditingResponse(response);
     }
     setShowEditResponseModal(true);
@@ -376,7 +396,7 @@ export default function ChildProfileScreen() {
 
   const handleQADelete = async (response: any) => {
     if (!response?.id) {
-      alert('Cannot delete: No response ID available');
+      Alert.alert('Error', 'Cannot delete: No response ID available');
       return;
     }
 
@@ -387,7 +407,7 @@ export default function ChildProfileScreen() {
 
     try {
       await dispatch(deleteResponse(response.id)).unwrap();
-      alert('Q&A response deleted successfully');
+      Alert.alert('Success', 'Q&A response deleted successfully');
     } catch (error: any) {
       let errorMessage = 'Failed to delete Q&A response';
       
@@ -401,7 +421,7 @@ export default function ChildProfileScreen() {
         errorMessage = error.message;
       }
       
-      alert(errorMessage);
+      Alert.alert('Error', errorMessage);
     }
   };
 
@@ -877,6 +897,7 @@ export default function ChildProfileScreen() {
           createdAt: memory.createdAt,
           media: memory.attachments,
           creator: currentUser, // Add creator info
+          visibility: memory.visibility,
           metadata: {
             visibility: memory.visibility,
             location: memory.location,
@@ -914,6 +935,7 @@ export default function ChildProfileScreen() {
           date: new Date(response.createdAt).toISOString().split('T')[0],
           createdAt: response.createdAt,
           media: response.attachments,
+          visibility: response.visibility,
           metadata: {
             promptId: response.promptId,
             feedback: response.feedback,
@@ -939,6 +961,7 @@ export default function ChildProfileScreen() {
           date: record.startDate,
           createdAt: record.createdAt,
           media: record.attachments,
+          visibility: record.visibility,
           metadata: {
             type: record.type,
             endDate: record.endDate,
@@ -955,20 +978,26 @@ export default function ChildProfileScreen() {
       if (!processedGrowthIds.has(record.id)) {
         processedGrowthIds.add(record.id);
         
+        // console.log('[TIMELINE] Growth record visibility:', {
+        //   id: record.id,
+        //   visibility: record.visibility,
+        //   hasVisibility: !!record.visibility
+        // });
 
-        
         timelineItems.push({
           id: record.id,
           type: 'growth',
-          title: `${record.type.charAt(0).toUpperCase() + record.type.slice(1)}: ${record.value} ${record.unit}`,
-          content: record.notes || '',
+          title: `${record.type} Record`,
+          content: `${record.value} ${record.unit}`,
           date: record.date,
           createdAt: record.createdAt,
-          media: [], // Growth records don't have attachments
+          visibility: record.visibility,
           metadata: {
             type: record.type,
             value: record.value,
-            unit: record.unit
+            unit: record.unit,
+            source: record.source,
+            notes: record.notes
           }
         });
       }
@@ -1013,6 +1042,7 @@ export default function ChildProfileScreen() {
                       onDelete={() => handleMemoryDelete(item)}
                       onLike={() => handleMemoryLike(item)}
                       onComment={() => handleMemoryComment(item)}
+                      onVisibilityUpdate={handleVisibilityUpdate}
                     />
                   );
                 case 'qa':
@@ -1023,7 +1053,7 @@ export default function ChildProfileScreen() {
                       onEdit={() => handleQAEdit(item)}
                       onDelete={async () => {
                         if (!item?.id) {
-                          alert('Cannot delete: No Q&A response ID available');
+                          Alert.alert('Error', 'Cannot delete: No Q&A response ID available');
                           return;
                         }
 
@@ -1033,7 +1063,7 @@ export default function ChildProfileScreen() {
 
                         try {
                           await dispatch(deleteResponse(item.id)).unwrap();
-                          alert('Q&A response deleted successfully');
+                          Alert.alert('Success', 'Q&A response deleted successfully');
                         } catch (error: any) {
                           let errorMessage = 'Failed to delete Q&A response';
                           
@@ -1047,9 +1077,10 @@ export default function ChildProfileScreen() {
                             errorMessage = error.message;
                           }
                           
-                          alert(errorMessage);
+                          Alert.alert('Error', errorMessage);
                         }
                       }}
+                      onVisibilityUpdate={handleVisibilityUpdate}
                     />
                   );
                 case 'health':
@@ -1100,6 +1131,7 @@ export default function ChildProfileScreen() {
                           ]
                         );
                       }}
+                      onVisibilityUpdate={handleVisibilityUpdate}
                     />
                   );
                 case 'growth':
@@ -1157,6 +1189,7 @@ export default function ChildProfileScreen() {
                           ]
                         );
                       }}
+                      onVisibilityUpdate={handleVisibilityUpdate}
                     />
                   );
                 default:

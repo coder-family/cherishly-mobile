@@ -138,52 +138,44 @@ const promptResponseSlice = createSlice({
     // fetchChildResponses
     builder
       .addCase(fetchChildResponses.pending, (state) => {
-        // console.log('promptResponseSlice: fetchChildResponses.pending');
         state.loading = true;
         state.error = null;
       })
       .addCase(fetchChildResponses.fulfilled, (state, action) => {
-        // console.log('promptResponseSlice: fetchChildResponses.fulfilled with payload:', action.payload);
-        state.loading = false;
         const { responses, total, page, limit } = action.payload;
+        
+        // Replace existing responses for the first page, append for subsequent pages
         if (page === 1) {
           state.responses = responses;
-          // console.log('promptResponseSlice: Replaced responses, new count:', responses.length);
         } else {
           state.responses = [...state.responses, ...responses];
-                      // console.log('promptResponseSlice: Added responses, total count:', state.responses.length);
         }
+        
         state.total = total;
         state.page = page;
         state.limit = limit;
-        state.hasMore = responses.length === limit;
+        state.loading = false;
+        state.error = null;
       })
       .addCase(fetchChildResponses.rejected, (state, action) => {
-        console.error('promptResponseSlice: fetchChildResponses.rejected with error:', action.payload);
-        console.error('promptResponseSlice: fetchChildResponses.rejected with action:', action);
-        console.error('promptResponseSlice: fetchChildResponses.rejected with error message:', action.error?.message);
         state.loading = false;
-        state.error = action.payload as string || action.error?.message || 'Failed to fetch responses';
+        state.error = action.error.message || 'Failed to fetch responses';
       });
 
     // createResponse
     builder
       .addCase(createResponse.pending, (state) => {
-        console.log('promptResponseSlice: createResponse.pending');
         state.loading = true;
         state.error = null;
       })
       .addCase(createResponse.fulfilled, (state, action) => {
-        console.log('promptResponseSlice: createResponse.fulfilled with payload:', action.payload);
-        state.loading = false;
         state.responses.unshift(action.payload);
-        state.total += 1;
-        console.log('promptResponseSlice: Updated state responses count:', state.responses.length);
+        state.loading = false;
+        state.error = null;
       })
       .addCase(createResponse.rejected, (state, action) => {
-        console.error('promptResponseSlice: createResponse.rejected with error:', action.payload);
         state.loading = false;
-        state.error = action.payload as string || 'Failed to create response';
+        state.error = action.error.message || 'Failed to create response';
       });
 
     // updateResponse
@@ -193,27 +185,19 @@ const promptResponseSlice = createSlice({
         state.error = null;
       })
       .addCase(updateResponse.fulfilled, (state, action) => {
-        console.log('promptResponseSlice: updateResponse.fulfilled with payload:', action.payload);
-        state.loading = false;
         const updatedResponse = action.payload;
         const index = state.responses.findIndex(r => r.id === updatedResponse.id);
+        
         if (index !== -1) {
-          console.log('promptResponseSlice: Updating response at index:', index);
-          console.log('promptResponseSlice: Old content:', state.responses[index].content);
-          console.log('promptResponseSlice: New content:', updatedResponse.content);
           state.responses[index] = updatedResponse;
-          console.log('promptResponseSlice: Response updated successfully');
-        } else {
-          console.log('promptResponseSlice: Response not found in state, ID:', updatedResponse.id);
         }
-        if (state.currentResponse?.id === updatedResponse.id) {
-          state.currentResponse = updatedResponse;
-        }
+        
+        state.loading = false;
+        state.error = null;
       })
       .addCase(updateResponse.rejected, (state, action) => {
-        console.error('promptResponseSlice: updateResponse.rejected with error:', action.payload);
         state.loading = false;
-        state.error = action.payload as string || 'Failed to update response';
+        state.error = action.error.message || 'Failed to update response';
       });
 
     // addFeedback
@@ -246,7 +230,6 @@ const promptResponseSlice = createSlice({
         state.deletingResponseId = action.meta.arg;
       })
       .addCase(deleteResponse.fulfilled, (state, action) => {
-        state.loading = false;
         const deletedId = action.payload;
         state.responses = state.responses.filter(r => r.id !== deletedId);
         if (state.currentResponse?.id === deletedId) {
@@ -254,10 +237,12 @@ const promptResponseSlice = createSlice({
         }
         state.total = Math.max(0, state.total - 1);
         state.deletingResponseId = null;
+        state.loading = false;
+        state.error = null;
       })
       .addCase(deleteResponse.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string || 'Failed to delete response';
+        state.error = action.error.message || 'Failed to delete response';
         state.deletingResponseId = null;
       });
 

@@ -282,31 +282,18 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitle}>Your Family Groups ({familyGroupsCount})</Text>
           
           {displayedGroups.map((group, index) => (
-            <TouchableOpacity
+            <FamilyGroupCard
               key={`family-group-${group.id}-${index}`}
+              id={group.id}
+              name={group.name}
+              avatarUrl={group.avatarUrl}
+              description={group.description}
+              memberCount={group.members?.length}
+              subtitle={index === 0 ? "Primary Family Group" : "Family Group"}
               onPress={() => {
-                // For now, just show an alert since the family detail page doesn't exist yet
-                Alert.alert(
-                  group.name,
-                  `Family Group Details\n\nMembers: ${group.members?.length || 0}\nDescription: ${group.description || 'No description'}\n\nFamily group detail page coming soon!`,
-                  [
-                    { text: "OK" },
-                    { 
-                      text: "Edit Group", 
-                      onPress: () => router.push(`/family/edit/${group.id}`) 
-                    }
-                  ]
-                );
+                router.push(`/family/${group.id}`);
               }}
-            >
-              <FamilyGroupCard
-                name={group.name}
-                avatarUrl={group.avatarUrl}
-                description={group.description}
-                memberCount={group.members?.length}
-                subtitle={index === 0 ? "Primary Family Group" : "Family Group"}
-              />
-            </TouchableOpacity>
+            />
           ))}
           
           {/* Show expand/collapse button if there are more than 2 groups */}
@@ -451,29 +438,58 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 15,
-    paddingBottom: 80,
-    backgroundColor: "#fff",
-    flexGrow: 1,
-    alignItems: "center",
+    flex: 1,
+    backgroundColor: '#f5f5f5',
   },
-  welcomeTitle: {
+  header: {
+    padding: 20,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  title: {
     fontSize: 28,
-    fontWeight: "bold",
-    marginTop: 10,
+    fontWeight: 'bold',
+    color: '#333',
     marginBottom: 8,
-    textAlign: "center",
   },
-  // welcomeSubtitle: {
-  //   fontSize: 16,
-  //   color: "#666",
-  //   marginBottom: 24,
-  //   textAlign: "center",
-  // },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 12,
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 20,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 20,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    marginLeft: 8,
+  },
+  content: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  subtitleText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
   },
   childrenSection: {
     width: "100%",
@@ -484,36 +500,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e0e0e0",
   },
-  familyGroupsSection: {
-    width: "100%",
-    backgroundColor: "#f0f7ff",
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 10,
-    marginBottom: 7,
-    borderWidth: 1,
-    borderColor: "#e0e7ff",
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    marginBottom: 12,
   },
   loadingText: {
     fontSize: 16,
     color: "#666",
     textAlign: "center",
     padding: 16,
-  },
-  primaryButton: {
-    backgroundColor: "#4f8cff",
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    marginTop: 18,
-    marginBottom: 8,
-    alignItems: "center",
-    width: "100%",
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
   },
   groupButton: {
     backgroundColor: "#e0e7ff",
@@ -534,6 +530,29 @@ const styles = StyleSheet.create({
     width: "100%",
     marginBottom: 16,
   },
+  seeMoreButton: {
+    backgroundColor: '#e0e7ff',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    marginTop: -10,
+    alignSelf: 'flex-end',
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  seeMoreText: {
+    color: '#3b4cca',
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginLeft: 3,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    padding: 16,
+  },
   quickActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -552,27 +571,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  emptyStateText: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
+  familyGroupsSection: {
+    width: "100%",
+    backgroundColor: "#f0f7ff",
+    borderRadius: 12,
     padding: 16,
+    marginTop: 10,
+    marginBottom: 7,
+    borderWidth: 1,
+    borderColor: "#e0e7ff",
   },
-  seeMoreButton: {
-    backgroundColor: '#e0e7ff',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-    marginTop: -10,
-    alignSelf: 'flex-end',
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  seeMoreText: {
-    color: '#3b4cca',
-    fontSize: 11,
-    fontWeight: 'bold',
-    marginLeft: 3,
+  welcomeTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginTop: 10,
+    marginBottom: 8,
+    textAlign: "center",
   },
 });

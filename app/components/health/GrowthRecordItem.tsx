@@ -2,7 +2,10 @@ import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
+import { useAppDispatch } from '../../redux/hooks';
+import { updateGrowthRecord } from '../../redux/slices/healthSlice';
 import { GrowthRecord } from '../../types/health';
+import VisibilityToggle from '../ui/VisibilityToggle';
 
 interface GrowthRecordItemProps {
   record: GrowthRecord;
@@ -15,9 +18,21 @@ const GrowthRecordItem: React.FC<GrowthRecordItemProps> = ({
   onEdit, 
   onDelete 
 }) => {
+  const dispatch = useAppDispatch();
+
+  const handleVisibilityUpdate = async (newVisibility: 'private' | 'public') => {
+    try {
+      await dispatch(updateGrowthRecord({
+        recordId: record.id,
+        data: { visibility: newVisibility }
+      })).unwrap();
+    } catch (error) {
+      throw error; // Re-throw to let VisibilityToggle handle the error
+    }
+  };
+
   // Add defensive checks to prevent crashes
   if (!record || !record.id || !record.type || record.value === undefined) {
-    console.error('[GROWTH-RECORD-ITEM] Invalid record:', record);
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>Invalid record data</Text>
@@ -97,6 +112,13 @@ const GrowthRecordItem: React.FC<GrowthRecordItemProps> = ({
           </Text>
           <Text style={styles.date}>{formatDate(record.date)}</Text>
         </View>
+
+                {/* Visibility Controls */}
+        <VisibilityToggle
+          visibility={record.visibility || 'private'}
+          onUpdate={handleVisibilityUpdate}
+          size="small"
+        />
 
         {record.notes && (
           <Text style={styles.notes} numberOfLines={2}>
@@ -200,6 +222,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 10,
   },
+
 });
 
 export default GrowthRecordItem; 

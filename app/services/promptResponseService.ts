@@ -15,65 +15,48 @@ interface ReactNativeFile {
 
 // Helper function to map API response to PromptResponse interface
 function mapPromptResponseFromApi(apiResponse: any): PromptResponse {
-  // console.log('promptResponseService: Mapping API response:', {
-  //   id: apiResponse.id || apiResponse._id,
-  //   promptId: apiResponse.promptId,
-  //   response: apiResponse.response,
-  //   content: apiResponse.response?.content,
-  //   directContent: apiResponse.content,
-  //   child: apiResponse.child,
-  //   attachments: apiResponse.attachments,
-  //   attachmentsLength: apiResponse.attachments?.length
-  // });
-  
-  // Map attachments to ensure they have the correct structure
-  const mappedAttachments = (apiResponse.attachments || []).map((attachment: any) => ({
-    id: attachment.id || attachment._id || attachment.url, // Use _id as fallback, then URL
-    publicId: attachment.publicId || '',
-    url: attachment.url || '',
-    type: attachment.type || 'image',
-    filename: attachment.filename || attachment.caption || '',
-    size: attachment.size || 0,
-    createdAt: attachment.createdAt || attachment.uploadedAt || '',
-  }));
-  
-  // Handle different content structures
+  // Extract content from different possible structures
   let content = '';
-  if (apiResponse.response && typeof apiResponse.response === 'object') {
-    // New structure: response.content
-    content = apiResponse.response.content || '';
-    // console.log('promptResponseService: Using response.content:', content);
-  } else if (typeof apiResponse.content === 'string') {
-    // Old structure: direct content
+  
+  // Priority 1: Check if response has a 'response' field with content
+  if (apiResponse.response && typeof apiResponse.response === 'object' && apiResponse.response.content) {
+    content = apiResponse.response.content;
+  }
+  // Priority 2: Check if response has direct 'content' field
+  else if (apiResponse.content) {
     content = apiResponse.content;
-    // console.log('promptResponseService: Using direct content:', content);
-  } else if (typeof apiResponse.response === 'string') {
-    // Fallback: response as string
-    content = apiResponse.response;
-    // console.log('promptResponseService: Using response as string:', content);
+  }
+  // Priority 3: Use response as string if it's a string
+  else if (typeof apiResponse === 'string') {
+    content = apiResponse;
   }
   
-  // console.log('promptResponseService: Final mapped content:', content);
-  
-  // Handle different promptId structures
+  // Extract promptId from different possible structures
   let promptId = '';
-  if (apiResponse.promptId && typeof apiResponse.promptId === 'object') {
-    // New structure: promptId._id
-    promptId = apiResponse.promptId._id || '';
-  } else if (typeof apiResponse.promptId === 'string') {
-    // Old structure: direct promptId
-    promptId = apiResponse.promptId;
+  if (apiResponse.promptId) {
+    promptId = typeof apiResponse.promptId === 'string' ? apiResponse.promptId : apiResponse.promptId._id || apiResponse.promptId.id || '';
+  } else if (apiResponse.prompt) {
+    promptId = typeof apiResponse.prompt === 'string' ? apiResponse.prompt : apiResponse.prompt._id || apiResponse.prompt.id || '';
   }
   
-  // Handle different child structures
+  // Extract childId from different possible structures
   let childId = '';
-  if (apiResponse.child && typeof apiResponse.child === 'object') {
-    // New structure: child._id
-    childId = apiResponse.child._id || '';
-  } else if (typeof apiResponse.childId === 'string') {
-    // Old structure: direct childId
-    childId = apiResponse.childId;
+  if (apiResponse.childId) {
+    childId = typeof apiResponse.childId === 'string' ? apiResponse.childId : apiResponse.childId._id || apiResponse.childId.id || '';
+  } else if (apiResponse.child) {
+    childId = typeof apiResponse.child === 'string' ? apiResponse.child : apiResponse.child._id || apiResponse.child.id || '';
   }
+  
+  // Map attachments
+  const mappedAttachments = apiResponse.attachments?.map((att: any) => ({
+    id: att._id || att.id || '',
+    publicId: att.publicId || '',
+    url: att.url || '',
+    type: att.type || 'image',
+    filename: att.filename || '',
+    size: att.size || 0,
+    createdAt: att.createdAt || '',
+  })) || [];
   
   return {
     id: apiResponse.id || apiResponse._id || '',
@@ -82,6 +65,7 @@ function mapPromptResponseFromApi(apiResponse: any): PromptResponse {
     parentId: apiResponse.parentId || '',
     content: content,
     attachments: mappedAttachments,
+    visibility: apiResponse.visibility || 'private',
     feedback: apiResponse.feedback,
     createdAt: apiResponse.createdAt || '',
     updatedAt: apiResponse.updatedAt || '',
@@ -90,8 +74,6 @@ function mapPromptResponseFromApi(apiResponse: any): PromptResponse {
 
 // API functions
 export async function getChildResponses(params: GetResponsesParams): Promise<{ responses: PromptResponse[]; total: number; page: number; limit: number }> {
-  // console.log('promptResponseService: Getting child responses for:', params);
-
   try {
     // Use the correct endpoint: /responses/child/:childId
     const response = await apiService.get(`/responses/child/${params.childId}`, {
@@ -101,8 +83,6 @@ export async function getChildResponses(params: GetResponsesParams): Promise<{ r
         promptId: params.promptId
       }
     });
-
-    // console.log('promptResponseService: Raw response:', response);
 
     // Handle different response structures
     let responses: PromptResponse[] = [];
@@ -138,8 +118,6 @@ export async function getChildResponses(params: GetResponsesParams): Promise<{ r
       console.error('promptResponseService: Unexpected response structure:', responseData);
       throw new Error('Invalid response structure from server');
     }
-
-    console.log('promptResponseService: Mapped responses:', responses.length);
     
     return {
       responses,
@@ -168,13 +146,6 @@ export async function getChildResponses(params: GetResponsesParams): Promise<{ r
 }
 
 export async function createResponse(data: CreatePromptResponseData): Promise<PromptResponse> {
-  console.log('promptResponseService: Creating response with data:', {
-    promptId: data.promptId,
-    childId: data.childId,
-    content: data.content,
-    attachmentsCount: data.attachments?.length || 0
-  });
-
   // Validate required fields
   if (!data.promptId || !data.childId || !data.content) {
     const error = 'Missing required fields: promptId, childId, or content';
@@ -193,20 +164,12 @@ export async function createResponse(data: CreatePromptResponseData): Promise<Pr
     content: data.content 
   }));
   
-  console.log('promptResponseService: FormData text fields added:', {
-    promptId: data.promptId,
-    child: data.childId, // Using 'child' field name for backend
-    contentLength: data.content.length
-  });
-  
   // Add attachments if any
   if (data.attachments && data.attachments.length > 0) {
-    console.log('promptResponseService: Adding attachments:', data.attachments.length);
     data.attachments.forEach((file, index) => {
       // Handle both File objects and React Native file objects
       if (file instanceof File) {
         // Web File object
-        console.log('promptResponseService: Adding web File:', file.name, file.type);
         
         // Validate file type against backend requirements
         const allowedTypes = [
@@ -227,8 +190,6 @@ export async function createResponse(data: CreatePromptResponseData): Promise<Pr
         const fileType = fileObj.type || 'image/jpeg';
         const fileName = fileObj.name || `attachment_${index}.jpg`;
         
-        console.log('promptResponseService: Adding React Native file:', fileName, fileType);
-        
         // Validate file type against backend requirements
         const allowedTypes = [
           'image/jpeg', 'image/png', 'image/gif', 
@@ -248,22 +209,12 @@ export async function createResponse(data: CreatePromptResponseData): Promise<Pr
         } as any);
       }
     });
-  } else {
-    console.log('promptResponseService: No attachments to add');
   }
 
   // Use fetch for multipart/form-data
   const token = await authService.getAccessToken();
   
   const url = `${BASE_URL}/responses`;
-  console.log('promptResponseService: Creating response at:', url);
-  console.log('promptResponseService: Request details:', {
-    method: 'POST',
-    url,
-    hasToken: !!token,
-    tokenLength: token ? token.length : 0
-  });
-  
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -272,8 +223,6 @@ export async function createResponse(data: CreatePromptResponseData): Promise<Pr
     },
     body: formData,
   });
-
-  console.log('promptResponseService: Create response status:', response.status);
 
   if (!response.ok) {
     let errorMessage = 'Failed to create response';
@@ -299,18 +248,13 @@ export async function createResponse(data: CreatePromptResponseData): Promise<Pr
   }
 
   const result = await response.json();
-  console.log('promptResponseService: Create response success:', result);
-  
   const responseData = result.data || result;
   const mappedResponse = mapPromptResponseFromApi(responseData);
-  console.log('promptResponseService: Mapped created response:', mappedResponse);
   
   return mappedResponse;
 }
 
 export async function updateResponse(responseId: string, data: UpdatePromptResponseData): Promise<PromptResponse> {
-  console.log('promptResponseService: Updating response:', responseId, data);
-
   // Create FormData for text content only
   const formData = new FormData();
   
@@ -321,22 +265,17 @@ export async function updateResponse(responseId: string, data: UpdatePromptRespo
       content: data.content,
       type: 'text'
     }));
-    console.log('promptResponseService: Sending content to backend as JSON:', { 
-      content: data.content,
-      type: 'text'
-    });
+  }
+
+  // Add visibility field
+  if (data.visibility) {
+    formData.append('visibility', data.visibility);
   }
 
   // Use fetch for multipart/form-data
   const token = await authService.getAccessToken();
   
   const url = `${BASE_URL}/responses/${responseId}`;
-  console.log('promptResponseService: Updating response at:', url);
-  
-  // Log the FormData contents
-  console.log('promptResponseService: FormData contents:');
-  console.log('promptResponseService: Content being sent:', data.content);
-  
   const response = await fetch(url, {
     method: 'PUT',
     headers: {
@@ -370,8 +309,6 @@ export async function updateResponse(responseId: string, data: UpdatePromptRespo
   }
 
   const result = await response.json();
-  console.log('promptResponseService: Update response result:', result);
-  
   // Handle the backend response structure: { data: { promptResponse: ... } }
   let responseData;
   if (result.data && result.data.promptResponse) {
@@ -382,14 +319,7 @@ export async function updateResponse(responseId: string, data: UpdatePromptRespo
     responseData = result.data || result;
   }
   
-  console.log('promptResponseService: Extracted responseData:', responseData);
-  
   const mappedResponse = mapPromptResponseFromApi(responseData);
-  console.log('promptResponseService: Mapped response:', {
-    id: mappedResponse.id,
-    content: mappedResponse.content,
-    originalContent: responseData.content || responseData.response?.content
-  });
   
   return mappedResponse;
 }
@@ -403,11 +333,8 @@ export async function addFeedback(responseId: string, feedback: FeedbackData): P
 }
 
 export async function deleteResponse(responseId: string): Promise<void> {
-  console.log('promptResponseService: Deleting response:', responseId);
-  
   try {
     await apiService.delete(`/responses/${responseId}`);
-    console.log('promptResponseService: Response deleted successfully');
   } catch (error: any) {
     console.error('promptResponseService: Error deleting response:', error);
     console.error('promptResponseService: Error response:', error.response);
@@ -418,9 +345,6 @@ export async function deleteResponse(responseId: string): Promise<void> {
 
 // Attachment management functions
 export async function addAttachments(responseId: string, files: File[]): Promise<PromptResponse> {
-  console.log('promptResponseService: Adding attachments to response:', responseId, files.length);
-  console.log('promptResponseService: Files received:', files);
-  
   const formData = new FormData();
   formData.append('action', 'add');
   
@@ -428,10 +352,8 @@ export async function addAttachments(responseId: string, files: File[]): Promise
   
   // Add files
   files.forEach((file, index) => {
-    console.log('promptResponseService: Processing file at index:', index, file);
     
     if (file instanceof File) {
-      console.log('promptResponseService: Adding web file:', file.name, file.type, 'size:', file.size);
       
       // Validate file size
       if (file.size === 0) {
@@ -459,8 +381,6 @@ export async function addAttachments(responseId: string, files: File[]): Promise
       const fileType = fileObj.type || 'image/jpeg';
       const fileName = fileObj.name || `attachment_${index}.jpg`;
       
-      console.log('promptResponseService: Adding React Native file:', fileName, fileType, 'uri:', fileObj.uri);
-      
       if (!fileObj.uri || fileObj.uri.trim() === '') {
         console.warn('promptResponseService: Skipping React Native file with empty URI:', fileName);
         return;
@@ -480,7 +400,6 @@ export async function addAttachments(responseId: string, files: File[]): Promise
       
       // Check file size before uploading
       getFileSize(fileObj.uri).then(fileSize => {
-        console.log('promptResponseService: React Native file size:', fileSize, 'bytes,', (fileSize / (1024 * 1024)).toFixed(2), 'MB');
         
         if (fileSize > 10 * 1024 * 1024) { // 10MB limit
           console.warn('promptResponseService: File too large:', fileSize, 'bytes');
@@ -507,16 +426,12 @@ export async function addAttachments(responseId: string, files: File[]): Promise
     }
   });
   
-  console.log('promptResponseService: Valid files to upload:', validFilesCount);
-  
   if (validFilesCount === 0) {
     throw new Error('No valid files to upload');
   }
 
   const token = await authService.getAccessToken();
   const url = `${BASE_URL}/responses/${responseId}/attachments`;
-  
-  console.log('promptResponseService: Sending request to:', url);
   
   const response = await fetch(url, {
     method: 'PATCH',
@@ -550,8 +465,6 @@ export async function addAttachments(responseId: string, files: File[]): Promise
   }
 
   const result = await response.json();
-  console.log('promptResponseService: Add attachments result:', result);
-  
   // Handle the backend response structure
   let responseData;
   if (result.data && result.data.promptResponse) {
@@ -566,8 +479,6 @@ export async function addAttachments(responseId: string, files: File[]): Promise
 }
 
 export async function removeAttachments(responseId: string, attachmentIds: string[]): Promise<PromptResponse> {
-  console.log('promptResponseService: Removing attachments from response:', responseId, attachmentIds);
-  
   const token = await authService.getAccessToken();
   const url = `${BASE_URL}/responses/${responseId}/attachments`;
   
@@ -606,8 +517,6 @@ export async function removeAttachments(responseId: string, attachmentIds: strin
   }
 
   const result = await response.json();
-  console.log('promptResponseService: Remove attachments result:', result);
-  
   // Handle the backend response structure
   let responseData;
   if (result.data && result.data.promptResponse) {
@@ -622,15 +531,12 @@ export async function removeAttachments(responseId: string, attachmentIds: strin
 }
 
 export async function replaceAttachments(responseId: string, files: File[]): Promise<PromptResponse> {
-  console.log('promptResponseService: Replacing attachments for response:', responseId, files.length);
-  
   const formData = new FormData();
   formData.append('action', 'replace');
   
   // Add files
   files.forEach((file, index) => {
     if (file instanceof File) {
-      console.log('promptResponseService: Adding file for replacement:', file.name, file.type, 'size:', file.size);
       
       // Validate file size
       if (file.size === 0) {
@@ -656,8 +562,6 @@ export async function replaceAttachments(responseId: string, files: File[]): Pro
       const fileObj = file as unknown as ReactNativeFile;
       const fileType = fileObj.type || 'image/jpeg';
       const fileName = fileObj.name || `attachment_${index}.jpg`;
-      
-      console.log('promptResponseService: Adding React Native file for replacement:', fileName, fileType, 'uri:', fileObj.uri);
       
       if (!fileObj.uri || fileObj.uri.trim() === '') {
         console.warn('promptResponseService: Skipping React Native file with empty URI:', fileName);
@@ -718,8 +622,6 @@ export async function replaceAttachments(responseId: string, files: File[]): Pro
   }
 
   const result = await response.json();
-  console.log('promptResponseService: Replace attachments result:', result);
-  
   // Handle the backend response structure
   let responseData;
   if (result.data && result.data.promptResponse) {
@@ -735,12 +637,9 @@ export async function replaceAttachments(responseId: string, files: File[]): Pro
 
 // Test function to check if endpoints exist
 export async function testEndpoints(): Promise<void> {
-  console.log('promptResponseService: Testing endpoints...');
-  
   try {
     // Test the base endpoint
     const response = await apiService.get('/responses');
-    console.log('promptResponseService: Base endpoint test successful:', response);
   } catch (error) {
     console.error('promptResponseService: Base endpoint test failed:', error);
   }

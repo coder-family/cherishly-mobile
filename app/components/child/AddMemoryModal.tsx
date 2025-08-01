@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
@@ -17,6 +18,7 @@ import { createMemory } from '../../redux/slices/memorySlice';
 import authService from '../../services/authService';
 import { CreateMemoryData } from '../../services/memoryService';
 import { conditionalLog } from '../../utils/logUtils';
+import VisibilityToggle, { VisibilityType } from '../ui/VisibilityToggle';
 
 interface AddMemoryModalProps {
   visible: boolean;
@@ -39,6 +41,25 @@ export default function AddMemoryModal({ visible, onClose, childId }: AddMemoryM
   const [tags, setTags] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
+  const [visibility, setVisibility] = useState<VisibilityType>('private');
+
+  // Load default visibility when modal opens
+  useEffect(() => {
+    if (visible) {
+      const loadDefaultVisibility = async () => {
+        try {
+          const savedVisibility = await AsyncStorage.getItem('defaultVisibility');
+          if (savedVisibility && (savedVisibility === 'private' || savedVisibility === 'public')) {
+            setVisibility(savedVisibility as VisibilityType);
+          }
+        } catch (error) {
+          console.error('Failed to load default visibility:', error);
+        }
+      };
+      
+      loadDefaultVisibility();
+    }
+  }, [visible]);
 
   // Clear any existing memory errors when modal opens
   useEffect(() => {
@@ -130,6 +151,7 @@ export default function AddMemoryModal({ visible, onClose, childId }: AddMemoryM
         childId,
         date: new Date().toISOString().split('T')[0], // Use date only (YYYY-MM-DD format)
         tags: tags.trim() ? tags.split(',').map(tag => tag.trim()) : [],
+        visibility: visibility, // Use the visibility state
         attachments: selectedFiles.length > 0 ? selectedFiles.map(file => {
           // Validate file has required properties
           if (!file.uri || !file.name) {
@@ -321,6 +343,13 @@ export default function AddMemoryModal({ visible, onClose, childId }: AddMemoryM
               Example: first steps, birthday, milestone
             </Text>
           </View>
+
+          <VisibilityToggle
+            value={visibility}
+            onChange={(newVisibility) => setVisibility(newVisibility)}
+            label="Memory Visibility"
+            description="Choose who can see this memory"
+          />
 
           {renderSelectedFiles()}
 

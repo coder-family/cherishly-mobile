@@ -3,14 +3,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { VideoView, useVideoPlayer } from "expo-video";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Dimensions,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 
 // Generic attachment interface
@@ -53,51 +53,31 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
   const [_videoTimestamp, setVideoTimestamp] = useState<number>(Date.now());
   const scrollViewRef = React.useRef<ScrollView>(null);
 
-  // Ensure attachments are valid and have required fields
+  // Process attachments safely
   const safeAttachments = useMemo(() => {
     if (!attachments || !Array.isArray(attachments)) {
-      console.log('MediaViewerBaseSafe: attachments is null/undefined or not an array:', attachments);
       return [];
     }
     
-    const filtered = attachments
-      .filter((att) => att && att.url && att.type)
-      .sort((a, b) => {
-        // Sort images first, then videos, then audio
-        const typeOrder = { image: 0, video: 1, audio: 2 };
-        return typeOrder[a.type] - typeOrder[b.type];
-      });
-    
-    console.log('MediaViewerBaseSafe: safeAttachments processed:', {
-      originalCount: attachments.length,
-      filteredCount: filtered.length,
-      attachments: filtered.map(att => ({
-        id: att.id,
-        url: att.url,
-        type: att.type,
-        hasId: !!att.id
-      }))
-    });
-    
-    return filtered;
+    return attachments.filter(attachment => 
+      attachment && 
+      typeof attachment === 'object' && 
+      attachment.url && 
+      typeof attachment.url === 'string'
+    );
   }, [attachments]);
 
-  // Create video players for all video attachments at the top level
-  const videoAttachments = safeAttachments.filter(att => att.type === 'video');
-  
-  console.log('MediaViewerBaseSafe: videoAttachments found:', {
-    count: videoAttachments.length,
-    videos: videoAttachments.map(v => ({
-      id: v.id,
-      url: v.url,
-      hasId: !!v.id
-    }))
-  });
+  // Separate video attachments
+  const videoAttachments = useMemo(() => {
+    return safeAttachments.filter(attachment => 
+      attachment.url && 
+      /\.(mp4|mov|avi|mkv|webm)$/i.test(attachment.url)
+    );
+  }, [safeAttachments]);
   
   // Create individual video players at the top level with unique keys - always create all 5
   const player1 = useVideoPlayer({ uri: videoAttachments[0]?.url || '' }, (player) => {
     if (videoAttachments[0]) {
-      console.log('MediaViewerBaseSafe: player1 initialized for:', videoAttachments[0].url);
       player.loop = false;
       player.muted = false;
       player.volume = 1.0;
@@ -106,7 +86,6 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
   
   const player2 = useVideoPlayer({ uri: videoAttachments[1]?.url || '' }, (player) => {
     if (videoAttachments[1]) {
-      console.log('MediaViewerBaseSafe: player2 initialized for:', videoAttachments[1].url);
       player.loop = false;
       player.muted = false;
       player.volume = 1.0;
@@ -115,7 +94,6 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
   
   const player3 = useVideoPlayer({ uri: videoAttachments[2]?.url || '' }, (player) => {
     if (videoAttachments[2]) {
-      console.log('MediaViewerBaseSafe: player3 initialized for:', videoAttachments[2].url);
       player.loop = false;
       player.muted = false;
       player.volume = 1.0;
@@ -124,7 +102,6 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
   
   const player4 = useVideoPlayer({ uri: videoAttachments[3]?.url || '' }, (player) => {
     if (videoAttachments[3]) {
-      console.log('MediaViewerBaseSafe: player4 initialized for:', videoAttachments[3].url);
       player.loop = false;
       player.muted = false;
       player.volume = 1.0;
@@ -133,7 +110,6 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
   
   const player5 = useVideoPlayer({ uri: videoAttachments[4]?.url || '' }, (player) => {
     if (videoAttachments[4]) {
-      console.log('MediaViewerBaseSafe: player5 initialized for:', videoAttachments[4].url);
       player.loop = false;
       player.muted = false;
       player.volume = 1.0;
@@ -166,42 +142,32 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
 
   // Control playing status
   const handleVideoPlay = useCallback((videoId: string) => {
-    console.log('MediaViewerBaseSafe: handleVideoPlay called with videoId:', videoId);
     setPlayingVideoId(videoId);
   }, []);
 
   // Stop all videos when modal closes
   const handleModalClose = useCallback(() => {
-    console.log('MediaViewerBaseSafe: handleModalClose called, current modalKey:', modalKey);
     setShowFullScreen(false);
     setPlayingVideoId(null);
     
     // Force remount of video components by updating modal key
     setModalKey(prev => {
       const newKey = prev + 1;
-      console.log('MediaViewerBaseSafe: modalKey updated from', prev, 'to', newKey);
       return newKey;
     });
   }, [modalKey]);
 
   // Reset video player when modal opens
   const handleModalOpen = useCallback((attachment: T) => {
-    console.log('MediaViewerBaseSafe: handleModalOpen called for:', {
-      attachmentId: attachment.id,
-      attachmentUrl: attachment.url,
-      currentModalKey: modalKey
-    });
     
     // Force video player reset by incrementing modalOpeningKey and updating timestamp
     setModalOpeningKey(prev => {
       const newKey = prev + 1;
-      console.log('MediaViewerBaseSafe: modalOpeningKey updated from', prev, 'to', newKey);
       return newKey;
     });
     
     // Update video timestamp to force remounting
     setVideoTimestamp(Date.now());
-    console.log('MediaViewerBaseSafe: videoTimestamp updated to:', Date.now());
     
     const actualIndex = safeAttachments.findIndex(att => att.id === attachment.id);
     setSelectedAttachment(attachment);
@@ -212,7 +178,7 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
     // Track which video is playing
     handleVideoPlay(attachment.id || attachment.url);
     onAttachmentPress?.(attachment, actualIndex >= 0 ? actualIndex : 0);
-  }, [safeAttachments, modalKey, handleVideoPlay, onAttachmentPress]);
+  }, [safeAttachments, handleVideoPlay, onAttachmentPress]);
 
   // Cleanup video players when component unmounts
   useEffect(() => {
@@ -300,25 +266,11 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
     const videoId = attachment.id || attachment.url;
     const isMuted = mutedStates[videoId] ?? false;
     
-    console.log('MediaViewerBaseSafe: renderVideoPreview called for:', {
-      attachmentId: attachment.id,
-      attachmentUrl: attachment.url,
-      videoId,
-      index,
-      isMuted,
-      modalKey
-    });
-    
     const player = getVideoPlayer(attachment);
 
     const toggleAudio = () => {
       if (player) {
         const newMutedState = !isMuted;
-        console.log('MediaViewerBaseSafe: toggleAudio called:', { 
-          videoId, 
-          oldMuted: isMuted, 
-          newMuted: newMutedState 
-        });
         player.muted = newMutedState;
         setMutedStates((prev: Record<string, boolean>) => ({
           ...prev,
@@ -382,7 +334,7 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
     <TouchableOpacity
       style={styles.audioPreview}
       onPress={() => {
-        console.log('Audio clicked:', attachment);
+        // Handle audio press
       }}
     >
       <MaterialIcons name="audiotrack" size={24} color="#4f8cff" />

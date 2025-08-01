@@ -45,6 +45,7 @@ export interface PromptResponse {
   parentId: string;
   content: string;
   attachments?: PromptResponseAttachment[];
+  visibility?: 'private' | 'public';
   feedback?: {
     rating: number;
     comment?: string;
@@ -73,6 +74,7 @@ export interface CreatePromptResponseData {
 export interface UpdatePromptResponseData {
   content?: string;
   attachments?: File[];
+  visibility?: 'private' | 'public';
 }
 
 export interface GetResponsesParams {

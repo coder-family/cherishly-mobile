@@ -8,6 +8,7 @@ export interface GrowthRecord {
   date: string;
   source: 'home' | 'doctor' | 'clinic' | 'hospital';
   notes?: string;
+  visibility?: 'private' | 'public';
   createdAt: string;
   updatedAt: string;
 }
@@ -20,6 +21,7 @@ export interface CreateGrowthRecordData {
   date: string;
   source: 'home' | 'doctor' | 'clinic' | 'hospital';
   notes?: string;
+  visibility?: 'private' | 'public';
 }
 
 export interface UpdateGrowthRecordData {
@@ -29,6 +31,7 @@ export interface UpdateGrowthRecordData {
   date?: string;
   source?: 'home' | 'doctor' | 'clinic' | 'hospital';
   notes?: string;
+  visibility?: 'private' | 'public';
 }
 
 // WHO Standard Growth Data Types
@@ -92,6 +95,7 @@ export interface HealthRecord {
   doctorName?: string;
   location?: string;
   attachments?: HealthRecordAttachment[];
+  visibility?: 'private' | 'public';
   createdAt: string;
   updatedAt: string;
 }
@@ -117,6 +121,7 @@ export interface UpdateHealthRecordData {
   doctorName?: string;
   location?: string;
   attachments?: HealthRecordAttachment[];
+  visibility?: 'private' | 'public';
 }
 
 // Chart Data Types

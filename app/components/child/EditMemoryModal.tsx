@@ -16,6 +16,7 @@ import { useAppDispatch } from '../../redux/hooks';
 import { clearError, fetchMemories, updateMemory, updateMemoryAttachments } from '../../redux/slices/memorySlice';
 import { Memory, UpdateMemoryData } from '../../services/memoryService';
 import { conditionalLog } from '../../utils/logUtils';
+import VisibilityToggle, { VisibilityType } from '../ui/VisibilityToggle';
 
 interface EditMemoryModalProps {
   visible: boolean;
@@ -37,6 +38,7 @@ export default function EditMemoryModal({ visible, onClose, memory }: EditMemory
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState('');
+  const [visibility, setVisibility] = useState<VisibilityType>('private');
   const [loading, setLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
   const [attachmentLoading, setAttachmentLoading] = useState(false);
@@ -47,6 +49,7 @@ export default function EditMemoryModal({ visible, onClose, memory }: EditMemory
       setTitle(memory.title || '');
       setContent(memory.content || '');
       setTags(memory.tags ? memory.tags.join(', ') : '');
+      setVisibility(memory.visibility || 'private');
       
       // Convert existing attachments to selected files format
       if (memory.attachments) {
@@ -91,6 +94,7 @@ export default function EditMemoryModal({ visible, onClose, memory }: EditMemory
       setTitle('');
       setContent('');
       setTags('');
+      setVisibility('private');
       setSelectedFiles([]);
     }
   }, [visible]);
@@ -260,6 +264,7 @@ export default function EditMemoryModal({ visible, onClose, memory }: EditMemory
         content: trimmedContent || undefined, // Don't send empty strings
         date: memory.date, // Include the existing date to prevent validation errors
         tags: trimmedTags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0 && tag.length <= 50) : undefined,
+        visibility: visibility, // Add visibility to update data
       };
 
       conditionalLog.memoryUI('EditMemoryModal: Update data:', updateData);
@@ -623,6 +628,13 @@ export default function EditMemoryModal({ visible, onClose, memory }: EditMemory
               Example: first steps, birthday, milestone
             </Text>
           </View>
+
+          <VisibilityToggle
+            value={visibility}
+            onChange={(newVisibility) => setVisibility(newVisibility)}
+            label="Memory Visibility"
+            description="Choose who can see this memory"
+          />
 
           {renderSelectedFiles()}
 
