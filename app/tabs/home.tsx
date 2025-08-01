@@ -3,8 +3,6 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -366,8 +364,10 @@ export default function HomeScreen() {
     return (
       <ScrollView
         contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+        alwaysBounceVertical={false}
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
       >
         {/* User Profile Card */}
         <UserProfileCard
@@ -399,12 +399,8 @@ export default function HomeScreen() {
     );
   };
 
-  return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={80}
-    >
+      return (
+      <View style={{ flex: 1 }}>
       {/* Enhanced Header */}
       <AppHeader
         title="Home"
@@ -431,15 +427,16 @@ export default function HomeScreen() {
       <AddChildModal
         visible={showAddChildModal}
         onClose={() => setShowAddChildModal(false)}
-      />
-    </KeyboardAvoidingView>
+              />
+      </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: '#f5f5f5',
+    paddingBottom: 40,
   },
   header: {
     padding: 20,

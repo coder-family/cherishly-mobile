@@ -26,7 +26,7 @@ export default function FamilyGroupDetailScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('children');
 
   useEffect(() => {
-    if (id) {
+    if (id && typeof id === 'string') {
       dispatch(fetchFamilyGroup(id));
     }
   }, [id, dispatch]);
@@ -39,7 +39,7 @@ export default function FamilyGroupDetailScreen() {
     return (
       <ErrorView 
         message={error}
-        onRetry={() => dispatch(fetchFamilyGroup(id!))}
+        onRetry={() => id && typeof id === 'string' && dispatch(fetchFamilyGroup(id))}
       />
     );
   }
@@ -48,13 +48,13 @@ export default function FamilyGroupDetailScreen() {
     return (
       <ErrorView 
         message="Family group not found"
-        onRetry={() => dispatch(fetchFamilyGroup(id!))}
+        onRetry={() => id && typeof id === 'string' && dispatch(fetchFamilyGroup(id))}
       />
     );
   }
 
   const isOwner = currentGroup.ownerId === user?.id;
-  const currentMember = currentGroup.members.find(member => member.userId === user?.id);
+  const currentMember = currentGroup.members?.find(member => member.userId === user?.id);
   const isAdmin = isOwner || currentMember?.role === 'admin';
 
   return (
@@ -90,7 +90,19 @@ export default function FamilyGroupDetailScreen() {
             <View style={styles.creatorInfo}>
               {(() => {
                 // Since ownerId is undefined, use the first member (admin) as creator
-                const creator = currentGroup.members[0];
+                const creator = currentGroup.members?.[0];
+                
+                // If no members, show unknown creator
+                if (!creator) {
+                  return (
+                    <>
+                      <MaterialIcons name="person" size={16} color="#666" />
+                      <Text style={styles.creatorText}>
+                        Created by Unknown
+                      </Text>
+                    </>
+                  );
+                }
                 
                 // If we have user info from backend populate
                 if (creator?.user?.firstName) {
@@ -113,7 +125,7 @@ export default function FamilyGroupDetailScreen() {
                   <>
                     <MaterialIcons name="person" size={16} color="#666" />
                     <Text style={styles.creatorText}>
-                      Created by {creator?.userId ? `User ${creator.userId.slice(-6)}` : 'Unknown'}
+                      Created by {creator?.userId && typeof creator.userId === 'string' ? `User ${creator.userId.slice(-6)}` : 'Unknown'}
                     </Text>
                   </>
                 );
@@ -123,7 +135,7 @@ export default function FamilyGroupDetailScreen() {
             <View style={styles.memberCount}>
               <MaterialIcons name="group" size={16} color="#666" />
               <Text style={styles.memberCountText}>
-                {currentGroup.members.length} {currentGroup.members.length === 1 ? 'member' : 'members'}
+                {currentGroup.members?.length || 0} {(currentGroup.members?.length || 0) === 1 ? 'member' : 'members'}
               </Text>
             </View>
           </View>
