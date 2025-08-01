@@ -54,6 +54,22 @@ export const leaveFamilyGroup = createAsyncThunk(
   }
 );
 
+export const addChildToFamilyGroup = createAsyncThunk(
+  'family/addChildToFamilyGroup',
+  async ({ groupId, childId }: { groupId: string; childId: string }) => {
+    await familyService.addChildToFamilyGroup(groupId, childId);
+    return { groupId, childId };
+  }
+);
+
+export const removeChildFromFamilyGroup = createAsyncThunk(
+  'family/removeChildFromFamilyGroup',
+  async ({ groupId, childId }: { groupId: string; childId: string }) => {
+    await familyService.removeChildFromFamilyGroup(groupId, childId);
+    return { groupId, childId };
+  }
+);
+
 // Slice
 interface FamilyState {
   familyGroups: FamilyGroup[];
@@ -192,6 +208,38 @@ const familySlice = createSlice({
       .addCase(leaveFamilyGroup.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to leave family group';
+      })
+      // Add child to family group
+      .addCase(addChildToFamilyGroup.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(addChildToFamilyGroup.fulfilled, (state, action) => {
+        state.loading = false;
+        // Optionally refresh the current group data
+        if (state.currentGroup?.id === action.payload.groupId) {
+          // You might want to refresh the group data here
+        }
+      })
+      .addCase(addChildToFamilyGroup.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to add child to family group';
+      })
+      // Remove child from family group
+      .addCase(removeChildFromFamilyGroup.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(removeChildFromFamilyGroup.fulfilled, (state, action) => {
+        state.loading = false;
+        // Optionally refresh the current group data
+        if (state.currentGroup?.id === action.payload.groupId) {
+          // You might want to refresh the group data here
+        }
+      })
+      .addCase(removeChildFromFamilyGroup.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to remove child from family group';
       });
   },
 });

@@ -44,6 +44,7 @@ export interface CreateChildData {
   dateOfBirth: string;
   avatar?: string;
   gender?: string;
+  familyGroupId?: string;
 }
 
 export interface UpdateChildData {
@@ -53,6 +54,7 @@ export interface UpdateChildData {
   dateOfBirth?: string;
   avatar?: string;
   gender?: string;
+  familyGroupId?: string;
 }
 
 // Transform API child to UI child format

@@ -3,6 +3,8 @@ import apiService from './apiService';
 
 // Utility function to transform API response to FamilyGroup interface
 function transformFamilyGroupData(group: any): FamilyGroup {
+  console.log('Transforming family group data:', group);
+  
   // Handle nested response structure from getFamilyGroupDetails
   const groupData = group.group || group;
   const members = group.members || groupData.members || [];
@@ -10,7 +12,7 @@ function transformFamilyGroupData(group: any): FamilyGroup {
   // Use createdBy as ownerId since that's what's stored in MongoDB
   const ownerId = groupData.createdBy || group.createdBy || group.ownerId;
 
-  return {
+  const transformed = {
     id: groupData._id || group._id || group.id,
     name: groupData.name || group.name,
     description: groupData.description || group.description,
@@ -29,9 +31,13 @@ function transformFamilyGroupData(group: any): FamilyGroup {
         avatarUrl: member.userId.avatar || member.userId.avatarUrl,
       } : undefined,
     })),
+    children: groupData.children || group.children, // Add children to transformed object
     createdAt: groupData.createdAt || group.createdAt,
     updatedAt: groupData.updatedAt || group.updatedAt,
   };
+  
+  console.log('Transformed result:', transformed);
+  return transformed;
 }
 
 // Type definitions
@@ -42,6 +48,7 @@ export interface FamilyGroup {
   avatarUrl?: string;
   ownerId: string;
   members: FamilyMember[];
+  children?: any[]; // Add children field
   createdAt: string;
   updatedAt: string;
 }
@@ -127,10 +134,15 @@ export async function getPrimaryFamilyGroup(): Promise<FamilyGroup | null> {
 
 export async function getFamilyGroup(groupId: string): Promise<FamilyGroup> {
   try {
+    console.log('Fetching family group details for ID:', groupId);
     const response = await apiService.get(`/family-groups/${groupId}/details`);
     const group = response.data || response;
-    return group;
+    console.log('Raw API response:', group);
+    const transformed = transformFamilyGroupData(group);
+    console.log('Transformed family group data:', transformed);
+    return transformed;
   } catch (error) {
+    console.error('Error fetching family group:', error);
     throw error;
   }
 }
@@ -163,6 +175,60 @@ export async function leaveFamilyGroup(groupId: string): Promise<void> {
 
 export async function inviteToFamilyGroup(groupId: string, email: string): Promise<void> {
   await apiService.post(`/family-groups/${groupId}/invite`, { email });
+}
+
+export async function addChildToFamilyGroup(groupId: string, childId: string): Promise<void> {
+  await apiService.post(`/family-groups/${groupId}/children`, { childId });
+}
+
+export async function removeChildFromFamilyGroup(groupId: string, childId: string): Promise<void> {
+  await apiService.delete(`/family-groups/${groupId}/children/${childId}`);
+}
+
+export async function getFamilyGroupChildren(groupId: string): Promise<any[]> {
+  const response = await apiService.get(`/family-groups/${groupId}/children`);
+  return response.data || response;
+}
+
+export async function getFamilyGroupTimeline(groupId: string, page: number = 1, limit: number = 20): Promise<{
+  timeline: any[];
+  children: any[];
+  permissions: {
+    userRole: string;
+    isOwner: boolean;
+    ownedChildren: number;
+    canSeeAllContent: boolean;
+  };
+  pagination: {
+    page: number;
+    limit: number;
+    hasMore: boolean;
+  };
+}> {
+  try {
+    console.log('Fetching timeline posts for family group:', groupId, 'page:', page);
+    const response = await apiService.get(`/family-groups/${groupId}/timeline?page=${page}&limit=${limit}`);
+    const data = response.data || response;
+    console.log('Timeline posts response:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching family group timeline:', error);
+    return {
+      timeline: [],
+      children: [],
+      permissions: {
+        userRole: 'member',
+        isOwner: false,
+        ownedChildren: 0,
+        canSeeAllContent: false,
+      },
+      pagination: {
+        page: 1,
+        limit: 20,
+        hasMore: false,
+      },
+    };
+  }
 }
 
 // Helper function to get user info by ID
