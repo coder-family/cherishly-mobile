@@ -326,7 +326,7 @@ export default function HomeScreen() {
               style={styles.quickActionButton}
               onPress={() => router.push("/family/invite-join")}
             >
-              <Text style={styles.quickActionText}>Invite & Join</Text>
+              <Text style={styles.quickActionText}>Join Group</Text>
             </TouchableOpacity>
           </View>
         </View>

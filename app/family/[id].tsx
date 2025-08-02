@@ -3,8 +3,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AddChildToGroupModal from '../components/family/AddChildToGroupModal';
+import EditFamilyGroupModal from '../components/family/EditFamilyGroupModal';
 import FamilyGroupDetailHeader from '../components/family/FamilyGroupDetailHeader';
+import FamilyGroupPermissions from '../components/family/FamilyGroupPermissions';
+import InvitationQRModal from '../components/family/InvitationQRModal';
+import InviteMemberModal from '../components/family/InviteMemberModal';
+import PendingInvitationsModal from '../components/family/PendingInvitationsModal';
 import TimelinePost from '../components/family/TimelinePost';
+
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
@@ -23,6 +29,16 @@ export default function FamilyGroupDetailScreen() {
   
   const [activeTab, setActiveTab] = useState<TabType>("children");
   const [showAddChildModal, setShowAddChildModal] = useState(false);
+  const [showEditGroupModal, setShowEditGroupModal] = useState(false);
+  const [showInviteMemberModal, setShowInviteMemberModal] = useState(false);
+  const [showPendingInvitationsModal, setShowPendingInvitationsModal] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [invitationData, setInvitationData] = useState<{
+    token: string;
+    groupName: string;
+    role: string;
+    expiresAt: string;
+  } | null>(null);
   const [groupChildren, setGroupChildren] = useState<any[]>([]);
   const [loadingChildren, setLoadingChildren] = useState(false);
   const [timelinePosts, setTimelinePosts] = useState<any[]>([]);
@@ -106,8 +122,18 @@ export default function FamilyGroupDetailScreen() {
 
   // Handle comment press
   const handleCommentPress = () => {
-    console.log('Comment button pressed');
-    // TODO: Open comment modal or navigate to comment screen
+    console.log("Comment pressed");
+  };
+
+  const handleQRButtonPress = () => {
+    // For demo purposes, create mock invitation data
+    setInvitationData({
+      token: 'demo123456789012345678901234567890',
+      groupName: currentGroup?.name || 'Family Group',
+      role: 'parent',
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    });
+    setShowQRModal(true);
   };
 
   // Render children section
@@ -243,22 +269,52 @@ export default function FamilyGroupDetailScreen() {
 
     return (
       <View style={styles.membersContainer}>
-        <Text style={styles.sectionTitle}>
-          Members ({currentGroup.members.length})
-        </Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            Members ({currentGroup.members.length})
+          </Text>
+          <View style={styles.memberActions}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => setShowPendingInvitationsModal(true)}
+            >
+              <MaterialIcons name="email" size={16} color="#666" />
+              <Text style={styles.actionButtonText}>Pending</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleQRButtonPress}
+            >
+              <MaterialIcons name="qr-code" size={16} color="#666" />
+              <Text style={styles.actionButtonText}>QR</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.inviteButton}
+              onPress={() => setShowInviteMemberModal(true)}
+            >
+              <MaterialIcons name="person-add" size={20} color="#4f8cff" />
+              <Text style={styles.inviteButtonText}>Invite</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         <ScrollView style={styles.membersList} showsVerticalScrollIndicator={false}>
           {currentGroup.members.map((member: any) => (
             <View key={member.id || member._id} style={styles.memberCard}>
               <View style={styles.memberInfo}>
                 <View style={styles.memberAvatar}>
                   <Text style={styles.memberAvatarText}>
-                    {member.name?.charAt(0).toUpperCase() || 'U'}
+                    {member.user?.firstName?.charAt(0).toUpperCase() || 
+                     member.user?.lastName?.charAt(0).toUpperCase() || 
+                     'U'}
                   </Text>
                 </View>
                 <View style={styles.memberDetails}>
-                  <Text style={styles.memberName}>{member.name || 'Unknown'}</Text>
+                  <Text style={styles.memberName}>
+                    {member.user ? `${member.user.firstName} ${member.user.lastName}` : 'Unknown'}
+                  </Text>
                   <Text style={styles.memberRole}>
-                    {member.id === currentGroup.ownerId ? 'Owner' : 'Member'}
+                    {member.role === 'admin' ? 'Admin' : 
+                     member.role === 'owner' ? 'Owner' : 'Member'}
                   </Text>
                 </View>
               </View>
@@ -271,10 +327,62 @@ export default function FamilyGroupDetailScreen() {
 
   // Render edit section
   const renderEditSection = () => {
+    const isOwner = currentGroup?.ownerId === user?.id;
+    const isAdmin = currentGroup?.members?.some((member: any) => 
+      member.userId === user?.id && (member.role === 'admin' || member.role === 'owner')
+    );
+
     return (
       <View style={styles.editContainer}>
-        <Text style={styles.sectionTitle}>Edit Group</Text>
-        <Text style={styles.placeholderText}>Edit functionality coming soon...</Text>
+        {/* Permissions and Role Information */}
+        <FamilyGroupPermissions 
+          currentGroup={currentGroup}
+          currentUser={user}
+        />
+
+        {/* Edit Group Settings (only for owners and admins) */}
+        {(isOwner || isAdmin) && (
+          <View style={styles.editSettingsSection}>
+            <Text style={styles.sectionTitle}>Group Settings</Text>
+            
+            <View style={styles.editCard}>
+              <View style={styles.editInfo}>
+                <Text style={styles.editLabel}>Group Name</Text>
+                <Text style={styles.editValue}>{currentGroup?.name}</Text>
+              </View>
+              
+              <View style={styles.editInfo}>
+                <Text style={styles.editLabel}>Description</Text>
+                <Text style={styles.editValue}>
+                  {currentGroup?.description || 'No description'}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => setShowEditGroupModal(true)}
+            >
+              <MaterialIcons name="edit" size={20} color="#fff" />
+              <Text style={styles.editButtonText}>Edit Group Settings</Text>
+            </TouchableOpacity>
+
+
+          </View>
+        )}
+
+        {/* Access Denied Message */}
+        {!isOwner && !isAdmin && (
+          <View style={styles.sectionPlaceholder}>
+            <MaterialIcons name="lock" size={48} color="#ccc" />
+            <Text style={styles.placeholderText}>
+              Only group owners and admins can edit this group
+            </Text>
+            <Text style={styles.placeholderSubtext}>
+              Contact the group owner to request admin privileges
+            </Text>
+          </View>
+        )}
       </View>
     );
   };
@@ -400,16 +508,45 @@ export default function FamilyGroupDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Add Child Modal */}
       <AddChildToGroupModal
         visible={showAddChildModal}
         onClose={() => setShowAddChildModal(false)}
         familyGroupId={currentGroup.id}
         familyGroupName={currentGroup.name}
-        onChildAdded={() => {
-          setShowAddChildModal(false);
-          fetchGroupChildren();
+      />
+
+      <InviteMemberModal
+        visible={showInviteMemberModal}
+        onClose={() => setShowInviteMemberModal(false)}
+        groupId={currentGroup.id}
+        groupName={currentGroup.name}
+      />
+
+      <PendingInvitationsModal
+        visible={showPendingInvitationsModal}
+        onClose={() => setShowPendingInvitationsModal(false)}
+        groupId={currentGroup.id}
+        groupName={currentGroup.name}
+      />
+
+      {invitationData && (
+        <InvitationQRModal
+          visible={showQRModal}
+          onClose={() => setShowQRModal(false)}
+          invitationData={invitationData}
+        />
+      )}
+
+      <EditFamilyGroupModal
+        visible={showEditGroupModal}
+        onClose={() => {
+          setShowEditGroupModal(false);
+          // Refresh family group data after edit
+          if (id) {
+            dispatch(fetchFamilyGroup(id as string));
+          }
         }}
+        familyGroup={currentGroup}
       />
     </ScreenWrapper>
   );
@@ -496,21 +633,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e0e7ff",
-    minWidth: 120,
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 16,
   },
   actionButtonText: {
-    fontSize: 14,
-    color: "#4f8cff",
-    fontWeight: "600",
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
     marginLeft: 4,
   },
   sectionPlaceholder: {
@@ -663,8 +796,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   childDetails: {
-    fontSize: 12,
-    color: "#666",
+    flex: 1,
+    marginLeft: 12,
   },
   childrenContainer: {
     marginHorizontal: 16,
@@ -958,5 +1091,76 @@ const styles = StyleSheet.create({
   editContainer: {
     marginHorizontal: 16,
     marginBottom: 16,
+  },
+  editCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  editInfo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  editLabel: {
+    fontSize: 14,
+    color: "#666",
+    fontWeight: "500",
+  },
+  editValue: {
+    fontSize: 14,
+    color: "#1a1a1a",
+    fontWeight: "600",
+    flex: 1,
+    textAlign: "right",
+  },
+  editButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#4f8cff",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignSelf: "center",
+  },
+  editButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+  editSettingsSection: {
+    marginTop: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  inviteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e0e7ff',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  inviteButtonText: {
+    fontSize: 14,
+    color: '#4f8cff',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  memberActions: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
   },
 });

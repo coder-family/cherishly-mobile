@@ -1,5 +1,6 @@
 import { conditionalLog } from '../utils/logUtils';
-import apiService from './apiService';
+import apiService, { API_BASE_URL_EXPORT } from './apiService';
+import authService from './authService';
 
 // Utility function to transform API response to FamilyGroup interface
 function transformFamilyGroupData(group: any): FamilyGroup {
@@ -159,6 +160,16 @@ export async function updateFamilyGroup(groupId: string, data: UpdateFamilyGroup
   return transformFamilyGroupData(group);
 }
 
+export async function updateFamilyGroupDetails(groupId: string, data: {
+  name: string;
+  description?: string;
+  avatar?: string;
+}): Promise<FamilyGroup> {
+  const response = await apiService.patch(`/family-groups/${groupId}`, data);
+  const group = response.data || response;
+  return transformFamilyGroupData(group);
+}
+
 export async function deleteFamilyGroup(groupId: string): Promise<void> {
   await apiService.delete(`/family-groups/${groupId}`);
 }
@@ -173,8 +184,66 @@ export async function leaveFamilyGroup(groupId: string): Promise<void> {
   await apiService.post(`/family-groups/${groupId}/leave`);
 }
 
-export async function inviteToFamilyGroup(groupId: string, email: string): Promise<void> {
-  await apiService.post(`/family-groups/${groupId}/invite`, { email });
+export async function inviteToFamilyGroup(groupId: string, email: string, role: 'parent' | 'admin' = 'parent'): Promise<{ token: string }> {
+  const response = await apiService.post('/family-groups/invite', { 
+    email, 
+    groupId, 
+    role 
+  });
+  return response.data || response;
+}
+
+export async function joinGroupFromInvitation(token: string, userData: {
+  firstName: string;
+  lastName: string;
+  password: string;
+  dateOfBirth: string;
+}): Promise<{ groupId: string; role: string }> {
+  const response = await apiService.post('/family-groups/join-group-from-invitation', {
+    token,
+    ...userData
+  });
+  return response.data || response;
+}
+
+export async function acceptInvitation(token: string): Promise<{ groupId: string; role: string }> {
+  const response = await apiService.post('/family-groups/accept-invitation', {
+    token
+  });
+  return response.data || response;
+}
+
+export async function getPendingInvitations(groupId: string): Promise<{
+  invitations: Array<{
+    _id: string;
+    email: string;
+    role: string;
+    createdAt: string;
+    expiresAt: string;
+  }>;
+}> {
+  const response = await apiService.get(`/family-groups/${groupId}/pending-invitations`);
+  return response.data || response;
+}
+
+export async function cancelInvitation(groupId: string, invitationId: string): Promise<void> {
+  await apiService.delete(`/family-groups/${groupId}/invitations/${invitationId}`);
+}
+
+export async function resendInvitation(groupId: string, invitationId: string): Promise<void> {
+  await apiService.post(`/family-groups/${groupId}/invitations/${invitationId}/resend`);
+}
+
+export async function getInvitationStats(groupId: string): Promise<{
+  stats: {
+    totalInvitations: number;
+    pendingInvitations: number;
+    acceptedInvitations: number;
+    expiredInvitations: number;
+  };
+}> {
+  const response = await apiService.get(`/family-groups/${groupId}/invitation-stats`);
+  return response.data || response;
 }
 
 export async function addChildToFamilyGroup(groupId: string, childId: string): Promise<void> {
@@ -188,6 +257,50 @@ export async function removeChildFromFamilyGroup(groupId: string, childId: strin
 export async function getFamilyGroupChildren(groupId: string): Promise<any[]> {
   const response = await apiService.get(`/family-groups/${groupId}/children`);
   return response.data || response;
+}
+
+export async function uploadFamilyGroupAvatar(groupId: string, fileUri: string): Promise<{ avatar: string }> {
+  try {
+    // Create FormData for file upload
+    const formData = new FormData();
+    
+    // Get file name from URI
+    const fileName = fileUri.split('/').pop() || 'avatar.jpg';
+    
+    // Append the file to FormData
+    formData.append('avatar', {
+      uri: fileUri,
+      type: 'image/jpeg', // You might want to detect this dynamically
+      name: fileName,
+    } as any);
+
+    // Use a separate axios instance for file uploads to avoid JSON content-type issues
+    const token = await authService.getAccessToken();
+    
+    // Use the correct base URL
+    const baseURL = API_BASE_URL_EXPORT || "https://growing-together-app.onrender.com/api";
+    const uploadUrl = `${baseURL}/family-groups/${groupId}/avatar`;
+    
+    const response = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to upload group avatar');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Avatar upload error:', error);
+    throw error;
+  }
 }
 
 export async function getFamilyGroupTimeline(groupId: string, page: number = 1, limit: number = 20): Promise<{

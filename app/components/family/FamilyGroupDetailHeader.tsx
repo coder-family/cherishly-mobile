@@ -1,6 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { getImageSource } from '../../utils/imageUtils';
 
 interface FamilyGroup {
   id: string;
@@ -36,7 +37,7 @@ export default function FamilyGroupDetailHeader({ currentGroup, onBackPress }: F
         <View style={styles.avatarContainer}>
           {currentGroup.avatarUrl ? (
             <Image
-              source={{ uri: currentGroup.avatarUrl }}
+              source={getImageSource(currentGroup.avatarUrl) || { uri: currentGroup.avatarUrl }}
               style={styles.avatar}
             />
           ) : (

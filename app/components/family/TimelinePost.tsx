@@ -60,8 +60,8 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
             {post.promptId?.title && <Text style={styles.postTitle}>Q: {safeText(post.promptId.title)}</Text>}
             {post.promptId?.question && <Text style={styles.postText}>{safeText(post.promptId.question)}</Text>}
             {post.response && (
-              <View style={styles.responseContainer}>
-                <Text style={styles.responseLabel}>A:</Text>
+              <View style={[styles.responseContainer, { flexDirection: 'row', alignItems: 'center' }]}>
+                <Text style={styles.responseLabel}>Answer: </Text>
                 <Text style={styles.responseText}>
                   {typeof post.response === 'object' && post.response.content 
                     ? safeText(post.response.content)
