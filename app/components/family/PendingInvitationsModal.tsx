@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     Alert,
     FlatList,
@@ -37,13 +37,7 @@ export default function PendingInvitationsModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (visible) {
-      fetchPendingInvitations();
-    }
-  }, [visible, groupId]);
-
-  const fetchPendingInvitations = async () => {
+  const fetchPendingInvitations = useCallback(async () => {
     setLoading(true);
     setError('');
     
@@ -57,7 +51,13 @@ export default function PendingInvitationsModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [groupId]);
+
+  useEffect(() => {
+    if (visible) {
+      fetchPendingInvitations();
+    }
+  }, [visible, groupId, fetchPendingInvitations]);
 
   const handleCancelInvitation = async (invitationId: string) => {
     Alert.alert(
@@ -156,7 +156,7 @@ export default function PendingInvitationsModal({
           <View style={styles.header}>
             <Text style={styles.title}>Pending Invitations</Text>
             <Text style={styles.subtitle}>
-              Invitations sent for "{groupName}"
+              Invitations sent for &quot;{groupName}&quot;
             </Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <MaterialIcons name="close" size={24} color="#666" />

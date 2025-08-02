@@ -148,7 +148,7 @@ export default function InvitationsScreen() {
                 <MaterialIcons name="email" size={24} color="#f59e0b" />
                 <Text style={styles.actionTitle}>View Pending ({stats.pendingInvitations})</Text>
                 <Text style={styles.actionDescription}>
-                  Manage invitations that haven't been accepted yet
+                  Manage invitations that haven&apos;t been accepted yet
                 </Text>
               </TouchableOpacity>
 

@@ -97,7 +97,7 @@ export default function InviteMemberModal({
             <View style={styles.header}>
               <Text style={styles.title}>Invite Member</Text>
               <Text style={styles.subtitle}>
-                Send an invitation to join "{groupName}"
+                Send an invitation to join &quot;{groupName}&quot;
               </Text>
             </View>
 

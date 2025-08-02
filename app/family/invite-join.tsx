@@ -193,7 +193,7 @@ export default function InviteJoinScreen() {
                     <View style={styles.stepContent}>
                       <Text style={styles.stepTitle}>Open the Members tab</Text>
                       <Text style={styles.stepDescription}>
-                        Tap on the "Members" tab in the group details.
+                        Tap on the &quot;Members&quot; tab in the group details.
                       </Text>
                     </View>
                   </View>
@@ -203,9 +203,9 @@ export default function InviteJoinScreen() {
                       <Text style={styles.stepNumberText}>3</Text>
                     </View>
                     <View style={styles.stepContent}>
-                      <Text style={styles.stepTitle}>Click "Invite" button</Text>
+                      <Text style={styles.stepTitle}>Click &quot;Invite&quot; button</Text>
                       <Text style={styles.stepDescription}>
-                        Tap the "Invite" button to send an invitation.
+                        Tap the &quot;Invite&quot; button to send an invitation.
                       </Text>
                     </View>
                   </View>
@@ -217,7 +217,7 @@ export default function InviteJoinScreen() {
                     <View style={styles.stepContent}>
                       <Text style={styles.stepTitle}>Enter email and role</Text>
                       <Text style={styles.stepDescription}>
-                        Enter the person's email and choose their role (Parent or Admin).
+                        Enter the person&apos;s email and choose their role (Parent or Admin).
                       </Text>
                     </View>
                   </View>
@@ -229,7 +229,7 @@ export default function InviteJoinScreen() {
                     • You can also generate a QR code for easy sharing
                   </Text>
                   <Text style={styles.infoText}>
-                    • Check "Pending" to see invitations that haven't been accepted
+                    • Check &quot;Pending&quot; to see invitations that haven&apos;t been accepted
                   </Text>
                   <Text style={styles.infoText}>
                     • Invitations expire after 24 hours

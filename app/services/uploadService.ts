@@ -5,12 +5,6 @@ export interface UploadResponse {
   filename: string;
 }
 
-
-export interface UploadResponse {
-  url: string;
-  filename: string;
-}
-
 export async function uploadFile(fileUri: string, type: 'avatar' | 'image' | 'video' = 'image'): Promise<UploadResponse> {
   try {
     // Create form data

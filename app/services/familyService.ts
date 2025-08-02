@@ -214,13 +214,13 @@ export async function acceptInvitation(token: string): Promise<{ groupId: string
 }
 
 export async function getPendingInvitations(groupId: string): Promise<{
-  invitations: Array<{
+  invitations: {
     _id: string;
     email: string;
     role: string;
     createdAt: string;
     expiresAt: string;
-  }>;
+  }[];
 }> {
   const response = await apiService.get(`/family-groups/${groupId}/pending-invitations`);
   return response.data || response;

@@ -213,7 +213,7 @@ export default function JoinFromInvitationScreen() {
               <View style={styles.invitationInfo}>
                 <Text style={styles.invitationTitle}>Invitation Details</Text>
                 <Text style={styles.invitationText}>
-                  You've been invited to join "{invitationInfo.groupName}" as {invitationInfo.role}
+                  You&apos;ve been invited to join &quot;{invitationInfo.groupName}&quot; as {invitationInfo.role}
                 </Text>
                 <Text style={styles.invitationText}>
                   Invited by: {invitationInfo.invitedBy}
