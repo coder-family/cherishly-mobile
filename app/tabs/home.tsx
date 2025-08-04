@@ -2,12 +2,12 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from "react-native";
 import AddChildModal from "../components/child/AddChildModal";
 import ChildProfileCard from "../components/child/ChildProfileCard";
@@ -409,6 +409,7 @@ export default function HomeScreen() {
         showBackButton={false}
         showForwardButton={false}
         showTitle={false}
+        showLogoutButton={true}
       />
 
       {/* Main Content */}

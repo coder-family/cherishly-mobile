@@ -4,14 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AddChildToGroupModal from '../components/family/AddChildToGroupModal';
 import EditFamilyGroupModal from '../components/family/EditFamilyGroupModal';
-import FamilyGroupDetailHeader from '../components/family/FamilyGroupDetailHeader';
 import FamilyGroupPermissions from '../components/family/FamilyGroupPermissions';
 import InvitationQRModal from '../components/family/InvitationQRModal';
 import InviteMemberModal from '../components/family/InviteMemberModal';
 import PendingInvitationsModal from '../components/family/PendingInvitationsModal';
 import TimelinePost from '../components/family/TimelinePost';
 
-import ScreenWrapper from '../components/layout/ScreenWrapper';
+import AppHeader from '../components/layout/AppHeader';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
 import { fetchFamilyGroup } from '../redux/slices/familySlice';
@@ -45,6 +44,11 @@ export default function FamilyGroupDetailScreen() {
   const [loadingTimeline, setLoadingTimeline] = useState(false);
   const [timelinePage, setTimelinePage] = useState(1);
   const [hasMoreTimeline, setHasMoreTimeline] = useState(true);
+
+  // Search state
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // Fetch family group data
   useEffect(() => {
@@ -389,42 +393,100 @@ export default function FamilyGroupDetailScreen() {
 
   if (loading) {
     return (
-      <ScreenWrapper>
+      <View style={{ flex: 1 }}>
+        <AppHeader
+          title="Family Group"
+          onSearchChange={() => {}}
+          searchPlaceholder="Search family group"
+          showBackButton={true}
+          showForwardButton={false}
+          showTitle={false}
+          showLogoutButton={true}
+        />
         <LoadingSpinner message="Loading family group..." />
-      </ScreenWrapper>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <ScreenWrapper>
+      <View style={{ flex: 1 }}>
+        <AppHeader
+          title="Family Group"
+          onSearchChange={() => {}}
+          searchPlaceholder="Search family group"
+          showBackButton={true}
+          showForwardButton={false}
+          showTitle={false}
+          showLogoutButton={true}
+        />
         <View style={styles.errorContainer}>
           <MaterialIcons name="error" size={48} color="#e74c3c" />
           <Text style={styles.errorText}>Error loading family group</Text>
           <Text style={styles.errorSubtext}>{error}</Text>
         </View>
-      </ScreenWrapper>
+      </View>
     );
   }
 
   if (!currentGroup) {
     return (
-      <ScreenWrapper>
+      <View style={{ flex: 1 }}>
+        <AppHeader
+          title="Family Group"
+          onSearchChange={() => {}}
+          searchPlaceholder="Search family group"
+          showBackButton={true}
+          showForwardButton={false}
+          showTitle={false}
+          showLogoutButton={true}
+        />
         <View style={styles.errorContainer}>
           <MaterialIcons name="group" size={48} color="#ccc" />
           <Text style={styles.errorText}>Family group not found</Text>
         </View>
-      </ScreenWrapper>
+      </View>
     );
   }
 
+  // Handle search
+  const handleSearch = async (query: string) => {
+    if (query.trim().length === 0) {
+      setShowSearchResults(false);
+      setSearchResults([]);
+      return;
+    }
+
+    if (query.trim().length < 2) {
+      return;
+    }
+
+    setSearchLoading(true);
+    setShowSearchResults(true);
+
+    try {
+      // Search within family group - placeholder for now
+      setSearchResults([]);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
   return (
-    <ScreenWrapper>
+    <View style={{ flex: 1 }}>
+      <AppHeader
+        title={currentGroup.name || "Family Group"}
+        onSearchChange={handleSearch}
+        searchPlaceholder={`Search in ${currentGroup.name || 'family group'}...`}
+        showBackButton={true}
+        showForwardButton={false}
+        showTitle={false}
+        showLogoutButton={true}
+      />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <FamilyGroupDetailHeader 
-          currentGroup={currentGroup}
-          onBackPress={() => router.back()}
-        />
 
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
@@ -548,7 +610,7 @@ export default function FamilyGroupDetailScreen() {
         }}
         familyGroup={currentGroup}
       />
-    </ScreenWrapper>
+    </View>
   );
 }
 

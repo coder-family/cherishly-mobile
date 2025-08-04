@@ -382,12 +382,30 @@ class AuthService {
    */
   async logout(): Promise<void> {
     try {
-      // No API call needed if there's no logout endpoint
-    } catch (error) {
-      conditionalLog.auth("Logout error:", sanitizeForLogging(error));
+      // Call logout API to invalidate token on server
+      conditionalLog.auth("Calling logout API...");
+      
+      // Get current token for debugging
+      const token = await this.getAccessToken();
+      conditionalLog.auth("Current token for logout:", { 
+        hasToken: !!token, 
+        tokenLength: token ? token.length : 0 
+      });
+      
+      // Log base URL for debugging
+      conditionalLog.auth("API Base URL:", { baseURL: "https://growing-together-app.onrender.com/api" });
+      
+      const response = await apiService.post("/users/logout");
+      conditionalLog.auth("Logout API call successful", { response });
+    } catch (error: any) {
+      conditionalLog.auth("Logout API error:", sanitizeForLogging(error));
+      // Even if API call fails, we should still clear local tokens
+      // This ensures user is logged out locally even if server is unreachable
     } finally {
+      conditionalLog.auth("Clearing local tokens...");
       await this.clearTokens();
       this.currentUser = null;
+      conditionalLog.auth("Logout completed");
     }
   }
 
