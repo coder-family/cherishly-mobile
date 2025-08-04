@@ -1,13 +1,13 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 import AddChildModal from "../components/child/AddChildModal";
 import ChildProfileCard from "../components/child/ChildProfileCard";
@@ -58,6 +58,15 @@ export default function HomeScreen() {
       dispatch(fetchFamilyGroups());
     }
   }, [dispatch, user]);
+
+  // Refresh family groups when screen comes into focus (e.g., after accepting invitations)
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        dispatch(fetchFamilyGroups());
+      }
+    }, [dispatch, user])
+  );
 
   // Handle search
   const handleSearch = async (query: string) => {
@@ -244,7 +253,15 @@ export default function HomeScreen() {
     if (familyLoading) {
       return (
         <View style={styles.familyGroupsSection}>
-          <Text style={styles.sectionTitle}>Your Family Groups</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Your Family Groups</Text>
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={() => dispatch(fetchFamilyGroups())}
+            >
+              <MaterialIcons name="refresh" size={20} color="#4f8cff" />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.loadingText}>Loading family groups...</Text>
         </View>
       );
@@ -254,7 +271,15 @@ export default function HomeScreen() {
     if (familyError) {
       return (
         <View style={styles.familyGroupsSection}>
-          <Text style={styles.sectionTitle}>Your Family Groups</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Your Family Groups</Text>
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={() => dispatch(fetchFamilyGroups())}
+            >
+              <MaterialIcons name="refresh" size={20} color="#4f8cff" />
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity
             style={[styles.groupButton, { backgroundColor: '#fee' }]}
             onPress={() => {
@@ -277,7 +302,15 @@ export default function HomeScreen() {
 
       return (
         <View style={styles.familyGroupsSection}>
-          <Text style={styles.sectionTitle}>Your Family Groups ({familyGroupsCount})</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Your Family Groups ({familyGroupsCount})</Text>
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={() => dispatch(fetchFamilyGroups())}
+            >
+              <MaterialIcons name="refresh" size={20} color="#4f8cff" />
+            </TouchableOpacity>
+          </View>
           
           {displayedGroups.map((group, index) => (
             <FamilyGroupCard
@@ -324,7 +357,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickActionButton}
-              onPress={() => router.push("/family/invite-join")}
+              onPress={() => router.push("/family/join-group")}
             >
               <Text style={styles.quickActionText}>Join Group</Text>
             </TouchableOpacity>
@@ -336,10 +369,18 @@ export default function HomeScreen() {
     // Show create/join button when no family groups
     return (
       <View style={styles.familyGroupsSection}>
-        <Text style={styles.sectionTitle}>Your Family Groups</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Your Family Groups</Text>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={() => dispatch(fetchFamilyGroups())}
+          >
+            <MaterialIcons name="refresh" size={20} color="#4f8cff" />
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity
           style={styles.groupButton}
-          onPress={() => router.push("/family/create")}
+          onPress={() => router.push("/family/join-group")}
         >
           <Text style={styles.groupButtonText}>
             Create or Join Family Group
@@ -585,5 +626,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 8,
     textAlign: "center",
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  refreshButton: {
+    padding: 8,
   },
 });

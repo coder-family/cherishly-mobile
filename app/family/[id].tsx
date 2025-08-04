@@ -12,6 +12,7 @@ import TimelinePost from '../components/family/TimelinePost';
 
 import AppHeader from '../components/layout/AppHeader';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { useGroupRefresh } from '../hooks/useGroupRefresh';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
 import { fetchFamilyGroup } from '../redux/slices/familySlice';
 import * as familyService from '../services/familyService';
@@ -25,6 +26,22 @@ export default function FamilyGroupDetailScreen() {
   
   const { currentGroup, loading, error } = useAppSelector((state) => state.family);
   const { user } = useAppSelector((state) => state.auth);
+  
+  // Use the group refresh hook
+  const { refreshGroupData } = useGroupRefresh(id as string);
+  
+  // Silent refresh function for after adding child
+  const silentRefresh = async () => {
+    try {
+      console.log('Silent refresh: Updating group data...');
+      await refreshGroupData();
+      // Fetch children without showing loading
+      await fetchGroupChildren(false);
+      console.log('Silent refresh: Completed successfully');
+    } catch (error) {
+      console.error('Silent refresh error:', error);
+    }
+  };
   
   const [activeTab, setActiveTab] = useState<TabType>("children");
   const [showAddChildModal, setShowAddChildModal] = useState(false);
@@ -58,9 +75,11 @@ export default function FamilyGroupDetailScreen() {
   }, [id, dispatch]);
 
   // Fetch children in the group
-  const fetchGroupChildren = async () => {
+  const fetchGroupChildren = async (showLoading = true) => {
     if (!currentGroup?.id) return;
-    setLoadingChildren(true);
+    if (showLoading) {
+      setLoadingChildren(true);
+    }
     try {
       const response: any = await familyService.getFamilyGroupChildren(currentGroup.id);
       const children = response.children || response;
@@ -70,7 +89,9 @@ export default function FamilyGroupDetailScreen() {
       console.error("Error fetching group children:", error);
       setGroupChildren([]);
     } finally {
-      setLoadingChildren(false);
+      if (showLoading) {
+        setLoadingChildren(false);
+      }
     }
   };
 
@@ -99,7 +120,7 @@ export default function FamilyGroupDetailScreen() {
   // Fetch children when tab is active
   useEffect(() => {
     if (activeTab === "children") {
-      fetchGroupChildren();
+      fetchGroupChildren(true); // Show loading for initial load
     }
   }, [activeTab, currentGroup?.id]);
 
@@ -575,6 +596,11 @@ export default function FamilyGroupDetailScreen() {
         onClose={() => setShowAddChildModal(false)}
         familyGroupId={currentGroup.id}
         familyGroupName={currentGroup.name}
+        existingChildren={groupChildren}
+        onGroupUpdated={async () => {
+          // Silent refresh to avoid loading states
+          await silentRefresh();
+        }}
       />
 
       <InviteMemberModal

@@ -1,25 +1,26 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import { MaterialIcons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
-import { useAppDispatch, useAppSelector } from '../../redux/hooks';
-import { fetchChildren } from '../../redux/slices/childSlice';
-import { addChildToFamilyGroup } from '../../redux/slices/familySlice';
-import { Child } from '../../services/childService';
-import LoadingSpinner from '../ui/LoadingSpinner';
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useAppDispatch, useAppSelector } from "../../redux/hooks";
+import { fetchChildren } from "../../redux/slices/childSlice";
+import { addChildToFamilyGroup } from "../../redux/slices/familySlice";
+import LoadingSpinner from "../ui/LoadingSpinner";
 
 interface AddChildToGroupModalProps {
   visible: boolean;
   onClose: () => void;
   familyGroupId: string;
   familyGroupName: string;
+  onGroupUpdated?: () => void; // Callback to notify parent component
+  existingChildren?: any[]; // Children already in the group
 }
 
 export default function AddChildToGroupModal({
@@ -27,74 +28,125 @@ export default function AddChildToGroupModal({
   onClose,
   familyGroupId,
   familyGroupName,
+  onGroupUpdated,
+  existingChildren = [],
 }: AddChildToGroupModalProps) {
   const dispatch = useAppDispatch();
   const { children, loading } = useAppSelector((state) => state.children);
-  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const [selectedChildIds, setSelectedChildIds] = useState<string[]>([]);
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     if (visible) {
-      console.log('Modal opened, fetching children...');
-      dispatch(fetchChildren());
+      console.log("Modal opened, fetching children...");
+      // Reset selected children when modal opens
+      setSelectedChildIds([]);
+      dispatch(fetchChildren()).catch((error) => {
+        console.error("Error fetching children:", error);
+        Alert.alert("Error", "Failed to load children. Please try again.");
+      });
+    } else {
+      // Reset selected children when modal closes
+      setSelectedChildIds([]);
     }
   }, [visible, dispatch]);
 
-  // Filter children that are not already in this family group
-  const availableChildren = children.filter(child => {
-    // For now, we'll show all children. In the future, we can check if they're already in the group
-    return true;
+  // Show all children but mark those already in the group
+  const allChildren = children.filter((child) => {
+    // Ensure child has required fields
+    return child && child.id && child.name;
   });
 
-  console.log('Children state:', children);
-  console.log('Available children:', availableChildren);
-  console.log('Loading state:', loading);
+  // Function to check if a child is already in the group
+  const isChildInGroup = (childId: string) => {
+    return existingChildren.some(existingChild => 
+      existingChild.id === childId || existingChild._id === childId
+    );
+  };
+
+  console.log("Children state:", children);
+  console.log("All children:", allChildren);
+  console.log("Existing children in group:", existingChildren);
+  console.log("Loading state:", loading);
+  console.log("Selected child IDs:", selectedChildIds);
+  console.log("Family group ID:", familyGroupId);
 
   const handleAddChildToGroup = async () => {
-    if (!selectedChildId) {
-      Alert.alert('Error', 'Please select a child to add to the group');
+    console.log('handleAddChildToGroup called with selectedChildIds:', selectedChildIds);
+    
+    if (selectedChildIds.length === 0) {
+      Alert.alert("Error", "Please select at least one child to add to the group");
+      return;
+    }
+    
+    // Validate that all selected children exist and are not already in the group
+    const selectedChildren = allChildren.filter(child => selectedChildIds.includes(child.id));
+    if (selectedChildren.length !== selectedChildIds.length) {
+      Alert.alert("Error", "Some selected children not found. Please try again.");
+      return;
+    }
+    
+    // Check if any child is already in the group
+    const alreadyInGroup = selectedChildIds.filter(childId => isChildInGroup(childId));
+    if (alreadyInGroup.length > 0) {
+      Alert.alert("Error", "Some selected children are already in the group.");
       return;
     }
 
+    console.log("Adding children to group:", { familyGroupId, selectedChildIds });
     setUpdating(true);
+
     try {
-      await dispatch(addChildToFamilyGroup({
-        groupId: familyGroupId,
-        childId: selectedChildId
-      })).unwrap();
+      // Add all selected children to the group
+      const promises = selectedChildIds.map(childId => 
+        dispatch(addChildToFamilyGroup({
+          groupId: familyGroupId,
+          childId: childId,
+        })).unwrap()
+      );
       
+      const results = await Promise.all(promises);
+      console.log("Successfully added children to group:", results);
+
+      // Notify parent component that group was updated (let parent handle refresh)
+      if (onGroupUpdated) {
+        console.log("Notifying parent component to refresh group data...");
+        onGroupUpdated();
+      }
+
       Alert.alert(
-        'Success',
-        'Child has been added to the family group successfully!',
-        [{ text: 'OK', onPress: onClose }]
+        "Success",
+        `${selectedChildIds.length} child${selectedChildIds.length > 1 ? 'ren' : ''} has been added to the family group successfully!`,
+        [{ text: "OK", onPress: onClose }]
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to add child to group');
+      console.error("Error adding children to group:", error);
+      console.error("Error details:", {
+        message: error.message,
+        status: error.status,
+        statusText: error.statusText,
+        url: error.url,
+      });
+
+      let errorMessage = "Failed to add children to group";
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.status === 404) {
+        errorMessage = "Family group or child not found";
+      } else if (error.status === 403) {
+        errorMessage =
+          "You do not have permission to add children to this group";
+      } else if (error.status === 409) {
+        errorMessage = "Some children are already members of this family group";
+      }
+
+      Alert.alert("Error", errorMessage);
     } finally {
       setUpdating(false);
     }
   };
 
-  const renderChildItem = ({ item }: { item: Child }) => {
-    const isSelected = selectedChildId === item.id;
-    
-    return (
-      <TouchableOpacity
-        style={[styles.childItem, isSelected && styles.selectedChildItem]}
-        onPress={() => setSelectedChildId(item.id)}
-      >
-        <View style={styles.childInfo}>
-          <Text style={styles.childName}>{item.name}</Text>
-          <Text style={styles.childDetails}>
-            {item.birthdate} • {item.gender || 'Not specified'}
-          </Text>
-        </View>
-        {isSelected && (
-          <MaterialIcons name="check-circle" size={24} color="#4f8cff" />
-        )}
-      </TouchableOpacity>
-    );
-  };
+
 
   return (
     <Modal
@@ -107,67 +159,137 @@ export default function AddChildToGroupModal({
         <View style={styles.modalContent}>
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
-              <Text style={styles.title}>Add Child to Group</Text>
+              <Text style={styles.title}>Add Children to Group</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <MaterialIcons name="close" size={24} color="#666" />
               </TouchableOpacity>
             </View>
 
             <Text style={styles.subtitle}>
-              Select a child to add to &quot;{familyGroupName}&quot;
+              Select children to add to &quot;{familyGroupName}&quot;
             </Text>
 
             {loading ? (
               <LoadingSpinner message="Loading children..." />
             ) : (
               <>
-                {availableChildren.length === 0 ? (
+                {!children || children.length === 0 ? (
                   <View style={styles.emptyState}>
                     <MaterialIcons name="child-care" size={48} color="#ccc" />
                     <Text style={styles.emptyStateText}>
-                      No children available to add to this group
+                      No children found. Please add a child first.
+                    </Text>
+                  </View>
+                ) : allChildren.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <MaterialIcons name="child-care" size={48} color="#ccc" />
+                    <Text style={styles.emptyStateText}>
+                      No children found. Please add a child first.
                     </Text>
                   </View>
                 ) : (
                   <>
                     <Text style={styles.debugText}>
-                      Found {availableChildren.length} children to display
+                      Found {allChildren.length} children to display
                     </Text>
                     
-                    {/* Debug: Show first child info */}
-                    {availableChildren.length > 0 && (
+                    <Text style={styles.debugText}>
+                      Selected: {selectedChildIds.length} child{selectedChildIds.length !== 1 ? 'ren' : ''}
+                    </Text>
+                    
+                    {selectedChildIds.length > 0 && (
                       <Text style={styles.debugText}>
-                        First child: {availableChildren[0].name} - {availableChildren[0].birthdate}
+                        Selected IDs: {selectedChildIds.join(', ')}
                       </Text>
                     )}
-                    
+
+                    {/* Select/Deselect All Button */}
+                    <TouchableOpacity
+                      style={styles.selectAllButton}
+                      onPress={() => {
+                        const availableChildIds = allChildren
+                          .filter(child => !isChildInGroup(child.id))
+                          .map(child => child.id);
+                        
+                        if (selectedChildIds.length === availableChildIds.length) {
+                          // Deselect all
+                          setSelectedChildIds([]);
+                        } else {
+                          // Select all available
+                          setSelectedChildIds(availableChildIds);
+                        }
+                      }}
+                    >
+                      <Text style={styles.selectAllButtonText}>
+                        {selectedChildIds.length === allChildren.filter(child => !isChildInGroup(child.id)).length
+                          ? 'Deselect All'
+                          : 'Select All Available'
+                        }
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Debug: Show first child info */}
+                    {allChildren.length > 0 && (
+                      <Text style={styles.debugText}>
+                        First child: {allChildren[0].name} -{" "}
+                        {allChildren[0].birthdate}
+                      </Text>
+                    )}
+
                     {/* Simple list for debugging */}
                     <View style={styles.childrenList}>
-                      {availableChildren.map((child, index) => (
-                        <View key={child.id} style={styles.simpleChildItem}>
-                          <Text style={styles.simpleChildText}>
-                            {index + 1}. {child.name} ({child.gender})
-                          </Text>
-                          <TouchableOpacity
-                            style={styles.simpleSelectButton}
-                            onPress={() => {
-                              console.log('Selected child:', child.name);
-                              setSelectedChildId(child.id);
-                            }}
-                          >
-                            <Text style={styles.simpleSelectText}>
-                              {selectedChildId === child.id ? '✓ Selected' : 'Select'}
+                      {allChildren.map((child: any, index: number) => {
+                        const isSelected = selectedChildIds.includes(child.id);
+                        const isInGroup = isChildInGroup(child.id);
+                        
+                        return (
+                          <View key={child.id} style={styles.simpleChildItem}>
+                            <Text style={styles.simpleChildText}>
+                              {index + 1}. {child.name} ({child.gender})
                             </Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
+                            <TouchableOpacity
+                              style={[
+                                styles.simpleSelectButton,
+                                isSelected && styles.selectedButton,
+                                isInGroup && styles.alreadyInGroupButton
+                              ]}
+                              onPress={() => {
+                                if (!isInGroup) {
+                                  console.log("Toggling child:", child.name, "with ID:", child.id);
+                                  if (isSelected) {
+                                    // Remove from selection
+                                    setSelectedChildIds(prev => prev.filter(id => id !== child.id));
+                                  } else {
+                                    // Add to selection
+                                    setSelectedChildIds(prev => [...prev, child.id]);
+                                  }
+                                }
+                              }}
+                              disabled={isInGroup}
+                            >
+                              <Text style={[
+                                styles.simpleSelectText,
+                                isSelected && styles.selectedButtonText,
+                                isInGroup && styles.alreadyInGroupText
+                              ]}>
+                                {isInGroup 
+                                  ? "✓ Already in Group" 
+                                  : isSelected 
+                                    ? "✓ Selected"
+                                    : "Select"
+                                }
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })}
                     </View>
                   </>
                 )}
               </>
             )}
           </ScrollView>
-          
+
           <View style={styles.footer}>
             <TouchableOpacity
               style={styles.cancelButton}
@@ -180,15 +302,17 @@ export default function AddChildToGroupModal({
             <TouchableOpacity
               style={[
                 styles.addButton,
-                !selectedChildId && styles.addButtonDisabled
+                selectedChildIds.length === 0 && styles.addButtonDisabled,
               ]}
               onPress={handleAddChildToGroup}
-              disabled={!selectedChildId || updating}
+              disabled={selectedChildIds.length === 0 || updating}
             >
               {updating ? (
                 <LoadingSpinner message="Adding..." />
               ) : (
-                <Text style={styles.addButtonText}>Add to Group</Text>
+                <Text style={styles.addButtonText}>
+                  Add {selectedChildIds.length > 0 ? `(${selectedChildIds.length})` : ''} to Group
+                </Text>
               )}
             </TouchableOpacity>
           </View>
@@ -201,38 +325,38 @@ export default function AddChildToGroupModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 20,
     margin: 20,
-    maxHeight: '80%',
-    width: '90%',
-    flexDirection: 'column',
+    maxHeight: "80%",
+    width: "90%",
+    flexDirection: "column",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   closeButton: {
     padding: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   childrenList: {
     flex: 1,
@@ -241,47 +365,47 @@ const styles = StyleSheet.create({
     minHeight: 100,
   },
   childItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
     borderRadius: 8,
     marginBottom: 8,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   selectedChildItem: {
-    borderColor: '#4f8cff',
-    backgroundColor: '#e0e7ff',
+    borderColor: "#4f8cff",
+    backgroundColor: "#e0e7ff",
   },
   childInfo: {
     flex: 1,
   },
   childName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
     marginBottom: 4,
   },
   childDetails: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   emptyState: {
-    alignItems: 'center',
+    alignItems: "center",
     padding: 40,
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#999',
-    textAlign: 'center',
+    color: "#999",
+    textAlign: "center",
     marginTop: 12,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 12,
-    marginTop: 'auto',
+    marginTop: "auto",
     paddingTop: 10,
   },
   cancelButton: {
@@ -290,59 +414,84 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
-    alignItems: 'center',
+    borderColor: "#ddd",
+    alignItems: "center",
   },
   cancelButtonText: {
     fontSize: 16,
-    color: '#666',
-    fontWeight: '600',
+    color: "#666",
+    fontWeight: "600",
   },
   addButton: {
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#4f8cff',
-    alignItems: 'center',
+    backgroundColor: "#4f8cff",
+    alignItems: "center",
   },
   addButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: "#ccc",
   },
   addButtonText: {
     fontSize: 16,
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
   },
   debugText: {
     fontSize: 14,
-    color: '#555',
+    color: "#555",
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
   simpleChildItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     borderRadius: 8,
     marginBottom: 8,
   },
   simpleChildText: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   simpleSelectButton: {
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: "#e0e0e0",
     borderRadius: 6,
   },
   simpleSelectText: {
     fontSize: 14,
-    color: '#4f8cff',
-    fontWeight: '600',
+    color: "#4f8cff",
+    fontWeight: "600",
   },
-}); 
+  selectedButton: {
+    backgroundColor: "#4f8cff",
+  },
+  selectedButtonText: {
+    color: "#fff",
+  },
+  alreadyInGroupButton: {
+    backgroundColor: "#e0e0e0",
+  },
+  alreadyInGroupText: {
+    color: "#999",
+  },
+  selectAllButton: {
+    backgroundColor: "#f0f0f0",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    marginBottom: 12,
+    alignItems: "center",
+  },
+  selectAllButtonText: {
+    fontSize: 14,
+    color: "#4f8cff",
+    fontWeight: "600",
+  },
+});

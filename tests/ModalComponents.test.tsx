@@ -48,6 +48,23 @@ jest.mock('../app/components/media/MultiMediaPicker', () => {
   };
 });
 
+jest.mock('../app/components/child/ChildProfileCard', () => ({ 
+  __esModule: true, 
+  default: ({ name }: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const React = require('react');
+    return React.createElement('Text', { testID: `child-profile-card-${name}` }, `ChildProfileCard-${name}`);
+  }
+}));
+jest.mock('../app/components/child/AddChildModal', () => ({
+  __esModule: true,
+  default: ({ visible, onClose }: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const React = require('react');
+    return visible ? React.createElement('Text', { testID: 'add-child-modal' }, 'AddChildModal') : null;
+  }
+}));
+
 describe('AskChildModal', () => {
   it('renders correctly with system question type', () => {
     const onSave = jest.fn();

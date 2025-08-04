@@ -57,7 +57,15 @@ export const leaveFamilyGroup = createAsyncThunk(
 export const addChildToFamilyGroup = createAsyncThunk(
   'family/addChildToFamilyGroup',
   async ({ groupId, childId }: { groupId: string; childId: string }) => {
+    console.log('Redux: Dispatching addChildToFamilyGroup', { groupId, childId });
+    
+    // Validate inputs
+    if (!groupId || !childId) {
+      throw new Error('Group ID and Child ID are required');
+    }
+    
     await familyService.addChildToFamilyGroup(groupId, childId);
+    console.log('Redux: Successfully added child to family group');
     return { groupId, childId };
   }
 );
@@ -99,10 +107,37 @@ export const acceptInvitation = createAsyncThunk(
   }
 );
 
+export const getMyPendingInvitations = createAsyncThunk(
+  'family/getMyPendingInvitations',
+  async () => {
+    return await familyService.getMyPendingInvitations();
+  }
+);
+
+export const declineInvitation = createAsyncThunk(
+  'family/declineInvitation',
+  async (invitationId: string) => {
+    return await familyService.declineInvitation(invitationId);
+  }
+);
+
 // Slice
 interface FamilyState {
   familyGroups: FamilyGroup[];
   currentGroup: FamilyGroup | null;
+  myInvitations: {
+    _id: string;
+    groupId: string;
+    groupName: string;
+    groupAvatar?: string;
+    email: string;
+    role: string;
+    status: string;
+    expiresAt: string;
+    invitedBy: string;
+    isExpired: boolean;
+    token?: string;
+  }[];
   loading: boolean;
   error: string | null;
 }
@@ -110,6 +145,7 @@ interface FamilyState {
 const initialState: FamilyState = {
   familyGroups: [],
   currentGroup: null,
+  myInvitations: [],
   loading: false,
   error: null,
 };
@@ -240,15 +276,18 @@ const familySlice = createSlice({
       })
       // Add child to family group
       .addCase(addChildToFamilyGroup.pending, (state) => {
-        state.loading = true;
+        // Don't set global loading for this operation to avoid UI flicker
         state.error = null;
       })
       .addCase(addChildToFamilyGroup.fulfilled, (state, action) => {
-        state.loading = false;
-        // Optionally refresh the current group data
+        state.error = null;
+        // Trigger a refresh of the current group data
         if (state.currentGroup?.id === action.payload.groupId) {
-          // You might want to refresh the group data here
+          // We'll handle the refresh in the component
+          console.log('Child added successfully, group needs refresh');
         }
+        // Also refresh the family groups list to reflect changes
+        // The component will handle the actual refresh
       })
       .addCase(addChildToFamilyGroup.rejected, (state, action) => {
         state.loading = false;
@@ -307,6 +346,35 @@ const familySlice = createSlice({
       .addCase(acceptInvitation.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to accept invitation';
+      })
+      // Get my pending invitations
+      .addCase(getMyPendingInvitations.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getMyPendingInvitations.fulfilled, (state, action) => {
+        state.myInvitations = action.payload.invitations;
+        state.loading = false;
+      })
+      .addCase(getMyPendingInvitations.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to fetch my invitations';
+      })
+      
+      // Decline invitation
+      .addCase(declineInvitation.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(declineInvitation.fulfilled, (state, action) => {
+        state.loading = false;
+        // Remove declined invitation from myInvitations
+        // Note: We can't filter by status since we don't have the invitation ID in the response
+        // The invitation will be removed on next fetch
+      })
+      .addCase(declineInvitation.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to decline invitation';
       });
   },
 });
