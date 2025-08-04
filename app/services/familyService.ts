@@ -149,15 +149,51 @@ export async function getFamilyGroup(groupId: string): Promise<FamilyGroup> {
 }
 
 export async function createFamilyGroup(data: CreateFamilyGroupData): Promise<FamilyGroup> {
-  const response = await apiService.post('/family-groups', data);
-  const group = response.data || response;
-  return transformFamilyGroupData(group);
+  try {
+    const response = await apiService.post('/family-groups', data);
+    const group = response.data || response;
+    return transformFamilyGroupData(group);
+  } catch (error: any) {
+    conditionalLog.family('Error creating family group:', error);
+    if (error.response) {
+      if (error.response.status === 400) {
+        throw new Error(error.response.data?.message || 'Invalid family group data');
+      } else if (error.response.status === 409) {
+        throw new Error('You already have a family group');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to create family group');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to create family group');
+    } else {
+      throw new Error('Failed to create family group: ' + (error.message || 'Unknown error'));
+    }
+  }
 }
 
 export async function updateFamilyGroup(groupId: string, data: UpdateFamilyGroupData): Promise<FamilyGroup> {
-  const response = await apiService.patch(`/family-groups/${groupId}`, data);
-  const group = response.data || response;
-  return transformFamilyGroupData(group);
+  try {
+    const response = await apiService.patch(`/family-groups/${groupId}`, data);
+    const group = response.data || response;
+    return transformFamilyGroupData(group);
+  } catch (error: any) {
+    conditionalLog.family('Error updating family group:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Family group not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to update this family group');
+      } else if (error.response.status === 400) {
+        throw new Error(error.response.data?.message || 'Invalid update data');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to update family group');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to update family group');
+    } else {
+      throw new Error('Failed to update family group: ' + (error.message || 'Unknown error'));
+    }
+  }
 }
 
 export async function updateFamilyGroupDetails(groupId: string, data: {
@@ -165,32 +201,125 @@ export async function updateFamilyGroupDetails(groupId: string, data: {
   description?: string;
   avatar?: string;
 }): Promise<FamilyGroup> {
-  const response = await apiService.patch(`/family-groups/${groupId}`, data);
-  const group = response.data || response;
-  return transformFamilyGroupData(group);
+  try {
+    const response = await apiService.patch(`/family-groups/${groupId}`, data);
+    const group = response.data || response;
+    return transformFamilyGroupData(group);
+  } catch (error: any) {
+    conditionalLog.family('Error updating family group details:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Family group not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to update this family group');
+      } else if (error.response.status === 400) {
+        throw new Error(error.response.data?.message || 'Invalid update data');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to update family group details');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to update family group details');
+    } else {
+      throw new Error('Failed to update family group details: ' + (error.message || 'Unknown error'));
+    }
+  }
 }
 
 export async function deleteFamilyGroup(groupId: string): Promise<void> {
-  await apiService.delete(`/family-groups/${groupId}`);
+  try {
+    await apiService.delete(`/family-groups/${groupId}`);
+  } catch (error: any) {
+    conditionalLog.family('Error deleting family group:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Family group not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to delete this family group');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to delete family group');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to delete family group');
+    } else {
+      throw new Error('Failed to delete family group: ' + (error.message || 'Unknown error'));
+    }
+  }
 }
 
 export async function joinFamilyGroup(groupId: string, inviteCode?: string): Promise<FamilyGroup> {
-  const response = await apiService.post(`/family-groups/${groupId}/join`, { inviteCode });
-  const group = response.data || response;
-  return transformFamilyGroupData(group);
+  try {
+    const response = await apiService.post(`/family-groups/${groupId}/join`, { inviteCode });
+    const group = response.data || response;
+    return transformFamilyGroupData(group);
+  } catch (error: any) {
+    conditionalLog.family('Error joining family group:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Family group not found');
+      } else if (error.response.status === 400) {
+        throw new Error(error.response.data?.message || 'Invalid invite code');
+      } else if (error.response.status === 409) {
+        throw new Error('You are already a member of this family group');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to join family group');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to join family group');
+    } else {
+      throw new Error('Failed to join family group: ' + (error.message || 'Unknown error'));
+    }
+  }
 }
 
 export async function leaveFamilyGroup(groupId: string): Promise<void> {
-  await apiService.post(`/family-groups/${groupId}/leave`);
+  try {
+    await apiService.post(`/family-groups/${groupId}/leave`);
+  } catch (error: any) {
+    conditionalLog.family('Error leaving family group:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Family group not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You cannot leave this family group');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to leave family group');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to leave family group');
+    } else {
+      throw new Error('Failed to leave family group: ' + (error.message || 'Unknown error'));
+    }
+  }
 }
 
 export async function inviteToFamilyGroup(groupId: string, email: string, role: 'parent' | 'admin' = 'parent'): Promise<{ token: string }> {
-  const response = await apiService.post('/family-groups/invite', { 
-    email, 
-    groupId, 
-    role 
-  });
-  return response.data || response;
+  try {
+    const response = await apiService.post('/family-groups/invite', { 
+      email, 
+      groupId, 
+      role 
+    });
+    return response.data || response;
+  } catch (error: any) {
+    conditionalLog.family('Error inviting to family group:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Family group not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to invite members');
+      } else if (error.response.status === 400) {
+        throw new Error(error.response.data?.message || 'Invalid email address');
+      } else if (error.response.status === 409) {
+        throw new Error('User is already a member of this family group');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to send invitation');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to send invitation');
+    } else {
+      throw new Error('Failed to send invitation: ' + (error.message || 'Unknown error'));
+    }
+  }
 }
 
 export async function joinGroupFromInvitation(token: string, userData: {
@@ -232,16 +361,69 @@ export async function getPendingInvitations(groupId: string): Promise<{
     expiresAt: string;
   }[];
 }> {
-  const response = await apiService.get(`/family-groups/${groupId}/pending-invitations`);
-  return response.data || response;
+  try {
+    const response = await apiService.get(`/family-groups/${groupId}/pending-invitations`);
+    return response.data || response;
+  } catch (error: any) {
+    conditionalLog.family('Error getting pending invitations:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Family group not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to view invitations');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to get pending invitations');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to get pending invitations');
+    } else {
+      throw new Error('Failed to get pending invitations: ' + (error.message || 'Unknown error'));
+    }
+  }
 }
 
 export async function cancelInvitation(groupId: string, invitationId: string): Promise<void> {
-  await apiService.delete(`/family-groups/${groupId}/invitations/${invitationId}`);
+  try {
+    await apiService.delete(`/family-groups/${groupId}/invitations/${invitationId}`);
+  } catch (error: any) {
+    conditionalLog.family('Error canceling invitation:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Invitation not found or already cancelled');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to cancel this invitation');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to cancel invitation');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to cancel invitation');
+    } else {
+      throw new Error('Failed to cancel invitation: ' + (error.message || 'Unknown error'));
+    }
+  }
 }
 
 export async function resendInvitation(groupId: string, invitationId: string): Promise<void> {
-  await apiService.post(`/family-groups/${groupId}/invitations/${invitationId}/resend`);
+  try {
+    await apiService.post(`/family-groups/${groupId}/invitations/${invitationId}/resend`);
+  } catch (error: any) {
+    conditionalLog.family('Error resending invitation:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Invitation not found or already expired');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to resend this invitation');
+      } else if (error.response.status === 429) {
+        throw new Error('Too many resend attempts. Please wait before trying again');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to resend invitation');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to resend invitation');
+    } else {
+      throw new Error('Failed to resend invitation: ' + (error.message || 'Unknown error'));
+    }
+  }
 }
 
 export async function getInvitationStats(groupId: string): Promise<{
@@ -252,21 +434,91 @@ export async function getInvitationStats(groupId: string): Promise<{
     expiredInvitations: number;
   };
 }> {
-  const response = await apiService.get(`/family-groups/${groupId}/invitation-stats`);
-  return response.data || response;
+  try {
+    const response = await apiService.get(`/family-groups/${groupId}/invitation-stats`);
+    return response.data || response;
+  } catch (error: any) {
+    conditionalLog.family('Error getting invitation stats:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Family group not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to view invitation stats');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to get invitation stats');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to get invitation stats');
+    } else {
+      throw new Error('Failed to get invitation stats: ' + (error.message || 'Unknown error'));
+    }
+  }
 }
 
 export async function addChildToFamilyGroup(groupId: string, childId: string): Promise<void> {
-  await apiService.post(`/family-groups/${groupId}/children`, { childId });
+  try {
+    await apiService.post(`/family-groups/${groupId}/children`, { childId });
+  } catch (error: any) {
+    conditionalLog.family('Error adding child to family group:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Family group or child not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to add children to this group');
+      } else if (error.response.status === 409) {
+        throw new Error('Child is already a member of this family group');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to add child to family group');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to add child to family group');
+    } else {
+      throw new Error('Failed to add child to family group: ' + (error.message || 'Unknown error'));
+    }
+  }
 }
 
 export async function removeChildFromFamilyGroup(groupId: string, childId: string): Promise<void> {
-  await apiService.delete(`/family-groups/${groupId}/children/${childId}`);
+  try {
+    await apiService.delete(`/family-groups/${groupId}/children/${childId}`);
+  } catch (error: any) {
+    conditionalLog.family('Error removing child from family group:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Family group or child not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to remove children from this group');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to remove child from family group');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to remove child from family group');
+    } else {
+      throw new Error('Failed to remove child from family group: ' + (error.message || 'Unknown error'));
+    }
+  }
 }
 
 export async function getFamilyGroupChildren(groupId: string): Promise<any[]> {
-  const response = await apiService.get(`/family-groups/${groupId}/children`);
-  return response.data || response;
+  try {
+    const response = await apiService.get(`/family-groups/${groupId}/children`);
+    return response.data || response;
+  } catch (error: any) {
+    conditionalLog.family('Error getting family group children:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Family group not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to view children in this group');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to get family group children');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to get family group children');
+    } else {
+      throw new Error('Failed to get family group children: ' + (error.message || 'Unknown error'));
+    }
+  }
 }
 
 export async function uploadFamilyGroupAvatar(groupId: string, fileUri: string): Promise<{ avatar: string }> {
