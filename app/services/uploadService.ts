@@ -12,8 +12,11 @@ export async function uploadFile(fileUri: string, type: 'avatar' | 'image' | 'vi
     
     // Get file info from URI
     const filename = fileUri.split('/').pop() || 'image.jpg';
-    const match = /\.(\w+)$/.exec(filename);
-    const mimeType = match ? `image/${match[1]}` : 'image/jpeg';
+    
+    // Use a whitelist of allowed file extensions for better security
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    const extension = filename.split('.').pop()?.toLowerCase();
+    const mimeType = extension && allowedExtensions.includes(extension) ? `image/${extension}` : 'image/jpeg';
     
     // Append file to form data
     formData.append('file', {
