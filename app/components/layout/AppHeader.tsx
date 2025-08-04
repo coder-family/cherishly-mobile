@@ -2,11 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
+  Alert,
   StyleSheet,
   TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
+import { useAppDispatch } from '../../redux/hooks';
+import { logoutUser } from '../../redux/slices/authSlice';
 
 interface AppHeaderProps {
   title?: string;
@@ -20,6 +23,7 @@ interface AppHeaderProps {
   showBackButton?: boolean;
   showForwardButton?: boolean;
   showTitle?: boolean;
+  showLogoutButton?: boolean;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({ 
@@ -33,9 +37,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   canGoForward = false,
   showBackButton = true,
   showForwardButton = false,
-  showTitle = true
+  showTitle = true,
+  showLogoutButton = false
 }) => {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [searchText, setSearchText] = useState('');
 
   const handleSearchChange = (text: string) => {
@@ -63,6 +69,31 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     }
   }, [onBack, canGoBack, router]);
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await dispatch(logoutUser());
+              router.replace('/login');
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.headerContainer}>
@@ -118,6 +149,23 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Logout Button */}
+          {showLogoutButton && (
+            <TouchableOpacity 
+              onPress={handleLogout}
+              style={styles.logoutButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+              testID="logout-button"
+            >
+              <Ionicons 
+                name="log-out-outline" 
+                size={24} 
+                color="#dc2626" 
+              />
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
@@ -149,6 +197,16 @@ const styles = StyleSheet.create({
   },
   navButtonDisabled: {
     opacity: 0.3,
+  },
+  logoutButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
   },
   title: {
     fontSize: 18,

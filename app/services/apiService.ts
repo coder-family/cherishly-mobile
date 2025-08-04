@@ -43,7 +43,9 @@ apiService.interceptors.request.use(
         conditionalLog.auth('Auth token added to request:', { 
           hasToken: !!token, 
           tokenLength: token ? token.length : 0,
-          url: config.url 
+          url: config.url,
+          method: config.method,
+          headers: Object.keys(config.headers)
         });
       } else {
         conditionalLog.auth('No auth token available for request:', { url: config.url });
