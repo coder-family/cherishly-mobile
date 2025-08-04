@@ -207,10 +207,15 @@ export async function joinGroupFromInvitation(token: string, userData: {
 }
 
 export async function acceptInvitation(token: string): Promise<{ groupId: string; role: string }> {
-  const response = await apiService.post('/family-groups/accept-invitation', {
-    token
-  });
-  return response.data || response;
+  try {
+    const response = await apiService.post('/family-groups/accept-invitation', {
+      token
+    });
+    return response.data || response;
+  } catch (error: any) {
+    console.error('Error accepting invitation:', error);
+    throw new Error(error.message || 'Failed to accept invitation');
+  }
 }
 
 export async function getPendingInvitations(groupId: string): Promise<{
