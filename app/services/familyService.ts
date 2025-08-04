@@ -199,11 +199,16 @@ export async function joinGroupFromInvitation(token: string, userData: {
   password: string;
   dateOfBirth: string;
 }): Promise<{ groupId: string; role: string }> {
-  const response = await apiService.post('/family-groups/join-group-from-invitation', {
-    token,
-    ...userData
-  });
-  return response.data || response;
+  try {
+    const response = await apiService.post('/family-groups/join-group-from-invitation', {
+      token,
+      ...userData
+    });
+    return response.data || response;
+  } catch (error: any) {
+    console.error('Error joining group from invitation:', error);
+    throw new Error(error.message || 'Failed to join group from invitation');
+  }
 }
 
 export async function acceptInvitation(token: string): Promise<{ groupId: string; role: string }> {
