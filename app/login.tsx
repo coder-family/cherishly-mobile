@@ -33,10 +33,12 @@ export default function Login() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMessage, setForgotMessage] = useState<string | null>(null);
   const [forgotError, setForgotError] = useState<string | null>(null);
+  const [passwordCleared, setPasswordCleared] = useState(false);
 
   const {
     control,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<LoginForm>({
     resolver: yupResolver(loginSchema),
@@ -49,30 +51,40 @@ export default function Login() {
   // Clear error when component mounts
   useEffect(() => {
     dispatch(clearError());
+    setPasswordCleared(false);
   }, [dispatch]);
 
   // Navigate to main app if authenticated
   useEffect(() => {
-    if (isAuthenticated && hasAttemptedLogin && !error) {
+    if (isAuthenticated && hasAttemptedLogin && !error && !loading) {
       setShowSuccessMessage(true);
+      setPasswordCleared(false); // Reset password cleared state
       setTimeout(() => {
         router.replace("/tabs/home");
         setHasAttemptedLogin(false); // Reset after navigation
       }, 1500);
     }
-  }, [isAuthenticated, hasAttemptedLogin, error, router]);
+  }, [isAuthenticated, hasAttemptedLogin, error, loading, router]);
 
   // Reset hasAttemptedLogin and showSuccessMessage on error
   useEffect(() => {
     if (error) {
       setHasAttemptedLogin(false);
       setShowSuccessMessage(false); // Hide success on error
+      // Clear password field on error to force user to re-enter
+      // Note: We don't clear email to allow user to fix password
+      reset({ 
+        email: control._formValues?.email || "", // Keep email
+        password: "" // Clear password
+      });
+      setPasswordCleared(true);
     }
-  }, [error]);
+  }, [error, reset, control._formValues?.email]);
 
   const onSubmit = (data: LoginForm) => {
     setShowSuccessMessage(false); // Always clear previous success
     setHasAttemptedLogin(true);
+    setPasswordCleared(false); // Reset password cleared state
     dispatch(loginUser({
       email: data.email,
       password: data.password,
@@ -133,6 +145,16 @@ export default function Login() {
             </View>
           )}
 
+          {/* Password cleared message */}
+          {passwordCleared && (
+            <View style={styles.messageContainer}>
+              <Ionicons name="information-circle" size={24} color="#4CAF50" />
+              <Text style={styles.successText} accessibilityRole="alert">
+                Please re-enter your password
+              </Text>
+            </View>
+          )}
+
           <View style={styles.inputGroup}>
             <Ionicons
               name="mail-outline"
@@ -156,7 +178,14 @@ export default function Login() {
                   autoCapitalize="none"
                   autoComplete="email"
                   value={value}
-                  onChangeText={onChange}
+                  onChangeText={(text) => {
+                    onChange(text);
+                    // Clear error when user starts typing new email
+                    if (error && text.length > 0) {
+                      dispatch(clearError());
+                      setPasswordCleared(false);
+                    }
+                  }}
                   testID="login-email-input"
                 />
               )}
@@ -183,13 +212,28 @@ export default function Login() {
               }) => (
                 <View style={styles.passwordContainer}>
                   <TextInput
-                    style={[styles.input, { paddingLeft: 36, paddingRight: 50 }]}
+                    style={[
+                      styles.input, 
+                      { paddingLeft: 36, paddingRight: 50 },
+                      error && { borderColor: "#ff6b6b", borderWidth: 2 }
+                    ]}
                     placeholder="Password"
                     placeholderTextColor="#fff"
                     secureTextEntry={!showPassword}
                     autoComplete="password"
                     value={value}
-                    onChangeText={onChange}
+                    onChangeText={(text) => {
+                      onChange(text);
+                      if (passwordCleared && text.length > 0) {
+                        setPasswordCleared(false);
+                      }
+                      // Clear error when user starts typing new password
+                      if (error && text.length > 0) {
+                        dispatch(clearError());
+                        setPasswordCleared(false);
+                      }
+                    }}
+                    testID="login-password-input"
                   />
                   <TouchableOpacity
                     style={styles.eyeIcon}
@@ -215,9 +259,12 @@ export default function Login() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[
+              styles.button, 
+              (loading || (error && passwordCleared)) && styles.buttonDisabled
+            ]}
             onPress={handleSubmit(onSubmit)}
-            disabled={loading}
+            disabled={loading || Boolean(error && passwordCleared)}
           >
             {loading ? (
               <View style={styles.loadingContainer}>

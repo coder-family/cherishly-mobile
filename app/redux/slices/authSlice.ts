@@ -78,10 +78,18 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
-        state.isAuthenticated = true;
-        state.user = action.payload;
-        state.loading = false;
-        state.error = null;
+        // Only set authenticated if we have valid user data
+        if (action.payload && action.payload.id) {
+          state.isAuthenticated = true;
+          state.user = action.payload;
+          state.loading = false;
+          state.error = null;
+        } else {
+          state.isAuthenticated = false;
+          state.user = null;
+          state.loading = false;
+          state.error = 'Invalid user data received';
+        }
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isAuthenticated = false;
