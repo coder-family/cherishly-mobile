@@ -100,14 +100,41 @@ describe('Login Component', () => {
   it('has accessible form elements', () => {
     const store = createTestStore();
     
-    const { getByTestId, getByPlaceholderText } = render(
+    const { getByTestId } = render(
       <Provider store={store}>
         <Login />
       </Provider>
     );
 
-    // Test that form elements are accessible
     expect(getByTestId('login-email-input')).toBeTruthy();
-    expect(getByPlaceholderText('Password')).toBeTruthy();
+    expect(getByTestId('login-password-input')).toBeTruthy();
+  });
+
+  it('shows error message when login fails', () => {
+    const errorMessage = 'Invalid email or password';
+    const store = createTestStore({ error: errorMessage });
+    
+    const { getByText } = render(
+      <Provider store={store}>
+        <Login />
+      </Provider>
+    );
+
+    // When there's an error, the password is cleared and a re-enter message is shown
+    expect(getByText('Please re-enter your password')).toBeTruthy();
+  });
+
+  it('shows password re-enter message when password is cleared after error', () => {
+    const errorMessage = 'Invalid email or password';
+    const store = createTestStore({ error: errorMessage });
+    
+    const { getByText } = render(
+      <Provider store={store}>
+        <Login />
+      </Provider>
+    );
+
+    // After error, password should be cleared and message should appear
+    expect(getByText('Please re-enter your password')).toBeTruthy();
   });
 }); 

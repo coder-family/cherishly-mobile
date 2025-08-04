@@ -161,6 +161,17 @@ class AuthService {
         );
       }
 
+      // Additional validation for user data
+      if (!user.id || !user.email) {
+        conditionalLog.authError(
+          "Invalid user data in login response:",
+          sanitizeForLogging(user)
+        );
+        throw new Error(
+          "Invalid user data received from server"
+        );
+      }
+
       // Validate token values
       if (typeof accessToken !== "string" || accessToken.trim() === "") {
         throw new Error("Invalid access token received from server");
