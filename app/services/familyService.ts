@@ -1,8 +1,11 @@
 import { conditionalLog } from '../utils/logUtils';
-import apiService from './apiService';
+import apiService, { API_BASE_URL_EXPORT } from './apiService';
+import authService from './authService';
 
 // Utility function to transform API response to FamilyGroup interface
 function transformFamilyGroupData(group: any): FamilyGroup {
+  console.log('Transforming family group data:', group);
+  
   // Handle nested response structure from getFamilyGroupDetails
   const groupData = group.group || group;
   const members = group.members || groupData.members || [];
@@ -10,7 +13,7 @@ function transformFamilyGroupData(group: any): FamilyGroup {
   // Use createdBy as ownerId since that's what's stored in MongoDB
   const ownerId = groupData.createdBy || group.createdBy || group.ownerId;
 
-  return {
+  const transformed = {
     id: groupData._id || group._id || group.id,
     name: groupData.name || group.name,
     description: groupData.description || group.description,
@@ -29,9 +32,13 @@ function transformFamilyGroupData(group: any): FamilyGroup {
         avatarUrl: member.userId.avatar || member.userId.avatarUrl,
       } : undefined,
     })),
+    children: groupData.children || group.children, // Add children to transformed object
     createdAt: groupData.createdAt || group.createdAt,
     updatedAt: groupData.updatedAt || group.updatedAt,
   };
+  
+  console.log('Transformed result:', transformed);
+  return transformed;
 }
 
 // Type definitions
@@ -42,6 +49,7 @@ export interface FamilyGroup {
   avatarUrl?: string;
   ownerId: string;
   members: FamilyMember[];
+  children?: any[]; // Add children field
   createdAt: string;
   updatedAt: string;
 }
@@ -127,10 +135,15 @@ export async function getPrimaryFamilyGroup(): Promise<FamilyGroup | null> {
 
 export async function getFamilyGroup(groupId: string): Promise<FamilyGroup> {
   try {
+    console.log('Fetching family group details for ID:', groupId);
     const response = await apiService.get(`/family-groups/${groupId}/details`);
     const group = response.data || response;
-    return group;
+    console.log('Raw API response:', group);
+    const transformed = transformFamilyGroupData(group);
+    console.log('Transformed family group data:', transformed);
+    return transformed;
   } catch (error) {
+    console.error('Error fetching family group:', error);
     throw error;
   }
 }
@@ -142,6 +155,16 @@ export async function createFamilyGroup(data: CreateFamilyGroupData): Promise<Fa
 }
 
 export async function updateFamilyGroup(groupId: string, data: UpdateFamilyGroupData): Promise<FamilyGroup> {
+  const response = await apiService.patch(`/family-groups/${groupId}`, data);
+  const group = response.data || response;
+  return transformFamilyGroupData(group);
+}
+
+export async function updateFamilyGroupDetails(groupId: string, data: {
+  name: string;
+  description?: string;
+  avatar?: string;
+}): Promise<FamilyGroup> {
   const response = await apiService.patch(`/family-groups/${groupId}`, data);
   const group = response.data || response;
   return transformFamilyGroupData(group);
@@ -161,8 +184,164 @@ export async function leaveFamilyGroup(groupId: string): Promise<void> {
   await apiService.post(`/family-groups/${groupId}/leave`);
 }
 
-export async function inviteToFamilyGroup(groupId: string, email: string): Promise<void> {
-  await apiService.post(`/family-groups/${groupId}/invite`, { email });
+export async function inviteToFamilyGroup(groupId: string, email: string, role: 'parent' | 'admin' = 'parent'): Promise<{ token: string }> {
+  const response = await apiService.post('/family-groups/invite', { 
+    email, 
+    groupId, 
+    role 
+  });
+  return response.data || response;
+}
+
+export async function joinGroupFromInvitation(token: string, userData: {
+  firstName: string;
+  lastName: string;
+  password: string;
+  dateOfBirth: string;
+}): Promise<{ groupId: string; role: string }> {
+  const response = await apiService.post('/family-groups/join-group-from-invitation', {
+    token,
+    ...userData
+  });
+  return response.data || response;
+}
+
+export async function acceptInvitation(token: string): Promise<{ groupId: string; role: string }> {
+  const response = await apiService.post('/family-groups/accept-invitation', {
+    token
+  });
+  return response.data || response;
+}
+
+export async function getPendingInvitations(groupId: string): Promise<{
+  invitations: {
+    _id: string;
+    email: string;
+    role: string;
+    createdAt: string;
+    expiresAt: string;
+  }[];
+}> {
+  const response = await apiService.get(`/family-groups/${groupId}/pending-invitations`);
+  return response.data || response;
+}
+
+export async function cancelInvitation(groupId: string, invitationId: string): Promise<void> {
+  await apiService.delete(`/family-groups/${groupId}/invitations/${invitationId}`);
+}
+
+export async function resendInvitation(groupId: string, invitationId: string): Promise<void> {
+  await apiService.post(`/family-groups/${groupId}/invitations/${invitationId}/resend`);
+}
+
+export async function getInvitationStats(groupId: string): Promise<{
+  stats: {
+    totalInvitations: number;
+    pendingInvitations: number;
+    acceptedInvitations: number;
+    expiredInvitations: number;
+  };
+}> {
+  const response = await apiService.get(`/family-groups/${groupId}/invitation-stats`);
+  return response.data || response;
+}
+
+export async function addChildToFamilyGroup(groupId: string, childId: string): Promise<void> {
+  await apiService.post(`/family-groups/${groupId}/children`, { childId });
+}
+
+export async function removeChildFromFamilyGroup(groupId: string, childId: string): Promise<void> {
+  await apiService.delete(`/family-groups/${groupId}/children/${childId}`);
+}
+
+export async function getFamilyGroupChildren(groupId: string): Promise<any[]> {
+  const response = await apiService.get(`/family-groups/${groupId}/children`);
+  return response.data || response;
+}
+
+export async function uploadFamilyGroupAvatar(groupId: string, fileUri: string): Promise<{ avatar: string }> {
+  try {
+    // Create FormData for file upload
+    const formData = new FormData();
+    
+    // Get file name from URI
+    const fileName = fileUri.split('/').pop() || 'avatar.jpg';
+    
+    // Append the file to FormData
+    formData.append('avatar', {
+      uri: fileUri,
+      type: 'image/jpeg', // You might want to detect this dynamically
+      name: fileName,
+    } as any);
+
+    // Use a separate axios instance for file uploads to avoid JSON content-type issues
+    const token = await authService.getAccessToken();
+    
+    // Use the correct base URL
+    const baseURL = API_BASE_URL_EXPORT || "https://growing-together-app.onrender.com/api";
+    const uploadUrl = `${baseURL}/family-groups/${groupId}/avatar`;
+    
+    const response = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to upload group avatar');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Avatar upload error:', error);
+    throw error;
+  }
+}
+
+export async function getFamilyGroupTimeline(groupId: string, page: number = 1, limit: number = 20): Promise<{
+  timeline: any[];
+  children: any[];
+  permissions: {
+    userRole: string;
+    isOwner: boolean;
+    ownedChildren: number;
+    canSeeAllContent: boolean;
+  };
+  pagination: {
+    page: number;
+    limit: number;
+    hasMore: boolean;
+  };
+}> {
+  try {
+    console.log('Fetching timeline posts for family group:', groupId, 'page:', page);
+    const response = await apiService.get(`/family-groups/${groupId}/timeline?page=${page}&limit=${limit}`);
+    const data = response.data || response;
+    console.log('Timeline posts response:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching family group timeline:', error);
+    return {
+      timeline: [],
+      children: [],
+      permissions: {
+        userRole: 'member',
+        isOwner: false,
+        ownedChildren: 0,
+        canSeeAllContent: false,
+      },
+      pagination: {
+        page: 1,
+        limit: 20,
+        hasMore: false,
+      },
+    };
+  }
 }
 
 // Helper function to get user info by ID

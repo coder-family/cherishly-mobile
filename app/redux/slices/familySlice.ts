@@ -54,6 +54,51 @@ export const leaveFamilyGroup = createAsyncThunk(
   }
 );
 
+export const addChildToFamilyGroup = createAsyncThunk(
+  'family/addChildToFamilyGroup',
+  async ({ groupId, childId }: { groupId: string; childId: string }) => {
+    await familyService.addChildToFamilyGroup(groupId, childId);
+    return { groupId, childId };
+  }
+);
+
+export const removeChildFromFamilyGroup = createAsyncThunk(
+  'family/removeChildFromFamilyGroup',
+  async ({ groupId, childId }: { groupId: string; childId: string }) => {
+    await familyService.removeChildFromFamilyGroup(groupId, childId);
+    return { groupId, childId };
+  }
+);
+
+export const inviteToFamilyGroup = createAsyncThunk(
+  'family/inviteToFamilyGroup',
+  async ({ groupId, email, role }: { groupId: string; email: string; role?: 'parent' | 'admin' }) => {
+    return await familyService.inviteToFamilyGroup(groupId, email, role);
+  }
+);
+
+export const joinGroupFromInvitation = createAsyncThunk(
+  'family/joinGroupFromInvitation',
+  async ({ token, userData }: { 
+    token: string; 
+    userData: {
+      firstName: string;
+      lastName: string;
+      password: string;
+      dateOfBirth: string;
+    }
+  }) => {
+    return await familyService.joinGroupFromInvitation(token, userData);
+  }
+);
+
+export const acceptInvitation = createAsyncThunk(
+  'family/acceptInvitation',
+  async (token: string) => {
+    return await familyService.acceptInvitation(token);
+  }
+);
+
 // Slice
 interface FamilyState {
   familyGroups: FamilyGroup[];
@@ -192,6 +237,76 @@ const familySlice = createSlice({
       .addCase(leaveFamilyGroup.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to leave family group';
+      })
+      // Add child to family group
+      .addCase(addChildToFamilyGroup.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(addChildToFamilyGroup.fulfilled, (state, action) => {
+        state.loading = false;
+        // Optionally refresh the current group data
+        if (state.currentGroup?.id === action.payload.groupId) {
+          // You might want to refresh the group data here
+        }
+      })
+      .addCase(addChildToFamilyGroup.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to add child to family group';
+      })
+      // Remove child from family group
+      .addCase(removeChildFromFamilyGroup.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(removeChildFromFamilyGroup.fulfilled, (state, action) => {
+        state.loading = false;
+        // Optionally refresh the current group data
+        if (state.currentGroup?.id === action.payload.groupId) {
+          // You might want to refresh the group data here
+        }
+      })
+      .addCase(removeChildFromFamilyGroup.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to remove child from family group';
+      })
+      // Invite to family group
+      .addCase(inviteToFamilyGroup.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(inviteToFamilyGroup.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(inviteToFamilyGroup.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to send invitation';
+      })
+      // Join group from invitation
+      .addCase(joinGroupFromInvitation.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(joinGroupFromInvitation.fulfilled, (state, action) => {
+        state.loading = false;
+        // Optionally refresh family groups after joining
+      })
+      .addCase(joinGroupFromInvitation.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to join group from invitation';
+      })
+      // Accept invitation
+      .addCase(acceptInvitation.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(acceptInvitation.fulfilled, (state, action) => {
+        state.loading = false;
+        // Optionally refresh family groups after accepting invitation
+      })
+      .addCase(acceptInvitation.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to accept invitation';
       });
   },
 });

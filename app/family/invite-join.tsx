@@ -1,14 +1,14 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import ErrorText from '../components/form/ErrorText';
 import FormWrapper from '../components/form/FormWrapper';
@@ -16,8 +16,7 @@ import InputField from '../components/form/InputField';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
-import { joinFamilyGroup } from '../redux/slices/familySlice';
-import * as familyService from '../services/familyService';
+import { acceptInvitation } from '../redux/slices/familySlice';
 
 export default function InviteJoinScreen() {
   const router = useRouter();
@@ -27,12 +26,7 @@ export default function InviteJoinScreen() {
   // Form state
   const [activeTab, setActiveTab] = useState<'join' | 'invite'>('join');
   const [joinForm, setJoinForm] = useState({
-    groupId: '',
-    inviteCode: '',
-  });
-  const [inviteForm, setInviteForm] = useState({
-    groupId: '',
-    email: '',
+    token: '',
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,44 +35,25 @@ export default function InviteJoinScreen() {
   const validateJoinForm = () => {
     const errors: Record<string, string> = {};
     
-    if (!joinForm.groupId.trim()) {
-      errors.groupId = 'Family Group ID is required';
+    if (!joinForm.token.trim()) {
+      errors.token = 'Invitation token is required';
+    } else if (!/^[a-fA-F0-9]{32}$/.test(joinForm.token.trim())) {
+      errors.token = 'Invalid invitation token format';
     }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  // Validation for invite form
-  const validateInviteForm = () => {
-    const errors: Record<string, string> = {};
-    
-    if (!inviteForm.groupId.trim()) {
-      errors.groupId = 'Family Group ID is required';
-    }
-
-    if (!inviteForm.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(inviteForm.email)) {
-      errors.email = 'Please enter a valid email address';
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  // Handle joining a family group
-  const handleJoinGroup = async () => {
+  // Handle accepting an invitation
+  const handleAcceptInvitation = async () => {
     if (!validateJoinForm()) {
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await dispatch(joinFamilyGroup({
-        groupId: joinForm.groupId.trim(),
-        inviteCode: joinForm.inviteCode.trim() || undefined,
-      })).unwrap();
+      await dispatch(acceptInvitation(joinForm.token.trim())).unwrap();
       
       Alert.alert(
         'Success!',
@@ -91,46 +66,10 @@ export default function InviteJoinScreen() {
         ]
       );
     } catch (err: any) {
-      console.error('Error joining family group:', err);
+      console.error('Error accepting invitation:', err);
       Alert.alert(
         'Error',
-        err.message || 'Failed to join family group. Please check the Group ID and invite code.'
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Handle inviting someone to a family group
-  const handleInviteToGroup = async () => {
-    if (!validateInviteForm()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await familyService.inviteToFamilyGroup(
-        inviteForm.groupId.trim(),
-        inviteForm.email.trim()
-      );
-      
-      Alert.alert(
-        'Invitation Sent!',
-        `An invitation has been sent to ${inviteForm.email}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setInviteForm({ groupId: '', email: '' });
-            }
-          }
-        ]
-      );
-    } catch (err: any) {
-      console.error('Error sending invitation:', err);
-      Alert.alert(
-        'Error',
-        err.message || 'Failed to send invitation. Please try again.'
+        err.message || 'Failed to accept invitation. Please check the token and try again.'
       );
     } finally {
       setIsSubmitting(false);
@@ -140,15 +79,6 @@ export default function InviteJoinScreen() {
   // Handle input changes
   const handleJoinInputChange = (field: string, value: string) => {
     setJoinForm(prev => ({ ...prev, [field]: value }));
-    
-    // Clear field error when user starts typing
-    if (formErrors[field]) {
-      setFormErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  const handleInviteInputChange = (field: string, value: string) => {
-    setInviteForm(prev => ({ ...prev, [field]: value }));
     
     // Clear field error when user starts typing
     if (formErrors[field]) {
@@ -174,9 +104,9 @@ export default function InviteJoinScreen() {
         >
           <FormWrapper>
             <View style={styles.header}>
-              <Text style={styles.title}>Family Groups</Text>
+              <Text style={styles.title}>Join Family Group</Text>
               <Text style={styles.subtitle}>
-                Join an existing family group or invite someone to yours.
+                Accept an invitation to join a family group, or learn how to invite others.
               </Text>
             </View>
 
@@ -187,7 +117,7 @@ export default function InviteJoinScreen() {
                 onPress={() => setActiveTab('join')}
               >
                 <Text style={[styles.tabText, activeTab === 'join' && styles.activeTabText]}>
-                  Join Group
+                  Accept Invitation
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -195,101 +125,123 @@ export default function InviteJoinScreen() {
                 onPress={() => setActiveTab('invite')}
               >
                 <Text style={[styles.tabText, activeTab === 'invite' && styles.activeTabText]}>
-                  Invite Others
+                  How to Invite
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Join Group Form */}
+            {/* Accept Invitation Form */}
             {activeTab === 'join' && (
               <View style={styles.formSection}>
-                <Text style={styles.formTitle}>Join a Family Group</Text>
+                <Text style={styles.formTitle}>Accept Family Group Invitation</Text>
                 <Text style={styles.formDescription}>
-                  Enter the Group ID you received from a family member.
+                  Enter the invitation token you received via email.
                 </Text>
 
                 <View style={styles.inputSection}>
-                  <Text style={styles.sectionLabel}>Group ID *</Text>
+                  <Text style={styles.sectionLabel}>Invitation Token *</Text>
                   <InputField
-                    placeholder="Enter Family Group ID"
-                    value={joinForm.groupId}
-                    onChangeText={(value) => handleJoinInputChange('groupId', value)}
-                    error={formErrors.groupId}
+                    placeholder="Enter 32-character invitation token"
+                    value={joinForm.token}
+                    onChangeText={(value) => handleJoinInputChange('token', value)}
+                    error={formErrors.token}
                     autoCapitalize="none"
                     autoCorrect={false}
                   />
-                  {formErrors.groupId && <ErrorText>{formErrors.groupId}</ErrorText>}
-                </View>
-
-                <View style={styles.inputSection}>
-                  <Text style={styles.sectionLabel}>Invite Code (Optional)</Text>
-                  <InputField
-                    placeholder="Enter invite code if provided"
-                    value={joinForm.inviteCode}
-                    onChangeText={(value) => handleJoinInputChange('inviteCode', value)}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
+                  {formErrors.token && <ErrorText>{formErrors.token}</ErrorText>}
                 </View>
 
                 <View style={styles.buttonSection}>
                   <TouchableOpacity
                     style={[styles.primaryButton, isSubmitting && styles.primaryButtonDisabled]}
-                    onPress={handleJoinGroup}
+                    onPress={handleAcceptInvitation}
                     disabled={isSubmitting}
                   >
                     <Text style={styles.primaryButtonText}>
-                      {isSubmitting ? 'Joining...' : 'Join Group'}
+                      {isSubmitting ? 'Accepting...' : 'Accept Invitation'}
                     </Text>
                   </TouchableOpacity>
                 </View>
               </View>
             )}
 
-            {/* Invite Form */}
+            {/* How to Invite Form */}
             {activeTab === 'invite' && (
               <View style={styles.formSection}>
-                <Text style={styles.formTitle}>Invite Someone</Text>
+                <Text style={styles.formTitle}>How to Invite Members</Text>
                 <Text style={styles.formDescription}>
-                  Send an invitation to join one of your family groups.
+                  To invite someone to your family group, follow these steps:
                 </Text>
 
-                <View style={styles.inputSection}>
-                  <Text style={styles.sectionLabel}>Group ID *</Text>
-                  <InputField
-                    placeholder="Enter your Family Group ID"
-                    value={inviteForm.groupId}
-                    onChangeText={(value) => handleInviteInputChange('groupId', value)}
-                    error={formErrors.groupId}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                  {formErrors.groupId && <ErrorText>{formErrors.groupId}</ErrorText>}
+                <View style={styles.instructionsContainer}>
+                  <View style={styles.instructionStep}>
+                    <View style={styles.stepNumber}>
+                      <Text style={styles.stepNumberText}>1</Text>
+                    </View>
+                    <View style={styles.stepContent}>
+                      <Text style={styles.stepTitle}>Go to your Family Group</Text>
+                      <Text style={styles.stepDescription}>
+                        Navigate to the family group you want to invite someone to.
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.instructionStep}>
+                    <View style={styles.stepNumber}>
+                      <Text style={styles.stepNumberText}>2</Text>
+                    </View>
+                    <View style={styles.stepContent}>
+                      <Text style={styles.stepTitle}>Open the Members tab</Text>
+                      <Text style={styles.stepDescription}>
+                        Tap on the &quot;Members&quot; tab in the group details.
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.instructionStep}>
+                    <View style={styles.stepNumber}>
+                      <Text style={styles.stepNumberText}>3</Text>
+                    </View>
+                    <View style={styles.stepContent}>
+                      <Text style={styles.stepTitle}>Click &quot;Invite&quot; button</Text>
+                      <Text style={styles.stepDescription}>
+                        Tap the &quot;Invite&quot; button to send an invitation.
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.instructionStep}>
+                    <View style={styles.stepNumber}>
+                      <Text style={styles.stepNumberText}>4</Text>
+                    </View>
+                    <View style={styles.stepContent}>
+                      <Text style={styles.stepTitle}>Enter email and role</Text>
+                      <Text style={styles.stepDescription}>
+                        Enter the person&apos;s email and choose their role (Parent or Admin).
+                      </Text>
+                    </View>
+                  </View>
                 </View>
 
-                <View style={styles.inputSection}>
-                  <Text style={styles.sectionLabel}>Email Address *</Text>
-                  <InputField
-                    placeholder="Enter email address"
-                    value={inviteForm.email}
-                    onChangeText={(value) => handleInviteInputChange('email', value)}
-                    error={formErrors.email}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    keyboardType="email-address"
-                  />
-                  {formErrors.email && <ErrorText>{formErrors.email}</ErrorText>}
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoTitle}>💡 Tips:</Text>
+                  <Text style={styles.infoText}>
+                    • You can also generate a QR code for easy sharing
+                  </Text>
+                  <Text style={styles.infoText}>
+                    • Check &quot;Pending&quot; to see invitations that haven&apos;t been accepted
+                  </Text>
+                  <Text style={styles.infoText}>
+                    • Invitations expire after 24 hours
+                  </Text>
                 </View>
 
                 <View style={styles.buttonSection}>
                   <TouchableOpacity
-                    style={[styles.primaryButton, isSubmitting && styles.primaryButtonDisabled]}
-                    onPress={handleInviteToGroup}
-                    disabled={isSubmitting}
+                    style={styles.secondaryButton}
+                    onPress={() => router.push("/tabs/home")}
                   >
-                    <Text style={styles.primaryButtonText}>
-                      {isSubmitting ? 'Sending...' : 'Send Invitation'}
-                    </Text>
+                    <Text style={styles.secondaryButtonText}>Go to Home</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -389,6 +341,7 @@ const styles = StyleSheet.create({
   inputSection: {
     marginBottom: 20,
   },
+
   buttonSection: {
     marginTop: 16,
   },
@@ -420,5 +373,71 @@ const styles = StyleSheet.create({
   },
   errorSection: {
     marginTop: 16,
+  },
+  instructionsContainer: {
+    marginBottom: 20,
+  },
+  instructionStep: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  stepNumber: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#4f8cff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  stepNumberText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  stepContent: {
+    flex: 1,
+  },
+  stepTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  stepDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  infoBox: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 20,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  secondaryButton: {
+    backgroundColor: '#e0e0e0',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

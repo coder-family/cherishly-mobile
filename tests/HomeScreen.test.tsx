@@ -437,7 +437,7 @@ describe('HomeScreen', () => {
       );
 
       expect(screen.getByText('+ Add Group')).toBeTruthy();
-      expect(screen.getByText('Invite & Join')).toBeTruthy();
+      expect(screen.getByText('Join Group')).toBeTruthy();
     });
 
     it('should show create/join button when no family groups exist', () => {
