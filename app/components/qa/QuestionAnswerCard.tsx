@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { useAppDispatch } from '../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { updateResponse } from '../../redux/slices/promptResponseSlice';
 import { Prompt, PromptResponse } from '../../services/promptService';
 import VisibilityToggle from '../ui/VisibilityToggle';
@@ -34,6 +34,47 @@ export default function QuestionAnswerCard({
   isDeleting = false,
 }: QuestionAnswerCardProps) {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const { children } = useAppSelector((state) => state.children);
+  
+  // Check if current user is the owner of the child (not just a member)
+  // Only the owner can see visibility toggle
+  const getChildId = (childId: any) => {
+    if (typeof childId === 'string') return childId;
+    if (childId && typeof childId === 'object' && childId._id) return childId._id;
+    if (childId && typeof childId === 'object' && childId.id) return childId.id;
+    return null;
+  };
+  
+  const responseChildId = getChildId(response?.childId);
+  
+  // Helper function to get parentId from child
+  const getParentId = (parentId: any) => {
+    if (typeof parentId === 'string') return parentId;
+    if (parentId && typeof parentId === 'object' && parentId._id) return parentId._id;
+    if (parentId && typeof parentId === 'object' && parentId.id) return parentId.id;
+    return null;
+  };
+  
+  const isOwner = currentUser && response && responseChildId && 
+    children && children.some(child => {
+      const childId = child.id;
+      const childParentId = getParentId(child.parentId);
+      const currentUserId = currentUser.id;
+      
+      return childId === responseChildId && childParentId === currentUserId;
+    });
+  
+  // Debug: Log owner check for troubleshooting
+  console.log('QuestionAnswerCard - Owner Check:', {
+    currentUserId: currentUser?.id,
+    responseChildId: response?.childId,
+    responseChildIdExtracted: responseChildId,
+    userChildren: children?.map(c => ({ id: c.id, parentId: c.parentId })),
+    isOwner,
+    responseId: response?.id,
+    responseVisibility: response?.visibility
+  });
 
   const handleVisibilityUpdate = async (newVisibility: 'private' | 'public') => {
     if (!response) return;
@@ -63,28 +104,19 @@ export default function QuestionAnswerCard({
           <MaterialIcons
             name="help-outline"
             size={20}
-            color={hasResponse ? '#4CAF50' : '#FF9800'}
+            color="#FF9800"
           />
           <Text style={styles.questionLabel}>
-            {hasResponse ? 'Answered' : 'Question'}
+            Question
           </Text>
-          {hasResponse && (
-            <MaterialIcons name="check-circle" size={16} color="#4CAF50" />
-          )}
         </View>
         
         <Text style={styles.questionText} numberOfLines={3}>
-          {prompt.content || prompt.title || 'Question'}
+          {prompt.content}
         </Text>
-        
-        {prompt.category && (
-          <View style={styles.categoryContainer}>
-            <Text style={styles.categoryText}>{prompt.category}</Text>
-          </View>
-        )}
       </View>
 
-      {/* Answer Section */}
+      {/* Answer Section - Only show if there's a response */}
       {hasResponse && (
         <View style={styles.answerSection}>
           <View style={styles.answerHeader}>
@@ -96,14 +128,14 @@ export default function QuestionAnswerCard({
             {response.content || 'No answer content'}
           </Text>
 
-                      {/* Visibility Controls */}
-            {response && (
-              <VisibilityToggle
-                visibility={response.visibility || 'private'}
-                onUpdate={handleVisibilityUpdate}
-                size="small"
-              />
-            )}
+          {/* Visibility Controls - Only show for owner */}
+          {isOwner && response && (
+            <VisibilityToggle
+              visibility={response.visibility || 'private'}
+              onUpdate={handleVisibilityUpdate}
+              size="small"
+            />
+          )}
 
           {/* Media Preview */}
           {hasAttachments && response?.attachments && (
@@ -127,7 +159,7 @@ export default function QuestionAnswerCard({
       )}
 
       {/* Action Buttons - Only show for answered questions */}
-      {showAddButton && hasResponse && (
+      {showAddButton && hasResponse && isOwner && (
         <View style={styles.actionButtonsContainer}>
           <TouchableOpacity
             style={styles.editButton}

@@ -80,7 +80,7 @@ export const removeChildFromFamilyGroup = createAsyncThunk(
 
 export const inviteToFamilyGroup = createAsyncThunk(
   'family/inviteToFamilyGroup',
-  async ({ groupId, email, role }: { groupId: string; email: string; role?: 'parent' | 'admin' }) => {
+  async ({ groupId, email, role }: { groupId: string; email: string; role?: 'parent' | 'admin' | 'member' }) => {
     return await familyService.inviteToFamilyGroup(groupId, email, role);
   }
 );
@@ -116,8 +116,8 @@ export const getMyPendingInvitations = createAsyncThunk(
 
 export const declineInvitation = createAsyncThunk(
   'family/declineInvitation',
-  async (invitationId: string) => {
-    return await familyService.declineInvitation(invitationId);
+  async (token: string) => {
+    return await familyService.declineInvitation(token);
   }
 );
 
@@ -133,9 +133,10 @@ interface FamilyState {
     email: string;
     role: string;
     status: string;
-    expiresAt: string;
+    expiresAt?: string;
+    createdAt?: string;
+    sentAt?: string;
     invitedBy: string;
-    isExpired: boolean;
     token?: string;
   }[];
   loading: boolean;

@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     Alert,
     StyleSheet,
@@ -11,12 +11,15 @@ import {
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { declineInvitation, fetchFamilyGroups, getMyPendingInvitations } from '../../redux/slices/familySlice';
 import * as familyService from '../../services/familyService';
+import { formatDate } from '../../utils/dateUtils';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import InvitationBackendNotice from './InvitationBackendNotice';
 
 export default function MyInvitationsSection() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { myInvitations, loading } = useAppSelector((state) => state.family);
+  const [showBackendNotice, setShowBackendNotice] = useState(false);
 
   const fetchMyInvitations = useCallback(async () => {
     try {
@@ -72,7 +75,37 @@ export default function MyInvitationsSection() {
               }
             } catch (error: any) {
               console.error('Error accepting invitation:', error);
-              Alert.alert('Error', error.message || 'Failed to accept invitation');
+              
+              // Check if this is a backend expiration error
+              if (error.message && error.message.includes('expired')) {
+                setShowBackendNotice(true);
+              }
+              
+              // Handle specific error cases
+              let errorMessage = 'Failed to accept invitation';
+              if (error.message) {
+                if (error.message.includes('expired')) {
+                  errorMessage = 'This invitation has expired. Please ask the group owner to send a new invitation.';
+                } else if (error.message.includes('invalid')) {
+                  errorMessage = 'This invitation is invalid. Please ask the group owner to send a new invitation.';
+                } else if (error.message.includes('already')) {
+                  errorMessage = 'You have already joined this family group.';
+                } else {
+                  errorMessage = error.message;
+                }
+              }
+              
+              Alert.alert(
+                'Error',
+                errorMessage,
+                [
+                  { text: 'OK' },
+                  {
+                    text: 'Retry',
+                    onPress: () => handleAccept(invitation)
+                  }
+                ]
+              );
             }
           },
         },
@@ -91,26 +124,41 @@ export default function MyInvitationsSection() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await dispatch(declineInvitation(invitation._id)).unwrap();
+              await dispatch(declineInvitation(invitation.token)).unwrap();
               // Refresh the list after declining
               fetchMyInvitations();
               Alert.alert('Success', 'Invitation declined successfully');
-            } catch (error) {
+            } catch (error: any) {
               console.error('Error declining invitation:', error);
-              Alert.alert('Error', 'Failed to decline invitation');
+              
+              // Handle specific error cases
+              let errorMessage = 'Failed to decline invitation';
+              if (error.message) {
+                if (error.message.includes('not found')) {
+                  errorMessage = 'This invitation no longer exists.';
+                } else if (error.message.includes('permission')) {
+                  errorMessage = 'You do not have permission to decline this invitation.';
+                } else {
+                  errorMessage = error.message;
+                }
+              }
+              
+              Alert.alert(
+                'Error',
+                errorMessage,
+                [
+                  { text: 'OK' },
+                  {
+                    text: 'Retry',
+                    onPress: () => handleDecline(invitation)
+                  }
+                ]
+              );
             }
           },
         },
       ]
     );
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
   };
 
   if (loading) {
@@ -130,6 +178,11 @@ export default function MyInvitationsSection() {
 
   return (
     <View style={styles.container}>
+      {showBackendNotice && (
+        <InvitationBackendNotice 
+          onDismiss={() => setShowBackendNotice(false)}
+        />
+      )}
       <View style={styles.header}>
         <MaterialIcons name="email" size={20} color="#4f8cff" />
         <Text style={styles.title}>Pending Invitations</Text>
@@ -143,11 +196,8 @@ export default function MyInvitationsSection() {
               <Text style={styles.groupName}>{invitation.groupName}</Text>
               <Text style={styles.invitedBy}>Invited by: {invitation.invitedBy}</Text>
               <Text style={styles.role}>Role: {invitation.role}</Text>
-              <Text style={styles.expiry}>
-                Expires: {formatDate(invitation.expiresAt)}
-                {invitation.isExpired && (
-                  <Text style={styles.expiredText}> (Expired)</Text>
-                )}
+              <Text style={styles.sentDate}>
+                Sent: {invitation.sentAt ? formatDate(invitation.sentAt) : (invitation.createdAt || invitation.expiresAt) ? formatDate(invitation.createdAt || invitation.expiresAt || '') : 'Date not available'}
               </Text>
             </View>
           </View>
@@ -156,7 +206,6 @@ export default function MyInvitationsSection() {
             <TouchableOpacity
               style={[styles.actionButton, styles.acceptButton]}
               onPress={() => handleAccept(invitation)}
-              disabled={invitation.isExpired}
             >
               <MaterialIcons name="check" size={16} color="#fff" />
               <Text style={styles.acceptButtonText}>Accept</Text>
@@ -229,12 +278,9 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 2,
   },
-  expiry: {
+  sentDate: {
     fontSize: 12,
-    color: '#4f8cff',
-  },
-  expiredText: {
-    color: '#dc2626',
+    color: '#999',
   },
   actions: {
     flexDirection: 'row',

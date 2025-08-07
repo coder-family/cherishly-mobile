@@ -1,14 +1,14 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import ErrorText from '../components/form/ErrorText';
 import FormWrapper from '../components/form/FormWrapper';
@@ -217,7 +217,7 @@ export default function InviteJoinScreen() {
                     <View style={styles.stepContent}>
                       <Text style={styles.stepTitle}>Enter email and role</Text>
                       <Text style={styles.stepDescription}>
-                        Enter the person&apos;s email and choose their role (Parent or Admin).
+                        Enter the person&apos;s email and choose their role (Parent, Admin, or Member).
                       </Text>
                     </View>
                   </View>

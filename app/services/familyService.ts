@@ -23,7 +23,7 @@ function transformFamilyGroupData(group: any): FamilyGroup {
       id: member._id || member.id,
       userId: member.userId?._id || member.userId?.id || member.userId,
       groupId: groupData._id || group._id || group.id,
-      role: member.role === 'admin' ? 'admin' : member.role === 'owner' ? 'owner' : 'member',
+      role: member.role === 'admin' ? 'admin' : member.role === 'owner' ? 'owner' : member.role === 'parent' ? 'parent' : 'member',
       joinedAt: member.joinedAt,
       user: member.userId && typeof member.userId === 'object' ? {
         id: member.userId._id || member.userId.id,
@@ -58,7 +58,7 @@ export interface FamilyMember {
   id: string;
   userId: string;
   groupId: string;
-  role: 'owner' | 'admin' | 'member';
+  role: 'owner' | 'admin' | 'parent' | 'member';
   joinedAt: string;
   user?: {
     id: string;
@@ -289,7 +289,7 @@ export async function leaveFamilyGroup(groupId: string): Promise<void> {
   }
 }
 
-export async function inviteToFamilyGroup(groupId: string, email: string, role: 'parent' | 'admin' = 'parent'): Promise<{ token: string }> {
+export async function inviteToFamilyGroup(groupId: string, email: string, role: 'parent' | 'admin' | 'member' = 'parent'): Promise<{ token: string }> {
   try {
     const response = await apiService.post('/family-groups/invite', { 
       email, 
@@ -346,7 +346,29 @@ export async function acceptInvitation(token: string): Promise<{ groupId: string
     return result;
   } catch (error: any) {
     console.error('Error accepting invitation:', error);
-    throw new Error(error.message || 'Failed to accept invitation');
+    
+    // Handle specific backend errors
+    if (error.response) {
+      if (error.response.status === 400) {
+        if (error.response.data?.message?.includes('expired')) {
+          throw new Error('This invitation has expired. Please ask the group owner to send a new invitation.');
+        } else if (error.response.data?.message?.includes('invalid')) {
+          throw new Error('This invitation is invalid. Please ask the group owner to send a new invitation.');
+        } else {
+          throw new Error(error.response.data?.message || 'Failed to accept invitation');
+        }
+      } else if (error.response.status === 404) {
+        throw new Error('Invitation not found. Please check the invitation link.');
+      } else if (error.response.status === 409) {
+        throw new Error('You have already joined this family group.');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to accept invitation');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to accept invitation');
+    } else {
+      throw new Error('Failed to accept invitation: ' + (error.message || 'Unknown error'));
+    }
   }
 }
 
@@ -651,9 +673,10 @@ export async function getMyPendingInvitations(): Promise<{
     email: string;
     role: string;
     status: string;
-    expiresAt: string;
+    expiresAt?: string;
+    createdAt?: string;
+    sentAt?: string;
     invitedBy: string;
-    isExpired: boolean;
     token?: string; // Add token for decline functionality
   }[];
   total: number;
@@ -677,25 +700,40 @@ export async function getMyPendingInvitations(): Promise<{
   }
 }
 
-export async function declineInvitation(invitationId: string): Promise<void> {
+export async function declineInvitation(token: string): Promise<void> {
   try {
-    await apiService.post(`/family-groups/invitations/${invitationId}/decline`);
+    await apiService.post('/family-groups/decline-invitation', { token });
   } catch (error: any) {
-    conditionalLog.family('Error declining invitation:', error);
+    console.error('Error declining invitation:', error);
+    
+    // Handle specific backend errors
     if (error.response) {
       if (error.response.status === 404) {
-        throw new Error('Invitation not found');
+        throw new Error('Invitation not found or already processed.');
       } else if (error.response.status === 400) {
-        throw new Error(error.response.data?.message || 'Invalid invitation');
+        if (error.response.data?.message?.includes('expired')) {
+          throw new Error('This invitation has expired and cannot be declined.');
+        } else {
+          throw new Error(error.response.data?.message || 'Invalid invitation');
+        }
       } else if (error.response.status === 403) {
-        throw new Error('You do not have permission to decline this invitation');
+        throw new Error('You do not have permission to decline this invitation.');
       } else {
         throw new Error(error.response.data?.message || 'Failed to decline invitation');
       }
     } else if (error.request) {
       throw new Error('Network error: Unable to decline invitation');
     } else {
-      throw new Error('Failed to decline invitation: ' + (error.message || 'Unknown error'));
+      // Handle backend validation errors
+      if (error.message && error.message.includes('validation failed')) {
+        if (error.message.includes('status') && (error.message.includes('declined') || error.message.includes('rejected'))) {
+          throw new Error('Backend does not support declined/rejected status. Please contact administrator.');
+        } else {
+          throw new Error('Invalid invitation data. Please try again.');
+        }
+      } else {
+        throw new Error('Failed to decline invitation: ' + (error.message || 'Unknown error'));
+      }
     }
   }
 } 

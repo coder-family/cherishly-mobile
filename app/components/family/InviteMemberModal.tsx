@@ -29,7 +29,7 @@ export default function InviteMemberModal({
 }: InviteMemberModalProps) {
   const dispatch = useAppDispatch();
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'parent' | 'admin'>('parent');
+  const [role, setRole] = useState<'parent' | 'admin' | 'member'>('parent');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -152,11 +152,29 @@ export default function InviteMemberModal({
                     Admin
                   </Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.roleButton,
+                    role === 'member' && styles.roleButtonActive,
+                  ]}
+                  onPress={() => setRole('member')}
+                >
+                  <Text
+                    style={[
+                      styles.roleButtonText,
+                      role === 'member' && styles.roleButtonTextActive,
+                    ]}
+                  >
+                    Member
+                  </Text>
+                </TouchableOpacity>
               </View>
               <Text style={styles.roleDescription}>
                 {role === 'admin'
                   ? 'Admins can manage the group, invite members, and have full access.'
-                  : 'Parents can view and contribute to the family group content.'}
+                  : role === 'parent'
+                  ? 'Parents can view and contribute to the family group content.'
+                  : 'Members can view public content but cannot create or edit content.'}
               </Text>
             </View>
 
@@ -235,13 +253,13 @@ const styles = StyleSheet.create({
   },
   roleContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
     marginBottom: 8,
   },
   roleButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 2,
     borderColor: '#e0e0e0',
@@ -252,7 +270,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4f8cff',
   },
   roleButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#666',
   },

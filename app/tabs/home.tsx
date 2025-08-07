@@ -18,7 +18,7 @@ import SearchResults from "../components/ui/SearchResults";
 import UserProfileCard from "../components/user/UserProfileCard";
 import UserProfileEditModal from "../components/user/UserProfileEditModal";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
-import { fetchChildren } from "../redux/slices/childSlice";
+import { fetchMyOwnChildren } from "../redux/slices/childSlice";
 import { fetchFamilyGroups } from "../redux/slices/familySlice";
 import { fetchCurrentUser } from "../redux/slices/userSlice";
 import { SearchResult, searchService } from "../services/searchService";
@@ -54,7 +54,7 @@ export default function HomeScreen() {
   useEffect(() => {
     if (user) {
       dispatch(fetchCurrentUser(user.id));
-      dispatch(fetchChildren());
+      dispatch(fetchMyOwnChildren());
       dispatch(fetchFamilyGroups());
     }
   }, [dispatch, user]);
@@ -114,7 +114,7 @@ export default function HomeScreen() {
     if (!showAddChildModal && user) {
       // Small delay to ensure the modal animation completes
       const timer = setTimeout(() => {
-        dispatch(fetchChildren());
+        dispatch(fetchMyOwnChildren());
       }, 100);
       return () => clearTimeout(timer);
     }
@@ -169,7 +169,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={[styles.groupButton, { backgroundColor: '#fef2f2' }]}
             onPress={() => {
-              dispatch(fetchChildren());
+              dispatch(fetchMyOwnChildren());
             }}
           >
             <Text style={[styles.groupButtonText, { color: '#dc2626' }]}>

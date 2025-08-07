@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import * as yup from 'yup';
 import { Colors } from '../../constants/Colors';
-import { useAppDispatch } from '../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { updateGrowthRecord } from '../../redux/slices/healthSlice';
 import { GrowthRecord, UpdateGrowthRecordData } from '../../types/health';
 import ErrorText from '../form/ErrorText';
@@ -53,9 +53,16 @@ const EditGrowthRecordModal: React.FC<EditGrowthRecordModalProps> = ({
   onSuccess,
 }) => {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const { children } = useAppSelector((state) => state.children);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedType, setSelectedType] = useState<'height' | 'weight'>('height');
   const [visibility, setVisibility] = useState<VisibilityType>('private');
+  
+  // Check if current user is the creator of this growth record
+  // We'll check if the current user is the owner of the child
+  const isCreator = currentUser && record && record.childId && 
+    children && children.some(child => child.id === record.childId);
 
   const {
     control,
@@ -359,16 +366,18 @@ const EditGrowthRecordModal: React.FC<EditGrowthRecordModalProps> = ({
               )}
             />
 
-            {/* Visibility Toggle */}
-            <VisibilityToggle
-              visibility={visibility}
-              onUpdate={async (newVisibility: 'private' | 'public') => {
-                setVisibility(newVisibility);
-                // Optionally save to AsyncStorage
-                await AsyncStorage.setItem('defaultVisibility', newVisibility);
-              }}
-              size="small"
-            />
+            {/* Visibility Toggle - Only show for creator */}
+            {isCreator && (
+              <VisibilityToggle
+                visibility={visibility}
+                onUpdate={async (newVisibility: 'private' | 'public') => {
+                  setVisibility(newVisibility);
+                  // Optionally save to AsyncStorage
+                  await AsyncStorage.setItem('defaultVisibility', newVisibility);
+                }}
+                size="small"
+              />
+            )}
 
             <PrimaryButton
               title="Update Record"

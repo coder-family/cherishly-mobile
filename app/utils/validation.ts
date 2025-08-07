@@ -82,7 +82,7 @@ export const registerSchema = yup.object().shape({
     .string()
     .oneOf([yup.ref("password")], "Passwords do not match")
     .required("Confirm password is required"),
-  role: yup.string().required("Role is required"),
+  role: yup.string().oneOf(['parent', 'admin', 'member'], "Role must be parent, admin, or member").required("Role is required"),
 });
 
 export const resetPasswordSchema = yup.object().shape({

@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
-import { deleteGrowthRecord, deleteHealthRecord, fetchGrowthRecords, fetchHealthRecords } from '../../redux/slices/healthSlice';
+import { deleteGrowthRecord, deleteHealthRecord, fetchGrowthRecords, fetchHealthRecords, updateGrowthRecord } from '../../redux/slices/healthSlice';
 import { GrowthFilter, GrowthRecord, HealthFilter, HealthRecord } from '../../types/health';
 import AddGrowthRecordModal from '../health/AddGrowthRecordModal';
 import AddHealthRecordModal from '../health/AddHealthRecordModal';
@@ -13,7 +13,7 @@ import GrowthChart from '../health/GrowthChart';
 import HealthRecordItem from '../health/HealthRecordItem';
 import ErrorView from '../ui/ErrorView';
 import SectionCard from '../ui/SectionCard';
-import VisibilityBadge from '../ui/VisibilityBadge';
+import VisibilityToggle from '../ui/VisibilityToggle';
 
 interface HealthContentProps {
   childId: string;
@@ -25,6 +25,40 @@ interface HealthContentProps {
 
 const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthItem, editingGrowthItem, onEditComplete, renderModalsOnly = false }) => {
   const dispatch = useAppDispatch();
+  
+  // Get current user and children for permission checking
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const { children } = useAppSelector((state) => state.children);
+  
+  // Check if current user is the owner of the child
+  const getParentId = (parentId: any) => {
+    if (typeof parentId === 'string') return parentId;
+    if (parentId && typeof parentId === 'object' && parentId._id) return parentId._id;
+    if (parentId && typeof parentId === 'object' && parentId.id) return parentId.id;
+    return null;
+  };
+  
+  const isOwner = currentUser && childId && 
+    children && children.some(child => {
+      const childIdValue = child.id;
+      const childParentId = getParentId(child.parentId);
+      const currentUserId = currentUser.id;
+      
+      return childIdValue === childId && childParentId === currentUserId;
+    });
+  
+  // Debug: Log owner check for troubleshooting
+  console.log('HealthContent - Owner Check:', {
+    currentUserId: currentUser?.id,
+    childId,
+    userChildren: children?.map(c => ({ 
+      id: c.id, 
+      parentId: c.parentId,
+      parentIdType: typeof c.parentId,
+      parentIdValue: c.parentId
+    })),
+    isOwner
+  });
   
   // Modal state
   const [showAddGrowthModal, setShowAddGrowthModal] = useState(false);
@@ -193,6 +227,16 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
     fetchHealthData();
   }, [fetchHealthData]);
 
+  // Handle visibility update for growth records
+  const handleVisibilityUpdate = useCallback(async (recordId: string, newVisibility: 'private' | 'public') => {
+    try {
+      await dispatch(updateGrowthRecord({ recordId, data: { visibility: newVisibility } })).unwrap();
+      fetchHealthData();
+    } catch (error) {
+      console.error('Failed to update growth record visibility:', error);
+    }
+  }, [dispatch, fetchHealthData]);
+
   // Handle edit modal
   const handleEditGrowthRecord = useCallback((record: GrowthRecord) => {
     setRecordToEdit(record);
@@ -311,13 +355,15 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
       <SectionCard title="Growth Tracking">
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionSubtitle}>Height & Weight</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowAddGrowthModal(true)}
-          >
-            <MaterialIcons name="add" size={18} color={Colors.light.primary} />
-            <Text style={styles.addButtonText}>Add Record</Text>
-          </TouchableOpacity>
+          {isOwner && (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowAddGrowthModal(true)}
+            >
+              <MaterialIcons name="add" size={18} color={Colors.light.primary} />
+              <Text style={styles.addButtonText}>Add Record</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Growth Charts */}
@@ -399,25 +445,33 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
                     {recordAgeInMonths}m
                   </Text>
                   <View style={styles.tableCell}>
-                    {record.visibility && (
-                      <VisibilityBadge visibility={record.visibility} size="small" />
+                    {record.visibility && isOwner && (
+                      <VisibilityToggle
+                        visibility={record.visibility}
+                        onUpdate={(newVisibility) => handleVisibilityUpdate(record.id, newVisibility)}
+                        size="small"
+                      />
                     )}
                   </View>
                   <View style={[styles.actionButtons, { flex: 1.2 }]}>
-                    <TouchableOpacity
-                      style={[styles.actionButton, styles.editButton]}
-                      onPress={() => handleEditGrowthRecord(record)}
-                      activeOpacity={0.7}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      <MaterialIcons name="edit" size={16} color={Colors.light.primary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.actionButton, styles.deleteButton]}
-                      onPress={() => handleDeleteGrowthRecord(record.id)}
-                    >
-                      <MaterialIcons name="delete" size={16} color="#EF4444" />
-                    </TouchableOpacity>
+                    {isOwner && (
+                      <>
+                        <TouchableOpacity
+                          style={[styles.actionButton, styles.editButton]}
+                          onPress={() => handleEditGrowthRecord(record)}
+                          activeOpacity={0.7}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <MaterialIcons name="edit" size={16} color={Colors.light.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.actionButton, styles.deleteButton]}
+                          onPress={() => handleDeleteGrowthRecord(record.id)}
+                        >
+                          <MaterialIcons name="delete" size={16} color="#EF4444" />
+                        </TouchableOpacity>
+                      </>
+                    )}
                   </View>
                 </View>
               );
@@ -430,13 +484,15 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
       <SectionCard title="Health Records">
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionSubtitle}>Medical History</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowAddHealthModal(true)}
-          >
-            <MaterialIcons name="add" size={18} color={Colors.light.primary} />
-            <Text style={styles.addButtonText}>Add Record</Text>
-          </TouchableOpacity>
+          {isOwner && (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowAddHealthModal(true)}
+            >
+              <MaterialIcons name="add" size={18} color={Colors.light.primary} />
+              <Text style={styles.addButtonText}>Add Record</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Health Records Timeline */}

@@ -52,7 +52,7 @@ export default function JoinGroupScreen() {
   const handleLearnHowToInvite = () => {
     Alert.alert(
       'How to Invite Others',
-      'To invite someone to your family group:\n\n1. Go to your family group\n2. Tap "Invite Members"\n3. Enter their email address\n4. Choose their role (parent/admin)\n5. Send the invitation\n\nThey will receive an email with a link to join.',
+      'To invite someone to your family group:\n\n1. Go to your family group\n2. Tap "Invite Members"\n3. Enter their email address\n4. Choose their role (parent/admin/member)\n5. Send the invitation\n\nThey will receive an email with a link to join.',
       [{ text: 'OK' }]
     );
   };

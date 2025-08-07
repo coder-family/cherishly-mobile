@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Dimensions, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
-import { useAppDispatch } from '../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { updateHealthRecord } from '../../redux/slices/healthSlice';
 import { HealthRecord } from '../../types/health';
 import VisibilityToggle from '../ui/VisibilityToggle';
@@ -21,6 +21,48 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
   isLast = false
 }) => {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const { children } = useAppSelector((state) => state.children);
+  
+  // Check if current user is the owner of the child (not just a member)
+  // Only the owner can see visibility toggle
+  const getChildId = (childId: any) => {
+    if (typeof childId === 'string') return childId;
+    if (childId && typeof childId === 'object' && childId._id) return childId._id;
+    if (childId && typeof childId === 'object' && childId.id) return childId.id;
+    return null;
+  };
+  
+  const recordChildId = getChildId(record?.childId);
+  
+  // Helper function to get parentId from child
+  const getParentId = (parentId: any) => {
+    if (typeof parentId === 'string') return parentId;
+    if (parentId && typeof parentId === 'object' && parentId._id) return parentId._id;
+    if (parentId && typeof parentId === 'object' && parentId.id) return parentId.id;
+    return null;
+  };
+  
+  const isOwner = currentUser && record && recordChildId && 
+    children && children.some(child => {
+      const childId = child.id;
+      const childParentId = getParentId(child.parentId);
+      const currentUserId = currentUser.id;
+      
+      return childId === recordChildId && childParentId === currentUserId;
+    });
+  
+  // Debug: Log owner check for troubleshooting
+  console.log('HealthRecordItem - Owner Check:', {
+    currentUserId: currentUser?.id,
+    recordChildId: record?.childId,
+    recordChildIdExtracted: recordChildId,
+    userChildren: children?.map(c => ({ id: c.id, parentId: c.parentId })),
+    isOwner,
+    recordId: record?.id,
+    recordVisibility: record?.visibility
+  });
+  
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
   const [showMediaModal, setShowMediaModal] = useState(false);
 
@@ -223,14 +265,16 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
             </View>
             
             {/* Visibility Controls */}
-            <VisibilityToggle
-              visibility={record.visibility || 'private'}
-              onUpdate={handleVisibilityUpdate}
-              size="small"
-            />
+            {isOwner && (
+              <VisibilityToggle
+                visibility={record.visibility || 'private'}
+                onUpdate={handleVisibilityUpdate}
+                size="small"
+              />
+            )}
           </View>
           {/* Action buttons */}
-          {(onEdit || onDelete) && (
+          {(onEdit || onDelete) && isOwner && (
             <View style={styles.actionButtons}>
               {onEdit && (
                 <TouchableOpacity

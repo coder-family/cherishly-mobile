@@ -75,6 +75,10 @@ function mapPromptResponseFromApi(apiResponse: any): PromptResponse {
 // API functions
 export async function getChildResponses(params: GetResponsesParams): Promise<{ responses: PromptResponse[]; total: number; page: number; limit: number }> {
   try {
+    // Log the request for debugging
+    console.log('promptResponseService: Attempting to get child responses for childId:', params.childId);
+    console.log('promptResponseService: Request params:', params);
+    
     // Use the correct endpoint: /responses/child/:childId
     const response = await apiService.get(`/responses/child/${params.childId}`, {
       params: {
@@ -83,6 +87,10 @@ export async function getChildResponses(params: GetResponsesParams): Promise<{ r
         promptId: params.promptId
       }
     });
+
+    // Log successful response for debugging
+    console.log('promptResponseService: Successfully received response for childId:', params.childId);
+    console.log('promptResponseService: Response structure:', response);
 
     // Handle different response structures
     let responses: PromptResponse[] = [];
@@ -119,6 +127,8 @@ export async function getChildResponses(params: GetResponsesParams): Promise<{ r
       throw new Error('Invalid response structure from server');
     }
     
+    console.log('promptResponseService: Successfully processed responses:', responses.length);
+    
     return {
       responses,
       total,
@@ -132,8 +142,19 @@ export async function getChildResponses(params: GetResponsesParams): Promise<{ r
       status: error.status,
       statusText: error.statusText,
       url: error.url,
-      response: error.response?.data
+      response: error.response?.data,
+      childId: params.childId
     });
+    
+    // Check if it's a permission error and provide more helpful message
+    if (error.status === 403) {
+      console.error('promptResponseService: Permission denied for childId:', params.childId);
+      console.error('promptResponseService: This might be because:');
+      console.error('1. The child is not added to your family group');
+      console.error('2. You don\'t have permission to view this child\'s responses');
+      console.error('3. The family group permissions are not properly set up');
+      console.error('4. Backend needs to be updated to check family group membership');
+    }
     
     // Fallback to empty response
     return {

@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import * as yup from 'yup';
 import { Colors } from '../../constants/Colors';
-import { useAppDispatch } from '../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { createGrowthRecord } from '../../redux/slices/healthSlice';
 import { CreateGrowthRecordData } from '../../types/health';
 import ErrorText from '../form/ErrorText';
@@ -54,9 +54,15 @@ const AddGrowthRecordModal: React.FC<AddGrowthRecordModalProps> = ({
   onSuccess,
 }) => {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const { children } = useAppSelector((state) => state.children);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedType, setSelectedType] = useState<'height' | 'weight'>('height');
   const [visibility, setVisibility] = useState<VisibilityType>('private');
+  
+  // Check if current user is the creator (owner of the child)
+  const isCreator = currentUser && childId && 
+    children && children.some(child => child.id === childId);
 
   // Load default visibility when modal opens
   useEffect(() => {
@@ -340,17 +346,18 @@ const AddGrowthRecordModal: React.FC<AddGrowthRecordModalProps> = ({
               )}
             />
 
-            {/* Visibility Toggle */}
-            <VisibilityToggle
-              value={visibility}
-              onChange={(newVisibility) => {
-                setVisibility(newVisibility);
-                // Optionally save to AsyncStorage
-                AsyncStorage.setItem('defaultVisibility', newVisibility);
-              }}
-              label="Growth Record Visibility"
-              description="Choose who can see this growth record"
-            />
+            {/* Visibility Toggle - Only show for creator */}
+            {isCreator && (
+              <VisibilityToggle
+                visibility={visibility}
+                onUpdate={async (newVisibility) => {
+                  setVisibility(newVisibility);
+                  // Optionally save to AsyncStorage
+                  await AsyncStorage.setItem('defaultVisibility', newVisibility);
+                }}
+                size="small"
+              />
+            )}
 
             <PrimaryButton
               title="Add Record"

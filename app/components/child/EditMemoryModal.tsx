@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useAppDispatch } from '../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { clearError, fetchMemories, updateMemory, updateMemoryAttachments } from '../../redux/slices/memorySlice';
 import { Memory, UpdateMemoryData } from '../../services/memoryService';
 import { conditionalLog } from '../../utils/logUtils';
@@ -35,6 +35,8 @@ interface SelectedFile {
 
 export default function EditMemoryModal({ visible, onClose, memory }: EditMemoryModalProps) {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const { children } = useAppSelector((state) => state.children);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState('');
@@ -42,6 +44,11 @@ export default function EditMemoryModal({ visible, onClose, memory }: EditMemory
   const [loading, setLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
   const [attachmentLoading, setAttachmentLoading] = useState(false);
+  
+  // Check if current user is the creator of this memory
+  // We'll check if the current user is the owner of the child
+  const isCreator = currentUser && memory && memory.childId && 
+    children && children.some(child => child.id === memory.childId);
 
   // Populate form with memory data when modal opens
   useEffect(() => {
@@ -629,12 +636,14 @@ export default function EditMemoryModal({ visible, onClose, memory }: EditMemory
             </Text>
           </View>
 
-          <VisibilityToggle
-            value={visibility}
-            onChange={(newVisibility) => setVisibility(newVisibility)}
-            label="Memory Visibility"
-            description="Choose who can see this memory"
-          />
+          {/* Only show visibility toggle for creator */}
+          {isCreator && (
+            <VisibilityToggle
+              visibility={visibility}
+              onUpdate={async (newVisibility) => setVisibility(newVisibility)}
+              size="small"
+            />
+          )}
 
           {renderSelectedFiles()}
 

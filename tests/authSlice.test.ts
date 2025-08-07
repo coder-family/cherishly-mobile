@@ -28,6 +28,7 @@ describe('Auth Slice', () => {
     email: 'john.doe@example.com',
     password: 'password123',
     dateOfBirth: '1990-01-01',
+    role: 'parent',
   };
 
   beforeEach(() => {

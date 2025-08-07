@@ -10,14 +10,16 @@ import {
     View
 } from 'react-native';
 import * as familyService from '../../services/familyService';
+import { formatDate } from '../../utils/dateUtils';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
 interface PendingInvitation {
   _id: string;
   email: string;
   role: string;
-  createdAt: string;
-  expiresAt: string;
+  createdAt?: string;
+  expiresAt?: string;
+  sentAt?: string;
 }
 
 interface PendingInvitationsModalProps {
@@ -92,20 +94,9 @@ export default function PendingInvitationsModal({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const isExpired = (expiresAt: string) => {
-    return new Date(expiresAt) < new Date();
-  };
-
   const renderInvitationItem = ({ item }: { item: PendingInvitation }) => {
-    const expired = isExpired(item.expiresAt);
-    
     return (
-      <View style={[styles.invitationItem, expired && styles.expiredItem]}>
+      <View style={styles.invitationItem}>
         <View style={styles.invitationInfo}>
           <View style={styles.emailContainer}>
             <MaterialIcons name="email" size={16} color="#666" />
@@ -114,24 +105,19 @@ export default function PendingInvitationsModal({
           <View style={styles.detailsContainer}>
             <Text style={styles.roleText}>Role: {item.role}</Text>
             <Text style={styles.dateText}>
-              Sent: {formatDate(item.createdAt)}
-            </Text>
-            <Text style={[styles.expiryText, expired && styles.expiredText]}>
-              {expired ? 'Expired' : `Expires: ${formatDate(item.expiresAt)}`}
+              Sent: {item.sentAt ? formatDate(item.sentAt) : item.createdAt ? formatDate(item.createdAt) : 'Date not available'}
             </Text>
           </View>
         </View>
         
         <View style={styles.actionButtons}>
-          {!expired && (
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleResendInvitation(item._id)}
-            >
-              <MaterialIcons name="refresh" size={16} color="#4f8cff" />
-              <Text style={styles.actionButtonText}>Resend</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleResendInvitation(item._id)}
+          >
+            <MaterialIcons name="refresh" size={16} color="#4f8cff" />
+            <Text style={styles.actionButtonText}>Resend</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.cancelButton]}
             onPress={() => handleCancelInvitation(item._id)}
@@ -285,9 +271,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  expiredItem: {
-    backgroundColor: '#fef2f2',
-  },
   invitationInfo: {
     marginBottom: 12,
   },
@@ -314,13 +297,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginBottom: 2,
-  },
-  expiryText: {
-    fontSize: 12,
-    color: '#4f8cff',
-  },
-  expiredText: {
-    color: '#dc2626',
   },
   actionButtons: {
     flexDirection: 'row',
