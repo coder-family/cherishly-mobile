@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { useAppDispatch } from '../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { updateMemory } from '../../redux/slices/memorySlice';
 import { Memory } from '../../services/memoryService';
 import { User } from '../../services/userService';
@@ -34,6 +34,38 @@ export default function MemoryItem({
   onComment 
 }: MemoryItemProps) {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const { children } = useAppSelector((state) => state.children);
+  
+  // Check if current user is the owner of the child (not just a member)
+  // Only the owner can see visibility toggle and edit/delete buttons
+  const getChildId = (childId: any) => {
+    if (typeof childId === 'string') return childId;
+    if (childId && typeof childId === 'object' && childId._id) return childId._id;
+    if (childId && typeof childId === 'object' && childId.id) return childId.id;
+    return null;
+  };
+  
+  const memoryChildId = getChildId(memory?.childId);
+  
+  // Helper function to get parentId from child
+  const getParentId = (parentId: any) => {
+    if (typeof parentId === 'string') return parentId;
+    if (parentId && typeof parentId === 'object' && parentId._id) return parentId._id;
+    if (parentId && typeof parentId === 'object' && parentId.id) return parentId.id;
+    return null;
+  };
+  
+  const isOwner = currentUser && memory && memoryChildId && 
+    children && children.some(child => {
+      const childId = child.id;
+      const childParentId = getParentId(child.parentId);
+      const currentUserId = currentUser.id;
+      
+      return childId === memoryChildId && childParentId === currentUserId;
+    });
+  
+
 
   const handleVisibilityUpdate = async (newVisibility: 'private' | 'public') => {
     try {
@@ -71,6 +103,10 @@ export default function MemoryItem({
     if (creator) {
       return creator.firstName + (creator.lastName ? ` ${creator.lastName}` : '');
     }
+    // If no creator, show current user's name
+    if (currentUser) {
+      return currentUser.firstName + (currentUser.lastName ? ` ${currentUser.lastName}` : '');
+    }
     return 'Người dùng';
   };
 
@@ -95,18 +131,18 @@ export default function MemoryItem({
       {/* Post Header */}
       <View style={styles.header}>
         <View style={styles.userInfo}>
-          <Avatar uri={creator?.avatar} size={36} style={styles.profilePicture} />
+          <Avatar uri={creator?.avatar || (currentUser as any)?.avatar} size={36} style={styles.profilePicture} />
           <View style={styles.userDetails}>
             <Text style={styles.userName}>{getCreatorName()}</Text>
             <Text style={styles.timestamp}>{formatTimeAgo(memory.createdAt)}</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.optionsButton}>
-          <MaterialIcons name="more-horiz" size={20} color="#666" />
-        </TouchableOpacity>
+        
+        <View style={styles.headerActions}>
+          {/* Visibility badge removed */}
+        </View>
       </View>
 
-      {/* Post Content */}
       <View style={styles.content}>
         {memory.title && (
           <Text style={styles.title} numberOfLines={2}>
@@ -118,12 +154,14 @@ export default function MemoryItem({
           {memory.content}
         </Text>
 
-                  {/* Visibility Controls */}
+        {/* Visibility Controls - Only show for owner */}
+        {isOwner && (
           <VisibilityToggle
             visibility={memory.visibility || 'private'}
             onUpdate={handleVisibilityUpdate}
             size="small"
           />
+        )}
 
         {/* Tags */}
         {renderTags()}
@@ -168,7 +206,7 @@ export default function MemoryItem({
             <Text style={styles.otherUsersText}>+5</Text>
           </View>
           
-          {(onEdit || onDelete) && (
+          {(onEdit || onDelete) && isOwner && (
             <View style={styles.memoryActions}>
               {onEdit && (
                 <TouchableOpacity
@@ -244,6 +282,24 @@ const styles = StyleSheet.create({
   },
   optionsButton: {
     padding: 4,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  visibilityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e0f2f7',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  visibilityText: {
+    fontSize: 12,
+    color: '#4f8cff',
+    fontWeight: '500',
+    marginLeft: 4,
   },
   content: {
     marginBottom: 12,

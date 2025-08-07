@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
-import { useAppDispatch } from '../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { updateGrowthRecord } from '../../redux/slices/healthSlice';
 import { GrowthRecord } from '../../types/health';
 import VisibilityToggle from '../ui/VisibilityToggle';
@@ -19,29 +19,56 @@ const GrowthRecordItem: React.FC<GrowthRecordItemProps> = ({
   onDelete 
 }) => {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const { children } = useAppSelector((state) => state.children);
+  
+  // Check if current user is the owner of the child (not just a member)
+  // Only the owner can see visibility toggle
+  const getChildId = (childId: any) => {
+    if (typeof childId === 'string') return childId;
+    if (childId && typeof childId === 'object' && childId._id) return childId._id;
+    if (childId && typeof childId === 'object' && childId.id) return childId.id;
+    return null;
+  };
+  
+  const recordChildId = getChildId(record?.childId);
+  
+  // Helper function to get parentId from child
+  const getParentId = (parentId: any) => {
+    if (typeof parentId === 'string') return parentId;
+    if (parentId && typeof parentId === 'object' && parentId._id) return parentId._id;
+    if (parentId && typeof parentId === 'object' && parentId.id) return parentId.id;
+    return null;
+  };
+  
+  const isOwner = currentUser && record && recordChildId && 
+    children && children.some(child => {
+      const childId = child.id;
+      const childParentId = getParentId(child.parentId);
+      const currentUserId = currentUser.id;
+      
+      return childId === recordChildId && childParentId === currentUserId;
+    });
+  
+
 
   const handleVisibilityUpdate = async (newVisibility: 'private' | 'public') => {
     try {
-      await dispatch(updateGrowthRecord({
+      const result = await dispatch(updateGrowthRecord({
         recordId: record.id,
         data: { visibility: newVisibility }
       })).unwrap();
+      
+      // Success - no alert needed, toggle switch provides visual feedback
     } catch (error) {
       throw error; // Re-throw to let VisibilityToggle handle the error
     }
   };
 
-  // Add defensive checks to prevent crashes
-  if (!record || !record.id || !record.type || record.value === undefined) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Invalid record data</Text>
-      </View>
-    );
-  }
-
   const getSourceIcon = (source: string) => {
     switch (source) {
+      case 'home':
+        return 'home';
       case 'doctor':
         return 'medical-services';
       case 'clinic':
@@ -49,16 +76,18 @@ const GrowthRecordItem: React.FC<GrowthRecordItemProps> = ({
       case 'hospital':
         return 'local-hospital';
       default:
-        return 'home';
+        return 'location-on';
     }
   };
 
   const getSourceColor = (source: string) => {
     switch (source) {
+      case 'home':
+        return '#10B981'; // Green
       case 'doctor':
         return '#3B82F6'; // Blue
       case 'clinic':
-        return '#10B981'; // Green
+        return '#8B5CF6'; // Purple
       case 'hospital':
         return '#EF4444'; // Red
       default:
@@ -67,17 +96,20 @@ const GrowthRecordItem: React.FC<GrowthRecordItemProps> = ({
   };
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'Unknown date';
     try {
-      return new Date(dateString).toLocaleDateString();
-    } catch (_error) {
-      return 'Invalid date';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'Invalid Date';
     }
   };
 
   const formatValue = (value: number, unit: string) => {
-    if (value === undefined || value === null) return 'No value';
-    return `${value} ${unit || ''}`;
+    return `${value} ${unit}`;
   };
 
   return (
@@ -86,14 +118,15 @@ const GrowthRecordItem: React.FC<GrowthRecordItemProps> = ({
         <View style={styles.header}>
           <View style={styles.typeContainer}>
             <MaterialIcons 
-              name={record.type === 'height' ? 'straighten' : 'fitness-center'} 
-              size={20} 
-              color={Colors.light.primary} 
+              name={getSourceIcon(record.source)} 
+              size={16} 
+              color={getSourceColor(record.source)} 
             />
             <Text style={styles.typeText}>
-              {record.type === 'height' ? 'Height' : 'Weight'}
+              {record.type.charAt(0).toUpperCase() + record.type.slice(1)}
             </Text>
           </View>
+          
           <View style={styles.sourceContainer}>
             <MaterialIcons 
               name={getSourceIcon(record.source)} 
@@ -113,12 +146,14 @@ const GrowthRecordItem: React.FC<GrowthRecordItemProps> = ({
           <Text style={styles.date}>{formatDate(record.date)}</Text>
         </View>
 
-                {/* Visibility Controls */}
-        <VisibilityToggle
-          visibility={record.visibility || 'private'}
-          onUpdate={handleVisibilityUpdate}
-          size="small"
-        />
+        {/* Visibility Controls - Only show for owner */}
+        {isOwner && (
+          <VisibilityToggle
+            visibility={record.visibility || 'private'}
+            onUpdate={handleVisibilityUpdate}
+            size="small"
+          />
+        )}
 
         {record.notes && (
           <Text style={styles.notes} numberOfLines={2}>
@@ -128,7 +163,7 @@ const GrowthRecordItem: React.FC<GrowthRecordItemProps> = ({
       </View>
 
       <View style={styles.actions}>
-        {onEdit && (
+        {onEdit && isOwner && (
           <TouchableOpacity 
             style={styles.actionButton} 
             onPress={() => onEdit(record)}
@@ -136,7 +171,7 @@ const GrowthRecordItem: React.FC<GrowthRecordItemProps> = ({
             <MaterialIcons name="edit" size={20} color={Colors.light.textSecondary} />
           </TouchableOpacity>
         )}
-        {onDelete && (
+        {onDelete && isOwner && (
           <TouchableOpacity 
             style={styles.actionButton} 
             onPress={() => onDelete(record.id)}

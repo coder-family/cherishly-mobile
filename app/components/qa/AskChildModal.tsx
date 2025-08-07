@@ -1,14 +1,14 @@
 // AskChildModal.tsx
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Modal,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from "react-native";
 import { useAppDispatch } from "../../redux/hooks";
 import { createResponse } from "../../redux/slices/promptResponseSlice";
@@ -87,7 +87,6 @@ export default function AskChildModal({
       if (questionType === "system" && selectedQuestion) {
         // Case 2: User selects system question - only create response
         console.log('AskChildModal: Creating response for system question:', selectedQuestion.id);
-        console.log('AskChildModal: Using childId:', childId);
         
         // Convert MediaFile objects to the format expected by the service
         const convertedAttachments = attachments.map(file => ({
@@ -105,7 +104,7 @@ export default function AskChildModal({
           attachments: convertedAttachments as any,
         };
 
-        console.log('AskChildModal: Response data:', responseData);
+
         await dispatch(createResponse(responseData)).unwrap();
         console.log('AskChildModal: Response created successfully for system question');
         
@@ -150,8 +149,7 @@ export default function AskChildModal({
         // Calculate age range from birth date
         const ageRange = childBirthdate ? getAgeRange(childBirthdate) : '4-6';
         
-        console.log('AskChildModal: Child birthdate:', childBirthdate);
-        console.log('AskChildModal: Calculated age range:', ageRange);
+
         
         const promptData: CreatePromptData = {
           title: trimmedQuestion,
@@ -162,7 +160,7 @@ export default function AskChildModal({
           tags: ['user-generated'],
         };
 
-        console.log('AskChildModal: Prompt data to create:', promptData);
+
 
         const newPrompt = await dispatch(createPrompt(promptData)).unwrap();
         console.log('AskChildModal: Custom prompt created:', newPrompt.id);
@@ -184,9 +182,7 @@ export default function AskChildModal({
           attachments: convertedAttachments as any,
         };
 
-        console.log('AskChildModal: Response data for custom question:', responseData);
         await dispatch(createResponse(responseData)).unwrap();
-        console.log('AskChildModal: Response created successfully for custom question');
         
         // Show success message
         Alert.alert(
@@ -207,24 +203,15 @@ export default function AskChildModal({
         Alert.alert("Please fill in the question and answer.");
       }
     } catch (error: any) {
-      console.error('AskChildModal: Error creating question/response:', error);
-      console.error('AskChildModal: Error type:', typeof error);
-      console.error('AskChildModal: Error keys:', Object.keys(error));
-      
       // Show detailed error message
       let errorMessage = "Failed to save question and answer. Please try again.";
       
       // Try to extract error details from different possible structures
       if (error.payload) {
-        console.log('AskChildModal: Error payload found:', error.payload);
-        console.log('AskChildModal: Error payload type:', typeof error.payload);
-        console.log('AskChildModal: Error payload keys:', Object.keys(error.payload));
-        
         if (typeof error.payload === 'string') {
           errorMessage = error.payload;
         } else if (error.payload.response) {
           // Handle the new error structure from Redux slice
-          console.log('AskChildModal: Error response data:', error.payload.response);
           if (typeof error.payload.response === 'string') {
             errorMessage = error.payload.response;
           } else if (error.payload.response.message) {
@@ -242,15 +229,12 @@ export default function AskChildModal({
           errorMessage = error.payload.error;
         }
       } else if (error.data) {
-        console.log('AskChildModal: Error data found:', error.data);
         if (error.data.message) {
           errorMessage = error.data.message;
         } else if (error.data.error) {
           errorMessage = error.data.error;
         }
       } else if (error.message) {
-        console.log('AskChildModal: Error message found:', error.message);
-        
         // Handle JSON string error messages
         if (typeof error.message === 'string' && error.message.startsWith('{')) {
           try {
@@ -273,8 +257,6 @@ export default function AskChildModal({
           errorMessage = error.message;
         }
       }
-      
-      console.log('AskChildModal: Final error message:', errorMessage);
       Alert.alert("Error", errorMessage);
     } finally {
       setIsSaving(false);

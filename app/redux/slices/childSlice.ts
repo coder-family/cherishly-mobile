@@ -10,6 +10,13 @@ export const fetchChildren = createAsyncThunk(
   }
 );
 
+export const fetchMyOwnChildren = createAsyncThunk(
+  'children/fetchMyOwnChildren',
+  async () => {
+    return await childService.getMyOwnChildren();
+  }
+);
+
 export const fetchChild = createAsyncThunk(
   'children/fetchChild',
   async (childId: string) => {
@@ -89,6 +96,19 @@ const childSlice = createSlice({
       .addCase(fetchChildren.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to fetch children';
+      })
+      // Fetch my own children
+      .addCase(fetchMyOwnChildren.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchMyOwnChildren.fulfilled, (state, action) => {
+        state.children = action.payload;
+        state.loading = false;
+      })
+      .addCase(fetchMyOwnChildren.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to fetch my own children';
       })
       // Fetch single child
       .addCase(fetchChild.pending, (state) => {

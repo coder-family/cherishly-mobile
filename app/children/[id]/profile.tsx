@@ -33,6 +33,7 @@ import { deleteResponse, fetchChildResponses, updateResponse } from '../../redux
 import { fetchPrompts } from '../../redux/slices/promptSlice';
 import { Memory } from '../../services/memoryService';
 import { SearchResult, searchService } from '../../services/searchService';
+import { useFilteredContent } from '../../utils/contentPermissionUtils';
 
 type TabType = 'timeline' | 'health' | 'qa' | 'memories' | 'profile';
 
@@ -82,6 +83,143 @@ export default function ChildProfileScreen() {
   // Q&A edit modal state
   const [showEditResponseModal, setShowEditResponseModal] = useState(false);
   const [editingResponse, setEditingResponse] = useState<any>(null);
+
+  // State for storing creator information
+  const [creators, setCreators] = useState<Record<string, any>>({});
+
+  // Create timeline items and filter them based on permissions
+  const timelineItems = React.useMemo(() => {
+    if (!id) return [];
+    
+    const items: any[] = [];
+    
+    // Add memories
+    const processedMemoryIds = new Set();
+    memories.forEach(memory => {
+      if (!processedMemoryIds.has(memory.id)) {
+        processedMemoryIds.add(memory.id);
+        
+
+        
+        // Extract creator info from parentId (which can be string or object)
+        let creator = null;
+        if (memory.parentId && typeof memory.parentId === 'object') {
+          creator = {
+            id: memory.parentId._id || memory.parentId.id,
+            firstName: memory.parentId.firstName,
+            lastName: memory.parentId.lastName,
+            avatar: memory.parentId.avatar
+          };
+        }
+        
+        items.push({
+          id: memory.id,
+          type: 'memory',
+          title: memory.title,
+          content: memory.content,
+          date: memory.date,
+          createdAt: memory.createdAt,
+          media: memory.attachments,
+          creator: creator, // Use extracted creator info
+          creatorId: memory.parentId, // Store the creator ID for fallback
+          visibility: memory.visibility,
+          metadata: {
+            visibility: memory.visibility,
+            location: memory.location,
+            tags: memory.tags
+          }
+        });
+      }
+    });
+    
+    // Add Q&A responses
+    const processedResponseIds = new Set();
+    responses.filter(response => response.childId === id).forEach(response => {
+      if (!processedResponseIds.has(response.id)) {
+        processedResponseIds.add(response.id);
+        
+        let questionText = 'Question not available';
+        if (typeof response.promptId === 'object' && response.promptId) {
+          questionText = (response.promptId as any).question || (response.promptId as any).title || 'Question not available';
+        } else if (typeof response.promptId === 'string') {
+          const matchingPrompt = prompts.find((p: any) => p.id === response.promptId);
+          if (matchingPrompt) {
+            questionText = matchingPrompt.content || matchingPrompt.title || 'Question not available';
+          }
+        }
+
+        items.push({
+          id: response.id,
+          type: 'qa',
+          title: 'Q&A Response',
+          content: response.content,
+          date: new Date(response.createdAt).toISOString().split('T')[0],
+          createdAt: response.createdAt,
+          media: response.attachments,
+          visibility: response.visibility,
+          metadata: {
+            promptId: response.promptId,
+            feedback: response.feedback,
+            question: questionText
+          }
+        });
+      }
+    });
+    
+    // Add health records
+    const processedHealthIds = new Set();
+    healthRecords.filter(record => record.childId === id).forEach(record => {
+      if (!processedHealthIds.has(record.id)) {
+        processedHealthIds.add(record.id);
+        items.push({
+          id: record.id,
+          type: 'health',
+          title: record.title,
+          content: record.description,
+          date: record.startDate,
+          createdAt: record.createdAt,
+          media: record.attachments,
+          visibility: record.visibility,
+          metadata: {
+            type: record.type,
+            endDate: record.endDate,
+            doctorName: record.doctorName,
+            location: record.location
+          }
+        });
+      }
+    });
+    
+    // Add growth records
+    const processedGrowthIds = new Set();
+    growthRecords.filter(record => record.childId === id).forEach(record => {
+      if (!processedGrowthIds.has(record.id)) {
+        processedGrowthIds.add(record.id);
+        items.push({
+          id: record.id,
+          type: 'growth',
+          title: `${record.type} Record`,
+          content: `${record.value} ${record.unit}`,
+          date: record.date,
+          createdAt: record.createdAt,
+          visibility: record.visibility,
+          metadata: {
+            type: record.type,
+            value: record.value,
+            unit: record.unit,
+            source: record.source,
+            notes: record.notes
+          }
+        });
+      }
+    });
+    
+    // Sort by date (newest first)
+    return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [id, memories, responses, healthRecords, growthRecords, prompts, currentUser]);
+
+  // Filter timeline items based on user permissions
+  const filteredTimelineItems = useFilteredContent(timelineItems);
 
   // Handle edit completion from HealthContent
   const handleHealthEditComplete = useCallback(() => {
@@ -884,138 +1022,11 @@ export default function ChildProfileScreen() {
       );
     }
     
-    // Consolidate timeline items for this child
-    const timelineItems: any[] = [];
-    
-    // Add memories (already filtered by childId in Redux)
-    const processedMemoryIds = new Set();
-    memories.forEach(memory => {
-      if (!processedMemoryIds.has(memory.id)) {
-        processedMemoryIds.add(memory.id);
-
-        timelineItems.push({
-          id: memory.id,
-          type: 'memory',
-          title: memory.title,
-          content: memory.content,
-          date: memory.date,
-          createdAt: memory.createdAt,
-          media: memory.attachments,
-          creator: currentUser, // Add creator info
-          visibility: memory.visibility,
-          metadata: {
-            visibility: memory.visibility,
-            location: memory.location,
-            tags: memory.tags
-          }
-        });
-      }
-    });
-    
-    // Add Q&A responses for this child
-    const processedResponseIds = new Set();
-    responses.filter(response => response.childId === id).forEach(response => {
-      if (!processedResponseIds.has(response.id)) {
-        processedResponseIds.add(response.id);
-
-        // Get question information from promptId
-        let questionText = 'Question not available';
-        
-        // Check if promptId is an object with embedded prompt info
-        if (typeof response.promptId === 'object' && response.promptId) {
-          questionText = (response.promptId as any).question || (response.promptId as any).title || 'Question not available';
-        } else if (typeof response.promptId === 'string') {
-          // Try to find matching prompt from prompts state
-          const matchingPrompt = prompts.find((p: any) => p.id === response.promptId);
-          if (matchingPrompt) {
-            questionText = matchingPrompt.content || matchingPrompt.title || 'Question not available';
-          }
-        }
-
-        timelineItems.push({
-          id: response.id,
-          type: 'qa',
-          title: 'Q&A Response',
-          content: response.content,
-          date: new Date(response.createdAt).toISOString().split('T')[0],
-          createdAt: response.createdAt,
-          media: response.attachments,
-          visibility: response.visibility,
-          metadata: {
-            promptId: response.promptId,
-            feedback: response.feedback,
-            question: questionText
-          }
-        });
-      }
-    });
-    
-    // Add health records for this child
-    const processedHealthIds = new Set();
-    healthRecords.filter(record => record.childId === id).forEach(record => {
-      if (!processedHealthIds.has(record.id)) {
-        processedHealthIds.add(record.id);
-        
-
-        
-        timelineItems.push({
-          id: record.id,
-          type: 'health',
-          title: record.title,
-          content: record.description,
-          date: record.startDate,
-          createdAt: record.createdAt,
-          media: record.attachments,
-          visibility: record.visibility,
-          metadata: {
-            type: record.type,
-            endDate: record.endDate,
-            doctorName: record.doctorName,
-            location: record.location
-          }
-        });
-      }
-    });
-    
-    // Add growth records for this child
-    const processedGrowthIds = new Set();
-    growthRecords.filter(record => record.childId === id).forEach(record => {
-      if (!processedGrowthIds.has(record.id)) {
-        processedGrowthIds.add(record.id);
-        
-        // console.log('[TIMELINE] Growth record visibility:', {
-        //   id: record.id,
-        //   visibility: record.visibility,
-        //   hasVisibility: !!record.visibility
-        // });
-
-        timelineItems.push({
-          id: record.id,
-          type: 'growth',
-          title: `${record.type} Record`,
-          content: `${record.value} ${record.unit}`,
-          date: record.date,
-          createdAt: record.createdAt,
-          visibility: record.visibility,
-          metadata: {
-            type: record.type,
-            value: record.value,
-            unit: record.unit,
-            source: record.source,
-            notes: record.notes
-          }
-        });
-      }
-    });
-    
-    // Sort timeline items by date (newest first)
-    timelineItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    
     return (
       <View style={styles.contentContainer}>
         <Text style={styles.contentTitle}>Timeline</Text>
         
-        {timelineItems.length === 0 ? (
+        {filteredTimelineItems.length === 0 ? (
           <View style={styles.emptyState}>
             <MaterialIcons name="timeline" size={48} color="#ccc" />
             <Text style={styles.emptyStateText}>No timeline items yet</Text>
@@ -1025,7 +1036,7 @@ export default function ChildProfileScreen() {
           </View>
         ) : (
           <View style={styles.timelineContainer}>
-            {timelineItems.map((item, index) => {
+            {filteredTimelineItems.map((item: any, index: number) => {
               const uniqueKey = `${item.type}-${item.id}-${index}`;
               
               switch (item.type) {
@@ -1284,18 +1295,35 @@ export default function ChildProfileScreen() {
         </View>
         
         {/* Render memories as regular views instead of FlatList */}
-        {getUniqueMemories().map((memory, index) => (
-          <MemoryItem
-            key={keyExtractor(memory, index)}
-            memory={memory}
-            creator={currentUser || undefined}
-            onPress={handleMemoryPress}
-            onEdit={handleMemoryEdit}
-            onDelete={handleMemoryDelete}
-            onLike={handleMemoryLike}
-            onComment={handleMemoryComment}
-          />
-        ))}
+        {getUniqueMemories().map((memory, index) => {
+          // Extract creator info from parentId (which can be string or object)
+          let creator = undefined;
+          if (memory.parentId && typeof memory.parentId === 'object') {
+            creator = {
+              id: memory.parentId._id || memory.parentId.id,
+              firstName: memory.parentId.firstName,
+              lastName: memory.parentId.lastName,
+              avatar: memory.parentId.avatar,
+              email: '', // Required by User type
+              role: '',
+              createdAt: '',
+              updatedAt: ''
+            };
+          }
+          
+          return (
+            <MemoryItem
+              key={keyExtractor(memory, index)}
+              memory={memory}
+              creator={creator}
+              onPress={handleMemoryPress}
+              onEdit={handleMemoryEdit}
+              onDelete={handleMemoryDelete}
+              onLike={handleMemoryLike}
+              onComment={handleMemoryComment}
+            />
+          );
+        })}
         
         {/* Load more indicator */}
         {memoriesLoading && memories.length > 0 && (

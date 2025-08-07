@@ -75,6 +75,8 @@ function mapPromptResponseFromApi(apiResponse: any): PromptResponse {
 // API functions
 export async function getChildResponses(params: GetResponsesParams): Promise<{ responses: PromptResponse[]; total: number; page: number; limit: number }> {
   try {
+    // Log the request for debugging
+    
     // Use the correct endpoint: /responses/child/:childId
     const response = await apiService.get(`/responses/child/${params.childId}`, {
       params: {
@@ -83,6 +85,8 @@ export async function getChildResponses(params: GetResponsesParams): Promise<{ r
         promptId: params.promptId
       }
     });
+
+    // Log successful response for debugging
 
     // Handle different response structures
     let responses: PromptResponse[] = [];
@@ -115,7 +119,7 @@ export async function getChildResponses(params: GetResponsesParams): Promise<{ r
       page = responseData.data.currentPage || page;
       limit = params.limit || limit;
     } else {
-      console.error('promptResponseService: Unexpected response structure:', responseData);
+      console.error('promptResponseService: Unexpected response structure');
       throw new Error('Invalid response structure from server');
     }
     
@@ -134,6 +138,16 @@ export async function getChildResponses(params: GetResponsesParams): Promise<{ r
       url: error.url,
       response: error.response?.data
     });
+    
+    // Check if it's a permission error and provide more helpful message
+    if (error.status === 403) {
+      console.error('promptResponseService: Permission denied');
+      console.error('promptResponseService: This might be because:');
+      console.error('1. The child is not added to your family group');
+      console.error('2. You don\'t have permission to view this child\'s responses');
+      console.error('3. The family group permissions are not properly set up');
+      console.error('4. Backend needs to be updated to check family group membership');
+    }
     
     // Fallback to empty response
     return {

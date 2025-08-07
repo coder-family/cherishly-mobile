@@ -1,13 +1,13 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Alert,
+    FlatList,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { deleteResponse, fetchChildResponses } from '../../redux/slices/promptResponseSlice';
@@ -97,8 +97,7 @@ export default function QAContent({ childId, useScrollView = false, editingItem 
   useEffect(() => {
     initialDataLoaded.current = false;
     setVisibleCardsCount(3); // Reset to show 3 cards initially
-    // Clear existing data when childId changes
-    console.log('QAContent: ChildId changed, clearing data');
+
   }, [childId]);
 
   // Cleanup timeout on unmount
@@ -160,11 +159,8 @@ export default function QAContent({ childId, useScrollView = false, editingItem 
   };
 
   const handleAskChildSave = (question: Prompt | string, answer: string, attachment?: string) => {
-    console.log('QAContent: AskChild save called with:', { question, answer, attachment });
-    
     // Refresh data after a short delay to ensure backend has processed the request
     setTimeout(() => {
-      console.log('QAContent: Refreshing data after AskChild save');
       dispatch(fetchPrompts({ isActive: true, limit: 20 }));
       dispatch(fetchChildResponses({ childId, limit: 20 }));
     }, 1000); // 1 second delay
@@ -175,7 +171,6 @@ export default function QAContent({ childId, useScrollView = false, editingItem 
   const handleResponseCreated = () => {
     // Refresh data after a short delay to ensure backend has processed the request
     setTimeout(() => {
-      console.log('QAContent: Refreshing responses for childId:', childId);
       dispatch(fetchChildResponses({ childId, limit: 20 }));
     }, 1000); // 1 second delay
   };
@@ -183,7 +178,6 @@ export default function QAContent({ childId, useScrollView = false, editingItem 
   const handleResponseUpdated = () => {
     // Refresh data after a short delay to ensure backend has processed the request
     setTimeout(() => {
-      console.log('QAContent: Refreshing responses for childId:', childId);
       dispatch(fetchChildResponses({ childId, limit: 20 }));
     }, 1000); // 1 second delay
   };
@@ -197,14 +191,6 @@ export default function QAContent({ childId, useScrollView = false, editingItem 
   const loadMoreDataRef = useRef<NodeJS.Timeout | null>(null);
 
   const loadMoreData = useCallback(() => {
-    console.log('QAContent: loadMoreData called', {
-      promptsLoading,
-      responsesLoading,
-      promptsHasMore,
-      responsesHasMore,
-      promptsLength: prompts.length,
-      responsesLength: responses.length
-    });
 
     // Clear any existing timeout
     if (loadMoreDataRef.current) {
@@ -215,20 +201,17 @@ export default function QAContent({ childId, useScrollView = false, editingItem 
     loadMoreDataRef.current = setTimeout(() => {
       // Prevent multiple simultaneous requests
       if (promptsLoading || responsesLoading) {
-        console.log('QAContent: Skipping loadMoreData - already loading');
         return;
       }
 
       // Load more prompts if available
       if (promptsHasMore && prompts.length > 0) {
-        console.log('QAContent: Loading more prompts');
         const nextPage = Math.floor(prompts.length / 20) + 1;
         dispatch(fetchPrompts({ isActive: true, limit: 20, page: nextPage }));
       }
 
       // Load more responses if available
       if (responsesHasMore && responses.length > 0) {
-        console.log('QAContent: Loading more responses');
         const nextPage = Math.floor(responses.length / 20) + 1;
         dispatch(fetchChildResponses({ childId, limit: 20, page: nextPage }));
       }
@@ -323,29 +306,14 @@ export default function QAContent({ childId, useScrollView = false, editingItem 
   const qaCards: ListItem[] = [];
   const processedResponseIds = new Set<string>();
 
-  console.log('QAContent: Starting to collect Q&A cards...');
-  console.log('QAContent: Prompts structure:', prompts.map(p => ({ id: p.id, content: p.content, title: p.title })));
-  console.log('QAContent: Responses structure:', responses.map(r => ({ 
-    id: r.id, 
-    promptId: r.promptId, 
-    promptIdType: typeof r.promptId,
-    content: r.content 
-  })));
+
 
   // Process all responses to create cards
   responses.forEach((response, index) => {
     // Skip if we've already processed this response
     if (processedResponseIds.has(response.id)) {
-      console.log(`QAContent: Skipping duplicate response ${response.id}`);
       return;
     }
-
-    console.log(`QAContent: Processing response ${index + 1}:`, {
-      responseId: response.id,
-      promptId: response.promptId,
-      promptIdType: typeof response.promptId,
-      hasEmbeddedPrompt: typeof response.promptId === 'object' && response.promptId !== null
-    });
 
     let promptToUse: any = null;
 
@@ -362,15 +330,13 @@ export default function QAContent({ childId, useScrollView = false, editingItem 
         createdAt: (response.promptId as any).createdAt || response.createdAt,
         updatedAt: (response.promptId as any).updatedAt || response.updatedAt,
       };
-      console.log(`QAContent: Using embedded prompt for response ${response.id}:`, promptToUse);
+
     } else if (typeof response.promptId === 'string') {
       // Try to find matching prompt
       const matchingPrompt = prompts.find(p => p.id === response.promptId);
       if (matchingPrompt) {
         promptToUse = matchingPrompt;
-        console.log(`QAContent: Found matching prompt for response ${response.id}:`, matchingPrompt);
       } else {
-        console.log(`QAContent: No matching prompt found for response ${response.id} with promptId: ${response.promptId}`);
         // Create a fallback prompt object
         promptToUse = {
           id: response.promptId,
@@ -386,7 +352,6 @@ export default function QAContent({ childId, useScrollView = false, editingItem 
     }
 
     if (promptToUse) {
-      console.log(`QAContent: Adding card for response ${response.id}`);
       qaCards.push({
         type: 'qa-card',
         prompt: promptToUse,
@@ -413,18 +378,6 @@ export default function QAContent({ childId, useScrollView = false, editingItem 
   if (hasMoreCards) {
     listItems.push({ type: 'load-more' });
   }
-
-  console.log('QAContent: Final listItems count:', listItems.length, 'Visible cards:', visibleCards.length, 'Total cards:', sortedCards.length);
-  console.log('QAContent: All collected cards:', qaCards.map(card => ({
-    type: card.type,
-    promptId: card.prompt?.id,
-    responseId: card.response?.id,
-    promptContent: card.prompt?.content,
-    responseContent: card.response?.content
-  })));
-  console.log('QAContent: Processed response IDs:', Array.from(processedResponseIds));
-  console.log('QAContent: Total responses from API:', responses.length);
-  console.log('QAContent: Cards created:', qaCards.length);
 
   const renderContent = () => {
     if (useScrollView) {

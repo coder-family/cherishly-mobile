@@ -1,7 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useThemeColor } from '../../hooks/useThemeColor';
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { useAppSelector } from '../../redux/hooks';
 import MemoryMediaViewer from '../child/MemoryMediaViewer';
 import Avatar from '../ui/Avatar';
 import VisibilityToggle from '../ui/VisibilityToggle';
@@ -18,6 +23,7 @@ export interface TimelineItemData {
   media?: any[];
   metadata?: any;
   creator?: any; // Add creator info for memory items
+  creatorId?: string; // Add creator ID for fallback display
   visibility?: 'private' | 'public';
 }
 
@@ -40,40 +46,71 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
   onComment,
   onVisibilityUpdate
 }) => {
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
-  const cardBackground = useThemeColor({}, 'card');
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const { children } = useAppSelector((state) => state.children);
   
+  // Check if current user is the owner of the child (not just a member)
+  // Only the owner can see visibility toggle and edit/delete buttons
+  const getChildId = (childId: any) => {
+    if (typeof childId === 'string') return childId;
+    if (childId && typeof childId === 'object' && childId._id) return childId._id;
+    if (childId && typeof childId === 'object' && childId.id) return childId.id;
+    return null;
+  };
+  
+  const itemChildId = getChildId(item?.childId);
+  
+  // Helper function to get parentId from child
+  const getParentId = (parentId: any) => {
+    if (typeof parentId === 'string') return parentId;
+    if (parentId && typeof parentId === 'object' && parentId._id) return parentId._id;
+    if (parentId && typeof parentId === 'object' && parentId.id) return parentId.id;
+    return null;
+  };
+  
+  const isOwner = currentUser && item && itemChildId && 
+    children && children.some(child => {
+      const childId = child.id;
+      const childParentId = getParentId(child.parentId);
+      const currentUserId = currentUser.id;
+      
+      return childId === itemChildId && childParentId === currentUserId;
+    });
+
+  // Define common variables
+  const cardBackground = '#fff';
+  const textColor = '#333';
+
   const getTypeIcon = () => {
     switch (item.type) {
       case 'memory':
         return 'photo-library';
       case 'qa':
-        return 'question-answer';
+        return 'help-outline';
       case 'health':
-        return 'local-hospital';
+        return 'favorite';
       case 'growth':
         return 'trending-up';
       default:
-        return 'event';
+        return 'article';
     }
   };
-  
+
   const getTypeColor = () => {
     switch (item.type) {
       case 'memory':
         return '#4CAF50';
       case 'qa':
-        return '#2196F3';
-      case 'health':
         return '#FF9800';
+      case 'health':
+        return '#F44336';
       case 'growth':
-        return '#9C27B0';
+        return '#2196F3';
       default:
-        return '#757575';
+        return '#9E9E9E';
     }
   };
-  
+
   const getTypeLabel = () => {
     switch (item.type) {
       case 'memory':
@@ -85,36 +122,28 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
       case 'growth':
         return 'Growth';
       default:
-        return 'Item';
+        return 'Post';
     }
   };
-  
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInHours / 24);
     
-    // Reset time to start of day for accurate day comparison
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const itemDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    
-    const diffTime = today.getTime() - itemDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-      return 'Today';
-    } else if (diffDays === 1) {
-      return 'Yesterday';
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else if (diffDays < 30) {
-      const weeks = Math.floor(diffDays / 7);
-      return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+    if (diffInDays > 0) {
+      return `${diffInDays} ngày trước`;
+    } else if (diffInHours > 0) {
+      return `${diffInHours} giờ trước`;
     } else {
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-      });
+      const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+      if (diffInMinutes > 0) {
+        return `${diffInMinutes} phút trước`;
+      } else {
+        return 'Vừa xong';
+      }
     }
   };
 
@@ -138,7 +167,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
       }
     }
   };
-  
+
   const handlePress = () => {
     if (onPress) {
       onPress(item);
@@ -149,43 +178,54 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
     if (item.creator) {
       return item.creator.firstName + (item.creator.lastName ? ` ${item.creator.lastName}` : '');
     }
+    // If no creator info available, show creator ID or generic name
+    if (item.creatorId) {
+      if (typeof item.creatorId === 'string') {
+        return `User ${item.creatorId.slice(-4)}`; // Show last 4 characters of creator ID
+      } else if (typeof item.creatorId === 'object' && (item.creatorId as any)._id) {
+        return `User ${(item.creatorId as any)._id.slice(-4)}`; // Show last 4 characters of creator ID
+      }
+    }
+    // If no creator, show current user's name
+    if (currentUser) {
+      return currentUser.firstName + (currentUser.lastName ? ` ${currentUser.lastName}` : '');
+    }
     return 'Người dùng';
   };
 
-  // Special rendering for memory items - use MemoryItem-like layout
+  // Memory item rendering
   if (item.type === 'memory') {
+    
     return (
-      <View style={styles.memoryContainer}>
-        {/* Post Header */}
-        <View style={styles.memoryHeader}>
+      <TouchableOpacity
+        style={[styles.container, { backgroundColor: cardBackground }]}
+        onPress={handlePress}
+        activeOpacity={0.7}
+      >
+        {/* Header */}
+        <View style={styles.header}>
           <View style={styles.userInfo}>
-            <Avatar uri={item.creator?.avatar} size={36} style={styles.profilePicture} />
+            <Avatar uri={item.creator?.avatar || (currentUser as any)?.avatar} size={36} style={styles.profilePicture} />
             <View style={styles.userDetails}>
               <Text style={styles.userName}>{getCreatorName()}</Text>
               <Text style={styles.timestamp}>{formatTimeAgo(item.createdAt)}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.optionsButton}>
-            <MaterialIcons name="more-horiz" size={20} color="#666" />
-          </TouchableOpacity>
+          
+          <View style={styles.headerActions}>
+            {/* Visibility badge removed */}
+          </View>
         </View>
 
-        {/* Post Content */}
-        <View style={styles.memoryContent}>
-          {item.title && (
-            <Text style={styles.memoryTitle} numberOfLines={2}>
-              {item.title}
-            </Text>
-          )}
-          
-          <Text style={styles.memoryDescription}>
-            {item.content}
+        {/* Content */}
+        <View style={styles.content}>
+          <Text style={styles.title} numberOfLines={2}>
+            {item.title}
           </Text>
           
-          {/* Media Attachments */}
-          {item.media && item.media.length > 0 && (
-            <MemoryMediaViewer attachments={item.media} />
-          )}
+          <Text style={styles.description} numberOfLines={3}>
+            {item.content}
+          </Text>
 
           {/* Tags */}
           {item.metadata?.tags && item.metadata.tags.length > 0 && (
@@ -198,13 +238,20 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
             </View>
           )}
 
-          {/* Visibility Controls */}
-          {item.visibility && onVisibilityUpdate && (
+          {/* Visibility Controls - Only show for owner */}
+          {isOwner && item.visibility && onVisibilityUpdate && (
             <VisibilityToggle
               visibility={item.visibility}
               onUpdate={(newVisibility) => onVisibilityUpdate(item.id, newVisibility)}
               size="small"
             />
+          )}
+
+          {/* Media Preview */}
+          {item.media && item.media.length > 0 && (
+            <View style={styles.mediaSection}>
+              <MemoryMediaViewer attachments={item.media} maxPreviewCount={3} />
+            </View>
           )}
         </View>
 
@@ -241,7 +288,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
               <Text style={styles.otherUsersText}>+5</Text>
             </View>
             
-            {(onEdit || onDelete) && (
+            {(onEdit || onDelete) && isOwner && (
               <View style={styles.memoryActions}>
                 {onEdit && (
                   <TouchableOpacity
@@ -265,7 +312,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
             )}
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   }
 
@@ -306,8 +353,8 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
             {item.content || 'No answer content'}
           </Text>
 
-          {/* Visibility Controls */}
-          {item.visibility && onVisibilityUpdate && (
+          {/* Visibility Controls - Only show for owner */}
+          {isOwner && item.visibility && onVisibilityUpdate && (
             <VisibilityToggle
               visibility={item.visibility}
               onUpdate={(newVisibility) => onVisibilityUpdate(item.id, newVisibility)}
@@ -331,7 +378,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
         </View>
 
         {/* Action buttons */}
-        {(onEdit || onDelete) && (
+        {(onEdit || onDelete) && isOwner && (
           <View style={styles.actionButtons}>
             {onEdit && (
               <TouchableOpacity
@@ -388,8 +435,8 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
         </Text>
       )}
       
-      {/* Visibility Controls */}
-      {item.visibility && onVisibilityUpdate && (
+      {/* Visibility Controls - Only show for owner */}
+      {isOwner && item.visibility && onVisibilityUpdate && (
         <VisibilityToggle
           visibility={item.visibility}
           onUpdate={(newVisibility) => onVisibilityUpdate(item.id, newVisibility)}
@@ -432,7 +479,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
       )}
 
       {/* Action buttons */}
-      {(onEdit || onDelete) && (
+      {(onEdit || onDelete) && isOwner && (
         <View style={styles.actionButtons}>
           {onEdit && (
             <TouchableOpacity
@@ -732,6 +779,25 @@ const styles = StyleSheet.create({
   },
   memoryActionButtonIcon: {
     padding: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  visibilityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  visibilityText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#666',
+    marginLeft: 4,
   },
 });
 

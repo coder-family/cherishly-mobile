@@ -13,7 +13,14 @@ export interface Memory {
   title: string;
   content: string;
   childId: string;
-  parentId: string;
+  parentId: string | { // Can be string or object with user info
+    _id: string;
+    id: string;
+    firstName: string;
+    lastName?: string;
+    avatar?: string;
+    name?: string;
+  };
   date: string; // Add date field
   visibility?: 'private' | 'public'; // Add visibility field
   location?: { // Add location field
@@ -24,6 +31,12 @@ export interface Memory {
   tags?: string[];
   createdAt: string;
   updatedAt: string;
+  creator?: { // Add creator information
+    id: string;
+    firstName: string;
+    lastName?: string;
+    avatar?: string;
+  };
 }
 
 export interface MemoryAttachment {
@@ -275,20 +288,49 @@ export async function getMemories(params: GetMemoriesParams): Promise<{ memories
   conditionalLog.memoryApi('Parsed Memory Data:', { memories: memories.length, total, page, limit });
   
   // Map API fields to frontend interface
-  const mappedMemories = memories.map((memory: any) => ({
-    id: memory._id || memory.id,
-    title: memory.title,
-    content: memory.content,
-    childId: memory.child || memory.childId,
-    parentId: memory.authorId || memory.parentId,
-    date: memory.date || memory.createdAt, // Use date field or fallback to createdAt
-    visibility: memory.visibility,
-    location: memory.location,
-    attachments: memory.attachments?.map((att: any) => mapAttachment(att)) || [],
-    tags: memory.tags || [],
-    createdAt: memory.createdAt,
-    updatedAt: memory.updatedAt
-  }));
+  const mappedMemories = memories.map((memory: any) => {
+    // Debug: Log the raw memory data
+    conditionalLog.memoryApi('Raw memory data:', {
+      id: memory._id,
+      parentId: memory.parentId,
+      parentIdType: typeof memory.parentId,
+      hasParentId: !!memory.parentId,
+      parentIdKeys: memory.parentId ? Object.keys(memory.parentId) : null
+    });
+
+    // Extract creator info from parentId object
+    let creator = null;
+    if (memory.parentId && typeof memory.parentId === 'object' && memory.parentId._id) {
+      creator = {
+        id: memory.parentId._id,
+        firstName: memory.parentId.firstName,
+        lastName: memory.parentId.lastName,
+        avatar: memory.parentId.avatar
+      };
+      conditionalLog.memoryApi('Created creator object:', creator);
+    } else {
+      conditionalLog.memoryApi('No creator extracted, parentId:', memory.parentId);
+    }
+
+    const mappedMemory = {
+      id: memory._id || memory.id,
+      title: memory.title,
+      content: memory.content,
+      childId: memory.child || memory.childId,
+      parentId: memory.authorId || memory.parentId,
+      date: memory.date || memory.createdAt, // Use date field or fallback to createdAt
+      visibility: memory.visibility,
+      location: memory.location,
+      attachments: memory.attachments?.map((att: any) => mapAttachment(att)) || [],
+      tags: memory.tags || [],
+      createdAt: memory.createdAt,
+      updatedAt: memory.updatedAt,
+      creator: creator
+    };
+
+    conditionalLog.memoryApi('Final mapped memory creator:', mappedMemory.creator);
+    return mappedMemory;
+  });
   
   conditionalLog.memoryApi('Mapped Memories:', { count: mappedMemories.length, firstMapped: mappedMemories[0] });
   

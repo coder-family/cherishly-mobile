@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useAppDispatch } from '../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { createMemory } from '../../redux/slices/memorySlice';
 import authService from '../../services/authService';
 import { CreateMemoryData } from '../../services/memoryService';
@@ -35,6 +35,8 @@ interface SelectedFile {
 
 export default function AddMemoryModal({ visible, onClose, childId }: AddMemoryModalProps) {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const { children } = useAppSelector((state) => state.children);
   conditionalLog.memoryUI('AddMemoryModal: Component starting to render');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -42,6 +44,10 @@ export default function AddMemoryModal({ visible, onClose, childId }: AddMemoryM
   const [loading, setLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
   const [visibility, setVisibility] = useState<VisibilityType>('private');
+  
+  // Check if current user is the creator (owner of the child)
+  const isCreator = currentUser && childId && 
+    children && children.some(child => child.id === childId);
 
   // Load default visibility when modal opens
   useEffect(() => {
@@ -344,12 +350,14 @@ export default function AddMemoryModal({ visible, onClose, childId }: AddMemoryM
             </Text>
           </View>
 
-          <VisibilityToggle
-            value={visibility}
-            onChange={(newVisibility) => setVisibility(newVisibility)}
-            label="Memory Visibility"
-            description="Choose who can see this memory"
-          />
+          {/* Only show visibility toggle for creator */}
+          {isCreator && (
+            <VisibilityToggle
+              visibility={visibility}
+              onUpdate={async (newVisibility) => setVisibility(newVisibility)}
+              size="small"
+            />
+          )}
 
           {renderSelectedFiles()}
 

@@ -4,7 +4,6 @@ import authService from './authService';
 
 // Utility function to transform API response to FamilyGroup interface
 function transformFamilyGroupData(group: any): FamilyGroup {
-  console.log('Transforming family group data:', group);
   
   // Handle nested response structure from getFamilyGroupDetails
   const groupData = group.group || group;
@@ -23,7 +22,7 @@ function transformFamilyGroupData(group: any): FamilyGroup {
       id: member._id || member.id,
       userId: member.userId?._id || member.userId?.id || member.userId,
       groupId: groupData._id || group._id || group.id,
-      role: member.role === 'admin' ? 'admin' : member.role === 'owner' ? 'owner' : 'member',
+      role: member.role === 'admin' ? 'admin' : member.role === 'owner' ? 'owner' : member.role === 'parent' ? 'parent' : 'member',
       joinedAt: member.joinedAt,
       user: member.userId && typeof member.userId === 'object' ? {
         id: member.userId._id || member.userId.id,
@@ -37,7 +36,6 @@ function transformFamilyGroupData(group: any): FamilyGroup {
     updatedAt: groupData.updatedAt || group.updatedAt,
   };
   
-  console.log('Transformed result:', transformed);
   return transformed;
 }
 
@@ -58,7 +56,7 @@ export interface FamilyMember {
   id: string;
   userId: string;
   groupId: string;
-  role: 'owner' | 'admin' | 'member';
+  role: 'owner' | 'admin' | 'parent' | 'member';
   joinedAt: string;
   user?: {
     id: string;
@@ -135,12 +133,9 @@ export async function getPrimaryFamilyGroup(): Promise<FamilyGroup | null> {
 
 export async function getFamilyGroup(groupId: string): Promise<FamilyGroup> {
   try {
-    console.log('Fetching family group details for ID:', groupId);
     const response = await apiService.get(`/family-groups/${groupId}/details`);
     const group = response.data || response;
-    console.log('Raw API response:', group);
     const transformed = transformFamilyGroupData(group);
-    console.log('Transformed family group data:', transformed);
     return transformed;
   } catch (error) {
     console.error('Error fetching family group:', error);
@@ -292,7 +287,7 @@ export async function leaveFamilyGroup(groupId: string): Promise<void> {
   }
 }
 
-export async function inviteToFamilyGroup(groupId: string, email: string, role: 'parent' | 'admin' = 'parent'): Promise<{ token: string }> {
+export async function inviteToFamilyGroup(groupId: string, email: string, role: 'parent' | 'admin' | 'member' = 'parent'): Promise<{ token: string }> {
   try {
     const response = await apiService.post('/family-groups/invite', { 
       email, 
@@ -345,10 +340,33 @@ export async function acceptInvitation(token: string): Promise<{ groupId: string
     const response = await apiService.post('/family-groups/accept-invitation', {
       token
     });
-    return response.data || response;
+    const result = response.data || response;
+    return result;
   } catch (error: any) {
     console.error('Error accepting invitation:', error);
-    throw new Error(error.message || 'Failed to accept invitation');
+    
+    // Handle specific backend errors
+    if (error.response) {
+      if (error.response.status === 400) {
+        if (error.response.data?.message?.includes('expired')) {
+          throw new Error('This invitation has expired. Please ask the group owner to send a new invitation.');
+        } else if (error.response.data?.message?.includes('invalid')) {
+          throw new Error('This invitation is invalid. Please ask the group owner to send a new invitation.');
+        } else {
+          throw new Error(error.response.data?.message || 'Failed to accept invitation');
+        }
+      } else if (error.response.status === 404) {
+        throw new Error('Invitation not found. Please check the invitation link.');
+      } else if (error.response.status === 409) {
+        throw new Error('You have already joined this family group.');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to accept invitation');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to accept invitation');
+    } else {
+      throw new Error('Failed to accept invitation: ' + (error.message || 'Unknown error'));
+    }
   }
 }
 
@@ -457,9 +475,21 @@ export async function getInvitationStats(groupId: string): Promise<{
 
 export async function addChildToFamilyGroup(groupId: string, childId: string): Promise<void> {
   try {
-    await apiService.post(`/family-groups/${groupId}/children`, { childId });
+    // Validate inputs
+    if (!groupId || !childId) {
+      throw new Error('Group ID and Child ID are required');
+    }
+    
+    const response = await apiService.post(`/family-groups/${groupId}/children`, { childId });
+    
+    // Validate response
+    if (!response) {
+      throw new Error('No response received from server');
+    }
   } catch (error: any) {
     conditionalLog.family('Error adding child to family group:', error);
+    
+    // Handle different types of errors
     if (error.response) {
       if (error.response.status === 404) {
         throw new Error('Family group or child not found');
@@ -467,13 +497,19 @@ export async function addChildToFamilyGroup(groupId: string, childId: string): P
         throw new Error('You do not have permission to add children to this group');
       } else if (error.response.status === 409) {
         throw new Error('Child is already a member of this family group');
+      } else if (error.response.status === 400) {
+        throw new Error('Invalid request: ' + (error.response.data?.message || 'Bad request'));
+      } else if (error.response.status >= 500) {
+        throw new Error('Server error: Please try again later');
       } else {
         throw new Error(error.response.data?.message || 'Failed to add child to family group');
       }
     } else if (error.request) {
       throw new Error('Network error: Unable to add child to family group');
+    } else if (error.message) {
+      throw new Error(error.message);
     } else {
-      throw new Error('Failed to add child to family group: ' + (error.message || 'Unknown error'));
+      throw new Error('Failed to add child to family group: Unknown error');
     }
   }
 }
@@ -581,10 +617,8 @@ export async function getFamilyGroupTimeline(groupId: string, page: number = 1, 
   };
 }> {
   try {
-    console.log('Fetching timeline posts for family group:', groupId, 'page:', page);
     const response = await apiService.get(`/family-groups/${groupId}/timeline?page=${page}&limit=${limit}`);
     const data = response.data || response;
-    console.log('Timeline posts response:', data);
     return data;
   } catch (error) {
     console.error('Error fetching family group timeline:', error);
@@ -625,5 +659,79 @@ export async function getUserInfo(userId: string): Promise<{
   } catch (error) {
     console.warn(`Failed to get user info for ${userId}:`, error);
     return null;
+  }
+} 
+
+export async function getMyPendingInvitations(): Promise<{
+  invitations: {
+    _id: string;
+    groupId: string;
+    groupName: string;
+    groupAvatar?: string;
+    email: string;
+    role: string;
+    status: string;
+    expiresAt?: string;
+    createdAt?: string;
+    sentAt?: string;
+    invitedBy: string;
+    token?: string; // Add token for decline functionality
+  }[];
+  total: number;
+}> {
+  try {
+    const response = await apiService.get('/family-groups/my-invitations');
+    return response.data || response;
+  } catch (error: any) {
+    conditionalLog.family('Error getting my invitations:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        return { invitations: [], total: 0 };
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to get my invitations');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to get my invitations');
+    } else {
+      throw new Error('Failed to get my invitations: ' + (error.message || 'Unknown error'));
+    }
+  }
+}
+
+export async function declineInvitation(token: string): Promise<void> {
+  try {
+    await apiService.post('/family-groups/decline-invitation', { token });
+  } catch (error: any) {
+    console.error('Error declining invitation:', error);
+    
+    // Handle specific backend errors
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Invitation not found or already processed.');
+      } else if (error.response.status === 400) {
+        if (error.response.data?.message?.includes('expired')) {
+          throw new Error('This invitation has expired and cannot be declined.');
+        } else {
+          throw new Error(error.response.data?.message || 'Invalid invitation');
+        }
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to decline this invitation.');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to decline invitation');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to decline invitation');
+    } else {
+      // Handle backend validation errors
+      if (error.message && error.message.includes('validation failed')) {
+        if (error.message.includes('status') && (error.message.includes('declined') || error.message.includes('rejected'))) {
+          throw new Error('Backend does not support declined/rejected status. Please contact administrator.');
+        } else {
+          throw new Error('Invalid invitation data. Please try again.');
+        }
+      } else {
+        throw new Error('Failed to decline invitation: ' + (error.message || 'Unknown error'));
+      }
+    }
   }
 } 
