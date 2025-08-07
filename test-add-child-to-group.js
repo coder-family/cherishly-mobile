@@ -13,8 +13,6 @@ async function testAddChildToGroup() {
   
   try {
     console.log('Testing add child to family group...');
-    console.log('Group ID:', groupId);
-    console.log('Child ID:', childId);
     
     const response = await axios.post(
       `${API_BASE_URL}/family-groups/${groupId}/children`,
@@ -29,7 +27,6 @@ async function testAddChildToGroup() {
     );
     
     console.log('✅ Success!');
-    console.log('Response:', response.data);
     
   } catch (error) {
     console.error('❌ Error:');

@@ -65,21 +65,7 @@ export default function MemoryItem({
       return childId === memoryChildId && childParentId === currentUserId;
     });
   
-  // Debug: Log owner check for troubleshooting
-  console.log('MemoryItem - Owner Check:', {
-    currentUserId: currentUser?.id,
-    memoryChildId: memory?.childId,
-    memoryChildIdExtracted: memoryChildId,
-    userChildren: children?.map(c => ({ 
-      id: c.id, 
-      parentId: c.parentId,
-      parentIdType: typeof c.parentId,
-      parentIdValue: c.parentId
-    })),
-    isOwner,
-    memoryId: memory?.id,
-    memoryVisibility: memory?.visibility
-  });
+
 
   const handleVisibilityUpdate = async (newVisibility: 'private' | 'public') => {
     try {

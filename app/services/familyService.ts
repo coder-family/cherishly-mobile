@@ -4,7 +4,6 @@ import authService from './authService';
 
 // Utility function to transform API response to FamilyGroup interface
 function transformFamilyGroupData(group: any): FamilyGroup {
-  console.log('Transforming family group data:', group);
   
   // Handle nested response structure from getFamilyGroupDetails
   const groupData = group.group || group;
@@ -37,7 +36,6 @@ function transformFamilyGroupData(group: any): FamilyGroup {
     updatedAt: groupData.updatedAt || group.updatedAt,
   };
   
-  console.log('Transformed result:', transformed);
   return transformed;
 }
 

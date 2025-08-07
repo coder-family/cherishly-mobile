@@ -50,16 +50,7 @@ const GrowthRecordItem: React.FC<GrowthRecordItemProps> = ({
       return childId === recordChildId && childParentId === currentUserId;
     });
   
-  // Debug: Log owner check for troubleshooting
-  console.log('GrowthRecordItem - Owner Check:', {
-    currentUserId: currentUser?.id,
-    recordChildId: record?.childId,
-    recordChildIdExtracted: recordChildId,
-    userChildren: children?.map(c => ({ id: c.id, parentId: c.parentId })),
-    isOwner,
-    recordId: record?.id,
-    recordVisibility: record?.visibility
-  });
+
 
   const handleVisibilityUpdate = async (newVisibility: 'private' | 'public') => {
     try {

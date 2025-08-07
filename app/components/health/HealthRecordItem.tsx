@@ -52,16 +52,7 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
       return childId === recordChildId && childParentId === currentUserId;
     });
   
-  // Debug: Log owner check for troubleshooting
-  console.log('HealthRecordItem - Owner Check:', {
-    currentUserId: currentUser?.id,
-    recordChildId: record?.childId,
-    recordChildIdExtracted: recordChildId,
-    userChildren: children?.map(c => ({ id: c.id, parentId: c.parentId })),
-    isOwner,
-    recordId: record?.id,
-    recordVisibility: record?.visibility
-  });
+
   
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
   const [showMediaModal, setShowMediaModal] = useState(false);

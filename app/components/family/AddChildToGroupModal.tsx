@@ -38,7 +38,6 @@ export default function AddChildToGroupModal({
 
   useEffect(() => {
     if (visible) {
-      console.log("Modal opened, fetching children...");
       // Reset selected children when modal opens
       setSelectedChildIds([]);
       dispatch(fetchChildren()).catch((error) => {
@@ -64,15 +63,9 @@ export default function AddChildToGroupModal({
     );
   };
 
-  console.log("Children state:", children);
-  console.log("All children:", allChildren);
-  console.log("Existing children in group:", existingChildren);
-  console.log("Loading state:", loading);
-  console.log("Selected child IDs:", selectedChildIds);
-  console.log("Family group ID:", familyGroupId);
+
 
   const handleAddChildToGroup = async () => {
-    console.log('handleAddChildToGroup called with selectedChildIds:', selectedChildIds);
     
     if (selectedChildIds.length === 0) {
       Alert.alert("Error", "Please select at least one child to add to the group");
@@ -93,7 +86,6 @@ export default function AddChildToGroupModal({
       return;
     }
 
-    console.log("Adding children to group:", { familyGroupId, selectedChildIds });
     setUpdating(true);
 
     try {
@@ -106,11 +98,9 @@ export default function AddChildToGroupModal({
       );
       
       const results = await Promise.all(promises);
-      console.log("Successfully added children to group:", results);
 
       // Notify parent component that group was updated (let parent handle refresh)
       if (onGroupUpdated) {
-        console.log("Notifying parent component to refresh group data...");
         onGroupUpdated();
       }
 
@@ -125,7 +115,7 @@ export default function AddChildToGroupModal({
         message: error.message,
         status: error.status,
         statusText: error.statusText,
-        url: error.url,
+        url: error.url
       });
 
       let errorMessage = "Failed to add children to group";
@@ -255,7 +245,7 @@ export default function AddChildToGroupModal({
                               ]}
                               onPress={() => {
                                 if (!isInGroup) {
-                                  console.log("Toggling child:", child.name, "with ID:", child.id);
+                              
                                   if (isSelected) {
                                     // Remove from selection
                                     setSelectedChildIds(prev => prev.filter(id => id !== child.id));

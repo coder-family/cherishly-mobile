@@ -65,16 +65,7 @@ export default function QuestionAnswerCard({
       return childId === responseChildId && childParentId === currentUserId;
     });
   
-  // Debug: Log owner check for troubleshooting
-  console.log('QuestionAnswerCard - Owner Check:', {
-    currentUserId: currentUser?.id,
-    responseChildId: response?.childId,
-    responseChildIdExtracted: responseChildId,
-    userChildren: children?.map(c => ({ id: c.id, parentId: c.parentId })),
-    isOwner,
-    responseId: response?.id,
-    responseVisibility: response?.visibility
-  });
+
 
   const handleVisibilityUpdate = async (newVisibility: 'private' | 'public') => {
     if (!response) return;

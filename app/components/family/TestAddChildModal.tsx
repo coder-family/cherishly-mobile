@@ -32,15 +32,11 @@ export default function TestAddChildModal({
       return;
     }
 
-    console.log('Test: Adding child to group:', { familyGroupId, testChildId });
-    
     try {
       const result = await dispatch(addChildToFamilyGroup({
         groupId: familyGroupId,
         childId: testChildId
       })).unwrap();
-      
-      console.log('Test: Successfully added child:', result);
       Alert.alert('Success', 'Child added successfully!');
     } catch (error: any) {
       console.error('Test: Error adding child:', error);
@@ -51,7 +47,6 @@ export default function TestAddChildModal({
   const handleLoadChildren = async () => {
     try {
       await dispatch(fetchChildren()).unwrap();
-      console.log('Test: Children loaded:', children);
     } catch (error: any) {
       console.error('Test: Error loading children:', error);
       Alert.alert('Error', 'Failed to load children');

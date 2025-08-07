@@ -33,11 +33,9 @@ export default function FamilyGroupDetailScreen() {
   // Silent refresh function for after adding child
   const silentRefresh = async () => {
     try {
-      console.log('Silent refresh: Updating group data...');
       await refreshGroupData();
       // Fetch children without showing loading
       await fetchGroupChildren(false);
-      console.log('Silent refresh: Completed successfully');
     } catch (error) {
       console.error('Silent refresh error:', error);
     }
@@ -84,7 +82,6 @@ export default function FamilyGroupDetailScreen() {
       const response: any = await familyService.getFamilyGroupChildren(currentGroup.id);
       const children = response.children || response;
       setGroupChildren(children);
-      console.log("Group children:", children);
     } catch (error) {
       console.error("Error fetching group children:", error);
       setGroupChildren([]);
@@ -107,8 +104,6 @@ export default function FamilyGroupDetailScreen() {
         setTimelinePosts(prevPosts => [...prevPosts, ...(response.timeline || [])]);
       }
       setHasMoreTimeline(response.pagination?.hasMore || false);
-      console.log("Timeline response:", response);
-      console.log("Permissions:", response.permissions);
     } catch (error) {
       console.error("Error fetching timeline posts:", error);
       setTimelinePosts([]);
@@ -147,7 +142,6 @@ export default function FamilyGroupDetailScreen() {
 
   // Handle comment press
   const handleCommentPress = () => {
-    console.log("Comment pressed");
   };
 
   const handleQRButtonPress = () => {
@@ -235,11 +229,6 @@ export default function FamilyGroupDetailScreen() {
 
   // Render timeline section
   const renderTimelineSection = () => {
-    console.log("Rendering timeline section:", { 
-      loadingTimeline, 
-      timelinePostsLength: timelinePosts?.length,
-      timelinePosts 
-    });
     
     if (loadingTimeline) {
       return (

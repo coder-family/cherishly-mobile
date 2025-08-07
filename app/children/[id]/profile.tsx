@@ -99,14 +99,7 @@ export default function ChildProfileScreen() {
       if (!processedMemoryIds.has(memory.id)) {
         processedMemoryIds.add(memory.id);
         
-        // Debug log to see memory data
-        console.log('Memory data:', {
-          id: memory.id,
-          parentId: memory.parentId,
-          creator: memory.creator || null, // Use creator info from memory data
-          currentUser: currentUser?.id,
-          memoryRaw: memory // Log the raw memory object
-        });
+
         
         // Extract creator info from parentId (which can be string or object)
         let creator = null;

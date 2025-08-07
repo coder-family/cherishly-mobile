@@ -57,15 +57,12 @@ export const leaveFamilyGroup = createAsyncThunk(
 export const addChildToFamilyGroup = createAsyncThunk(
   'family/addChildToFamilyGroup',
   async ({ groupId, childId }: { groupId: string; childId: string }) => {
-    console.log('Redux: Dispatching addChildToFamilyGroup', { groupId, childId });
-    
     // Validate inputs
     if (!groupId || !childId) {
       throw new Error('Group ID and Child ID are required');
     }
     
     await familyService.addChildToFamilyGroup(groupId, childId);
-    console.log('Redux: Successfully added child to family group');
     return { groupId, childId };
   }
 );
@@ -285,7 +282,7 @@ const familySlice = createSlice({
         // Trigger a refresh of the current group data
         if (state.currentGroup?.id === action.payload.groupId) {
           // We'll handle the refresh in the component
-          console.log('Child added successfully, group needs refresh');
+  
         }
         // Also refresh the family groups list to reflect changes
         // The component will handle the actual refresh

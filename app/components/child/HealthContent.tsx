@@ -47,18 +47,7 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
       return childIdValue === childId && childParentId === currentUserId;
     });
   
-  // Debug: Log owner check for troubleshooting
-  console.log('HealthContent - Owner Check:', {
-    currentUserId: currentUser?.id,
-    childId,
-    userChildren: children?.map(c => ({ 
-      id: c.id, 
-      parentId: c.parentId,
-      parentIdType: typeof c.parentId,
-      parentIdValue: c.parentId
-    })),
-    isOwner
-  });
+
   
   // Modal state
   const [showAddGrowthModal, setShowAddGrowthModal] = useState(false);
