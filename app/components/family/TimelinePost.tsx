@@ -3,7 +3,9 @@ import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import MediaViewerBase from '../media/MediaViewerBase';
 import CommentButton from './CommentButton';
-import ReactionSystem from './ReactionSystem';
+// import ReactionSystem from './ReactionSystem';
+import type { TargetType } from '../../services/reactionService';
+import ReactionBar from '../ui/ReactionBar';
 
 interface TimelinePostProps {
   post: any;
@@ -22,6 +24,20 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
       return JSON.stringify(text);
     }
     return '';
+  };
+
+  const mapContentTypeToTargetType = (ct: string): TargetType => {
+    switch (ct) {
+      case 'promptResponse':
+        return 'PromptResponse';
+      case 'growthRecord':
+        return 'GrowthRecord';
+      case 'healthRecord':
+        return 'HealthRecord';
+      case 'memory':
+      default:
+        return 'Memory';
+    }
   };
 
   const renderPostContent = () => {
@@ -60,7 +76,7 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
             {post.promptId?.title && <Text style={styles.postTitle}>Q: {safeText(post.promptId.title)}</Text>}
             {post.promptId?.question && <Text style={styles.postText}>{safeText(post.promptId.question)}</Text>}
             {post.response && (
-              <View style={[styles.responseContainer, { flexDirection: 'row', alignItems: 'center' }]}>
+              <View style={[styles.responseContainer, { flexDirection: 'row', alignItems: 'center' }]}> 
                 <Text style={styles.responseLabel}>Answer: </Text>
                 <Text style={styles.responseText}>
                   {typeof post.response === 'object' && post.response.content 
@@ -157,9 +173,10 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
       <View style={styles.postContent}>
         {renderPostContent()}
         <View style={styles.actionRow}>
-          <ReactionSystem 
-            postId={post._id || post.id}
-            onReactionPress={onReactionPress}
+          <ReactionBar 
+            targetType={mapContentTypeToTargetType(contentType)}
+            targetId={post._id || post.id}
+            onReactionChange={(type) => onReactionPress?.(type || '')}
           />
           <CommentButton onPress={onCommentPress} />
         </View>

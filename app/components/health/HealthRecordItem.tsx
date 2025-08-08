@@ -5,6 +5,7 @@ import { Colors } from '../../constants/Colors';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { updateHealthRecord } from '../../redux/slices/healthSlice';
 import { HealthRecord } from '../../types/health';
+import ReactionBar from '../ui/ReactionBar';
 import VisibilityToggle from '../ui/VisibilityToggle';
 
 interface HealthRecordItemProps {
@@ -322,15 +323,9 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
             </Text>
             <View style={styles.attachmentsList}>
               {(() => {
-                const validAttachments = record.attachments.slice(0, 3).filter(attachment => {
-                  if (!attachment) return false;
-                  if (typeof attachment === 'string') return attachment.trim() !== '';
-                  if (typeof attachment === 'object' && attachment !== null) {
-                    const attachmentObj = attachment as any;
-                    return attachmentObj.url || attachmentObj.path;
-                  }
-                  return false;
-                });
+                const validAttachments = (record.attachments || [])
+                  .slice(0, 3)
+                  .filter(att => !!att && typeof (att as any).url === 'string' && (att as any).url.trim() !== '');
                 
                 if (validAttachments.length === 0) {
                   return (
@@ -342,21 +337,7 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
                 }
                 
                 return validAttachments.map((attachment, index) => {
-                  // Handle different attachment formats
-                  let attachmentUrl = attachment;
-                  if (typeof attachment === 'object' && attachment !== null) {
-                    const attachmentObj = attachment as any;
-                    if (attachmentObj.url) {
-                      attachmentUrl = attachmentObj.url;
-                    } else if (attachmentObj.path) {
-                      attachmentUrl = attachmentObj.path;
-                    } else {
-                      return null;
-                    }
-                  } else if (typeof attachment !== 'string') {
-                    return null;
-                  }
-                  
+                  const attachmentUrl: string = (attachment as any).url;
                   const isImage = isImageFile(attachmentUrl);
                   return (
                     <TouchableOpacity 
@@ -387,6 +368,11 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
             </View>
           </View>
         )}
+
+        {/* Reaction bar */}
+        <View style={{ marginTop: 12 }}>
+          <ReactionBar targetType={'HealthRecord'} targetId={record.id} />
+        </View>
       </View>
 
       {/* Media Preview Modal */}

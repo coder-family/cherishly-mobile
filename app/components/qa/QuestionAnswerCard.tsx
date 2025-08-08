@@ -9,6 +9,7 @@ import {
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { updateResponse } from '../../redux/slices/promptResponseSlice';
 import { Prompt, PromptResponse } from '../../services/promptService';
+import ReactionBar from '../ui/ReactionBar';
 import VisibilityToggle from '../ui/VisibilityToggle';
 import QAMediaViewer from './QAMediaViewer';
 
@@ -116,7 +117,7 @@ export default function QuestionAnswerCard({
           </View>
           
           <Text style={styles.answerText} numberOfLines={4}>
-            {response.content || 'No answer content'}
+            {response!.content || 'No answer content'}
           </Text>
 
           {/* Visibility Controls - Only show for owner */}
@@ -133,16 +134,21 @@ export default function QuestionAnswerCard({
             <QAMediaViewer attachments={response.attachments} />
           )}
 
+          {/* Reaction Bar for Q&A response */}
+          <View style={{ marginTop: 12 }}>
+            <ReactionBar targetType={'PromptResponse'} targetId={response!.id} />
+          </View>
+
           {/* Feedback */}
-          {response.feedback && (
+          {response!.feedback && (
             <View style={styles.feedbackContainer}>
               <MaterialIcons
                 name="star"
                 size={16}
-                color={response.feedback.rating >= 4 ? '#FFD700' : '#ccc'}
+                color={response!.feedback.rating >= 4 ? '#FFD700' : '#ccc'}
               />
               <Text style={styles.feedbackText}>
-                {response.feedback.rating}/5 stars
+                {response!.feedback.rating}/5 stars
               </Text>
             </View>
           )}

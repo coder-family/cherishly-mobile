@@ -11,6 +11,7 @@ import { updateMemory } from '../../redux/slices/memorySlice';
 import { Memory } from '../../services/memoryService';
 import { User } from '../../services/userService';
 import Avatar from '../ui/Avatar';
+import ReactionBar from '../ui/ReactionBar';
 import VisibilityToggle from '../ui/VisibilityToggle';
 import MemoryMediaViewer from './MemoryMediaViewer';
 
@@ -176,19 +177,11 @@ export default function MemoryItem({
       {/* Interaction Bar */}
       <View style={styles.interactionBar}>
         <View style={styles.leftActions}>
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => onLike?.(memory)}
-          >
-            <MaterialIcons name="favorite-border" size={20} color="#666" />
-            <Text style={styles.actionText}>Thích</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.likeCount}>
-            <MaterialIcons name="favorite" size={16} color="#ff4757" />
-            <Text style={styles.likeCountText}>6</Text>
-          </View>
-          
+          <ReactionBar
+            targetType={'Memory'}
+            targetId={memory.id}
+            onReactionChange={() => onLike?.(memory)}
+          />
           <TouchableOpacity 
             style={styles.actionButton}
             onPress={() => onComment?.(memory)}
@@ -199,13 +192,6 @@ export default function MemoryItem({
         </View>
         
         <View style={styles.rightActions}>
-          <View style={styles.otherUsers}>
-            <View style={styles.smallProfilePicture}>
-              <MaterialIcons name="person" size={12} color="#fff" />
-            </View>
-            <Text style={styles.otherUsersText}>+5</Text>
-          </View>
-          
           {(onEdit || onDelete) && isOwner && (
             <View style={styles.memoryActions}>
               {onEdit && (
@@ -348,45 +334,16 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 15,
+    marginLeft: 8,
   },
   actionText: {
     fontSize: 12,
     color: '#666',
     marginLeft: 5,
   },
-  likeCount: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  likeCountText: {
-    fontSize: 12,
-    color: '#ff4757',
-    fontWeight: '600',
-    marginLeft: 4,
-  },
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  otherUsers: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  smallProfilePicture: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#4f8cff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  otherUsersText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 4,
   },
   memoryActions: {
     flexDirection: 'row',
