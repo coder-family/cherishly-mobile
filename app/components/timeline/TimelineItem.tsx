@@ -7,8 +7,10 @@ import {
   View
 } from 'react-native';
 import { useAppSelector } from '../../redux/hooks';
+import type { TargetType } from '../../services/reactionService';
 import MemoryMediaViewer from '../child/MemoryMediaViewer';
 import Avatar from '../ui/Avatar';
+import ReactionBar from '../ui/ReactionBar';
 import VisibilityToggle from '../ui/VisibilityToggle';
 
 export interface TimelineItemData {
@@ -76,6 +78,20 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
       
       return childId === itemChildId && childParentId === currentUserId;
     });
+
+  const mapItemTypeToTargetType = (t: TimelineItemData['type']): TargetType => {
+    switch (t) {
+      case 'qa':
+        return 'PromptResponse';
+      case 'health':
+        return 'HealthRecord';
+      case 'growth':
+        return 'GrowthRecord';
+      case 'memory':
+      default:
+        return 'Memory';
+    }
+  };
 
   // Define common variables
   const cardBackground = '#fff';
@@ -223,7 +239,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
             {item.title}
           </Text>
           
-          <Text style={styles.description} numberOfLines={3}>
+          <Text style={styles.memoryDescription} numberOfLines={3}>
             {item.content}
           </Text>
 
@@ -258,19 +274,11 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
         {/* Interaction Bar */}
         <View style={styles.interactionBar}>
           <View style={styles.leftActions}>
-            <TouchableOpacity 
-              style={styles.memoryActionButton}
-              onPress={() => onLike?.(item)}
-            >
-              <MaterialIcons name="favorite-border" size={20} color="#666" />
-              <Text style={styles.actionText}>Thích</Text>
-            </TouchableOpacity>
-            
-            <View style={styles.likeCount}>
-              <MaterialIcons name="favorite" size={16} color="#ff4757" />
-              <Text style={styles.likeCountText}>6</Text>
-            </View>
-            
+            <ReactionBar
+              targetType={mapItemTypeToTargetType(item.type)}
+              targetId={item.id}
+              onReactionChange={() => onLike?.(item)}
+            />
             <TouchableOpacity 
               style={styles.memoryActionButton}
               onPress={() => onComment?.(item)}
@@ -281,13 +289,6 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
           </View>
           
           <View style={styles.rightActions}>
-            <View style={styles.otherUsers}>
-              <View style={styles.smallProfilePicture}>
-                <MaterialIcons name="person" size={12} color="#fff" />
-              </View>
-              <Text style={styles.otherUsersText}>+5</Text>
-            </View>
-            
             {(onEdit || onDelete) && isOwner && (
               <View style={styles.memoryActions}>
                 {onEdit && (
@@ -368,6 +369,11 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
               <MemoryMediaViewer attachments={item.media} maxPreviewCount={3} />
             </View>
           )}
+
+          {/* Reaction Bar */}
+          <View style={{ marginTop: 12 }}>
+            <ReactionBar targetType={mapItemTypeToTargetType(item.type)} targetId={item.id} />
+          </View>
         </View>
 
         {/* Date */}
@@ -456,8 +462,8 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
       {item.metadata && (
         <View style={styles.metadata}>
           {item.metadata.type && (
-            <View style={[styles.tag, { backgroundColor: getTypeColor() + '20' }]}>
-              <Text style={[styles.tagText, { color: getTypeColor() }]}>
+            <View style={[styles.tag, { backgroundColor: getTypeColor() + '20' }]}> 
+              <Text style={[styles.tagText, { color: getTypeColor() }]}> 
                 {item.metadata.type}
               </Text>
             </View>
@@ -477,6 +483,11 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
           )}
         </View>
       )}
+
+      {/* Reaction Bar */}
+      <View style={{ marginTop: 12 }}>
+        <ReactionBar targetType={mapItemTypeToTargetType(item.type)} targetId={item.id} />
+      </View>
 
       {/* Action buttons */}
       {(onEdit || onDelete) && isOwner && (
@@ -740,16 +751,6 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 12,
     color: '#666',
-  },
-  likeCount: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  likeCountText: {
-    fontSize: 12,
-    color: '#ff4757',
-    fontWeight: '600',
   },
   rightActions: {
     flexDirection: 'row',
