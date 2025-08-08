@@ -6,12 +6,17 @@ Backend đã thêm field `sentAt` vào invitation response:
 
 ```json
 {
-  "email": "trungtambdct2008@gmail.com",
-  "token": "de3b07c484fc288ba2631afbeba6a205",
-  "status": "pending",
-  "role": "member",
-  "sentAt": "2025-08-05T08:29:09.854+00:00",
-  "_id": "6891c0d5a54dda27f0e14e0"
+  "success": true,
+  "data": {
+    "invitations": [
+      {
+        "_id": "invitation_id_here",
+        "token": "YOUR_TOKEN_HERE",
+        "status": "pending",
+        "sentAt": "2024-01-15T10:30:00.000Z"
+      }
+    ]
+  }
 }
 ```
 

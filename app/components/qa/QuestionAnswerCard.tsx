@@ -1,14 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React from 'react';
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
-} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { updateResponse } from '../../redux/slices/promptResponseSlice';
+import { commentService } from '../../services/commentService';
 import { Prompt, PromptResponse } from '../../services/promptService';
+import CommentModal from '../CommentModal';
 import ReactionBar from '../ui/ReactionBar';
 import VisibilityToggle from '../ui/VisibilityToggle';
 import QAMediaViewer from './QAMediaViewer';
@@ -37,6 +34,8 @@ export default function QuestionAnswerCard({
   const dispatch = useAppDispatch();
   const currentUser = useAppSelector((state) => state.auth.user);
   const { children } = useAppSelector((state) => state.children);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
   
   // Check if current user is the owner of the child (not just a member)
   // Only the owner can see visibility toggle
@@ -69,17 +68,48 @@ export default function QuestionAnswerCard({
 
 
   const handleVisibilityUpdate = async (newVisibility: 'private' | 'public') => {
-    if (!response) return;
-    
     try {
       await dispatch(updateResponse({
-        responseId: response.id,
+        responseId: response!.id,
         data: { visibility: newVisibility }
       })).unwrap();
     } catch (error) {
       throw error; // Re-throw to let VisibilityToggle handle the error
     }
   };
+
+  const handleCommentPress = () => {
+    setShowCommentModal(true);
+  };
+
+  // Fetch comment count
+  useEffect(() => {
+    if (!response?.id) return;
+    
+    const fetchCommentCount = async () => {
+      try {
+        const apiResponse = await commentService.getComments('promptResponse', response.id, 1, 1);
+        
+        // Handle nested response format from backend
+        let total = 0;
+        const responseData = apiResponse as any;
+        if (responseData.data?.pagination?.total) {
+          // Backend returns: { data: { pagination: { total: 5 } } }
+          total = responseData.data.pagination.total;
+        } else if (responseData.pagination?.total) {
+          // Direct format
+          total = responseData.pagination.total;
+        }
+        
+        setCommentCount(total);
+      } catch (error) {
+        console.error('Error fetching comment count:', error);
+        setCommentCount(0);
+      }
+    };
+
+    fetchCommentCount();
+  }, [response?.id]);
 
   const hasResponse = !!response;
   const hasAttachments = response?.attachments && response.attachments.length > 0;
@@ -135,9 +165,17 @@ export default function QuestionAnswerCard({
           )}
 
           {/* Reaction Bar for Q&A response */}
-          <View style={{ marginTop: 12 }}>
-            <ReactionBar targetType={'PromptResponse'} targetId={response!.id} />
-          </View>
+          {response?.id && (
+            <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <ReactionBar targetType={'PromptResponse'} targetId={response.id} />
+              <TouchableOpacity style={styles.actionButton} onPress={handleCommentPress}>
+                <MaterialIcons name="chat-bubble-outline" size={24} color="#1877F2" />
+                <Text style={styles.actionText}>
+                  {commentCount > 0 ? `${commentCount} bình luận` : 'Bình luận'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Feedback */}
           {response!.feedback && (
@@ -191,6 +229,27 @@ export default function QuestionAnswerCard({
           }
         </Text>
       </View>
+
+      {/* Comment Modal */}
+      {response?.id && (
+        <CommentModal
+          visible={showCommentModal}
+          onClose={() => setShowCommentModal(false)}
+          targetType="promptResponse"
+          targetId={response.id}
+          onCommentAdded={(comment) => {
+            // Update comment count when comment is added
+            setCommentCount(prev => prev + 1);
+          }}
+          onCommentDeleted={(commentId) => {
+            // Update comment count when comment is deleted
+            setCommentCount(prev => Math.max(0, prev - 1));
+          }}
+          onCommentEdited={(comment) => {
+            // Comment edited successfully
+          }}
+        />
+      )}
     </TouchableOpacity>
   );
 }
@@ -322,6 +381,16 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 12,
     color: '#999',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionText: {
+    fontSize: 14,
+    color: '#1877F2',
+    fontWeight: '500',
   },
 
 });

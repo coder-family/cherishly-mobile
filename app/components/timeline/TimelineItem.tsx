@@ -1,805 +1,400 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import React from 'react';
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
-} from 'react-native';
-import { useAppSelector } from '../../redux/hooks';
-import type { TargetType } from '../../services/reactionService';
-import MemoryMediaViewer from '../child/MemoryMediaViewer';
-import Avatar from '../ui/Avatar';
-import ReactionBar from '../ui/ReactionBar';
-import VisibilityToggle from '../ui/VisibilityToggle';
-
-export interface TimelineItemData {
-  id: string;
-  type: 'memory' | 'qa' | 'health' | 'growth';
-  title: string;
-  content: string;
-  date: string;
-  createdAt: string;
-  childId: string;
-  childName?: string;
-  media?: any[];
-  metadata?: any;
-  creator?: any; // Add creator info for memory items
-  creatorId?: string; // Add creator ID for fallback display
-  visibility?: 'private' | 'public';
-}
+import { MaterialIcons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { commentService } from "../../services/commentService";
+import CommentModal from "../CommentModal";
+import CommentSystem from "../CommentSystem";
+import MediaViewerBase from "../media/MediaViewerBase";
+import ReactionBar from "../ui/ReactionBar";
+import VisibilityToggle from "../ui/VisibilityToggle";
 
 interface TimelineItemProps {
-  item: TimelineItemData;
-  onPress?: (item: TimelineItemData) => void;
-  onEdit?: (item: TimelineItemData) => void;
-  onDelete?: (item: TimelineItemData) => void;
-  onLike?: (item: TimelineItemData) => void;
-  onComment?: (item: TimelineItemData) => void;
-  onVisibilityUpdate?: (itemId: string, visibility: 'private' | 'public') => Promise<void>;
+  item: any;
+  onPress?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onLike?: () => void;
+  onComment?: () => void;
+  onVisibilityUpdate?: (
+    itemId: string,
+    visibility: "private" | "public"
+  ) => void;
 }
 
-const TimelineItem: React.FC<TimelineItemProps> = ({ 
-  item, 
-  onPress, 
-  onEdit, 
-  onDelete, 
-  onLike, 
+export default function TimelineItem({
+  item,
+  onPress,
+  onEdit,
+  onDelete,
+  onLike,
   onComment,
-  onVisibilityUpdate
-}) => {
-  const currentUser = useAppSelector((state) => state.auth.user);
-  const { children } = useAppSelector((state) => state.children);
-  
-  // Check if current user is the owner of the child (not just a member)
-  // Only the owner can see visibility toggle and edit/delete buttons
-  const getChildId = (childId: any) => {
-    if (typeof childId === 'string') return childId;
-    if (childId && typeof childId === 'object' && childId._id) return childId._id;
-    if (childId && typeof childId === 'object' && childId.id) return childId.id;
-    return null;
-  };
-  
-  const itemChildId = getChildId(item?.childId);
-  
-  // Helper function to get parentId from child
-  const getParentId = (parentId: any) => {
-    if (typeof parentId === 'string') return parentId;
-    if (parentId && typeof parentId === 'object' && parentId._id) return parentId._id;
-    if (parentId && typeof parentId === 'object' && parentId.id) return parentId.id;
-    return null;
-  };
-  
-  const isOwner = currentUser && item && itemChildId && 
-    children && children.some(child => {
-      const childId = child.id;
-      const childParentId = getParentId(child.parentId);
-      const currentUserId = currentUser.id;
-      
-      return childId === itemChildId && childParentId === currentUserId;
-    });
+  onVisibilityUpdate,
+}: TimelineItemProps) {
+  const [showComments, setShowComments] = useState(false);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
 
-  const mapItemTypeToTargetType = (t: TimelineItemData['type']): TargetType => {
-    switch (t) {
-      case 'qa':
-        return 'PromptResponse';
-      case 'health':
-        return 'HealthRecord';
-      case 'growth':
-        return 'GrowthRecord';
-      case 'memory':
+  const getItemType = () => {
+    switch (item.type) {
+      case "memory":
+        return "Memory";
+      case "qa":
+        return "PromptResponse";
+      case "health":
+        return "HealthRecord";
+      case "growth":
+        return "GrowthRecord";
       default:
-        return 'Memory';
+        return "Memory";
     }
   };
 
-  // Define common variables
-  const cardBackground = '#fff';
-  const textColor = '#333';
-
-  const getTypeIcon = () => {
+  const getItemTypeForComment = () => {
     switch (item.type) {
-      case 'memory':
-        return 'photo-library';
-      case 'qa':
-        return 'help-outline';
-      case 'health':
-        return 'favorite';
-      case 'growth':
-        return 'trending-up';
+      case "memory":
+        return "memory";
+      case "qa":
+        return "promptResponse";
+      case "health":
+        return "healthRecord";
+      case "growth":
+        return "growthRecord";
       default:
-        return 'article';
+        return "memory";
     }
   };
 
-  const getTypeColor = () => {
+  const getItemIcon = () => {
     switch (item.type) {
-      case 'memory':
-        return '#4CAF50';
-      case 'qa':
-        return '#FF9800';
-      case 'health':
-        return '#F44336';
-      case 'growth':
-        return '#2196F3';
+      case "memory":
+        return "photo";
+      case "qa":
+        return "help";
+      case "health":
+        return "medical-services";
+      case "growth":
+        return "trending-up";
       default:
-        return '#9E9E9E';
+        return "photo";
     }
   };
 
-  const getTypeLabel = () => {
+  const getItemColor = () => {
     switch (item.type) {
-      case 'memory':
-        return 'Memory';
-      case 'qa':
-        return 'Q&A';
-      case 'health':
-        return 'Health';
-      case 'growth':
-        return 'Growth';
+      case "memory":
+        return "#4f8cff";
+      case "qa":
+        return "#ff9800";
+      case "health":
+        return "#4caf50";
+      case "growth":
+        return "#9c27b0";
       default:
-        return 'Post';
+        return "#4f8cff";
     }
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInMs = now.getTime() - date.getTime();
-    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-    const diffInDays = Math.floor(diffInHours / 24);
-    
-    if (diffInDays > 0) {
-      return `${diffInDays} ngày trước`;
-    } else if (diffInHours > 0) {
-      return `${diffInHours} giờ trước`;
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+    if (diffInHours < 1) {
+      return "Vừa xong";
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)} giờ trước`;
     } else {
-      const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-      if (diffInMinutes > 0) {
-        return `${diffInMinutes} phút trước`;
-      } else {
-        return 'Vừa xong';
-      }
+      return date.toLocaleDateString("vi-VN");
     }
   };
 
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMs = now.getTime() - date.getTime();
-    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-    const diffInDays = Math.floor(diffInHours / 24);
+  const handleCommentPress = () => {
+    setShowCommentModal(true);
+    onComment?.();
+  };
+
+  // Fetch comment count
+  useEffect(() => {
+    if (!item?.id) return;
     
-    if (diffInDays > 0) {
-      return `${diffInDays} ngày trước`;
-    } else if (diffInHours > 0) {
-      return `${diffInHours} giờ trước`;
-    } else {
-      const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-      if (diffInMinutes > 0) {
-        return `${diffInMinutes} phút trước`;
-      } else {
-        return 'Vừa xong';
+    const fetchCommentCount = async () => {
+      try {
+        const targetType = getItemTypeForComment();
+        const apiResponse = await commentService.getComments(targetType, item.id, 1, 1);
+        
+        // Handle nested response format from backend
+        let total = 0;
+        const responseData = apiResponse as any;
+        if (responseData.data?.pagination?.total) {
+          // Backend returns: { data: { pagination: { total: 5 } } }
+          total = responseData.data.pagination.total;
+        } else if (responseData.pagination?.total) {
+          // Direct format
+          total = responseData.pagination.total;
+        }
+        
+        setCommentCount(total);
+      } catch (error) {
+        console.error('Error fetching comment count:', error);
+        setCommentCount(0);
       }
-    }
-  };
+    };
 
-  const handlePress = () => {
-    if (onPress) {
-      onPress(item);
-    }
-  };
+    fetchCommentCount();
+  }, [item?.id, getItemTypeForComment]);
 
-  const getCreatorName = () => {
-    if (item.creator) {
-      return item.creator.firstName + (item.creator.lastName ? ` ${item.creator.lastName}` : '');
-    }
-    // If no creator info available, show creator ID or generic name
-    if (item.creatorId) {
-      if (typeof item.creatorId === 'string') {
-        return `User ${item.creatorId.slice(-4)}`; // Show last 4 characters of creator ID
-      } else if (typeof item.creatorId === 'object' && (item.creatorId as any)._id) {
-        return `User ${(item.creatorId as any)._id.slice(-4)}`; // Show last 4 characters of creator ID
-      }
-    }
-    // If no creator, show current user's name
-    if (currentUser) {
-      return currentUser.firstName + (currentUser.lastName ? ` ${currentUser.lastName}` : '');
-    }
-    return 'Người dùng';
-  };
+  return (
+    <View style={styles.container}>
+      {/* Item Header */}
+      <View style={styles.header}>
+        <View style={styles.typeBadge}>
+          <MaterialIcons name={getItemIcon() as any} size={16} color="#fff" />
+          <Text style={styles.typeText}>{item.type.toUpperCase()}</Text>
+        </View>
+        <Text style={styles.date}>{formatDate(item.createdAt)}</Text>
+      </View>
 
-  // Memory item rendering
-  if (item.type === 'memory') {
-    
-    return (
+      {/* Item Content */}
       <TouchableOpacity
-        style={[styles.container, { backgroundColor: cardBackground }]}
-        onPress={handlePress}
+        style={styles.content}
+        onPress={onPress}
         activeOpacity={0.7}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.userInfo}>
-            <Avatar uri={item.creator?.avatar || (currentUser as any)?.avatar} size={36} style={styles.profilePicture} />
-            <View style={styles.userDetails}>
-              <Text style={styles.userName}>{getCreatorName()}</Text>
-              <Text style={styles.timestamp}>{formatTimeAgo(item.createdAt)}</Text>
-            </View>
-          </View>
-          
-          <View style={styles.headerActions}>
-            {/* Visibility badge removed */}
-          </View>
-        </View>
+        <Text style={styles.title}>{item.title}</Text>
+        {item.content && <Text style={styles.description}>{item.content}</Text>}
 
-        {/* Content */}
-        <View style={styles.content}>
-          <Text style={styles.title} numberOfLines={2}>
-            {item.title}
-          </Text>
-          
-          <Text style={styles.memoryDescription} numberOfLines={3}>
-            {item.content}
-          </Text>
-
-          {/* Tags */}
-          {item.metadata?.tags && item.metadata.tags.length > 0 && (
-            <View style={styles.tagsContainer}>
-              {item.metadata.tags.map((tag: string) => (
-                <View key={tag} style={styles.tag}>
-                  <Text style={styles.tagText}>#{tag}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* Visibility Controls - Only show for owner */}
-          {isOwner && item.visibility && onVisibilityUpdate && (
-            <VisibilityToggle
-              visibility={item.visibility}
-              onUpdate={(newVisibility) => onVisibilityUpdate(item.id, newVisibility)}
-              size="small"
+        {/* Media */}
+        {item.media && item.media.length > 0 && (
+          <View style={styles.mediaContainer}>
+            <MediaViewerBase
+              attachments={item.media}
+              maxPreviewCount={3}
+              onAttachmentPress={(attachment: any, index: number) => {
+                // console.log(
+                //   "Timeline item attachment pressed:",
+                //   attachment,
+                //   index
+                // );
+              }}
             />
-          )}
-
-          {/* Media Preview */}
-          {item.media && item.media.length > 0 && (
-            <View style={styles.mediaSection}>
-              <MemoryMediaViewer attachments={item.media} maxPreviewCount={3} />
-            </View>
-          )}
-        </View>
-
-        {/* Interaction Bar */}
-        <View style={styles.interactionBar}>
-          <View style={styles.leftActions}>
-            <ReactionBar
-              targetType={mapItemTypeToTargetType(item.type)}
-              targetId={item.id}
-              onReactionChange={() => onLike?.(item)}
-            />
-            <TouchableOpacity 
-              style={styles.memoryActionButton}
-              onPress={() => onComment?.(item)}
-            >
-              <MaterialIcons name="chat-bubble-outline" size={20} color="#666" />
-              <Text style={styles.actionText}>Bình luận</Text>
-            </TouchableOpacity>
           </View>
-          
-          <View style={styles.rightActions}>
-            {(onEdit || onDelete) && isOwner && (
-              <View style={styles.memoryActions}>
-                {onEdit && (
-                  <TouchableOpacity
-                    style={styles.memoryActionButtonIcon}
-                    onPress={() => onEdit(item)}
-                    hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-                  >
-                    <MaterialIcons name="edit" size={16} color="#4f8cff" />
-                  </TouchableOpacity>
-                )}
-                {onDelete && (
-                  <TouchableOpacity
-                    style={styles.memoryActionButtonIcon}
-                    onPress={() => onDelete(item)}
-                    hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-                  >
-                    <MaterialIcons name="delete" size={16} color="#ff4757" />
-                  </TouchableOpacity>
-                )}
+        )}
+
+        {/* Creator Info */}
+        {item.creator && (
+          <View style={styles.creatorInfo}>
+            {item.creator.avatar ? (
+              <Image
+                source={{ uri: item.creator.avatar }}
+                style={styles.creatorAvatar}
+              />
+            ) : (
+              <View style={styles.creatorAvatarPlaceholder}>
+                <MaterialIcons name="person" size={16} color="#ccc" />
               </View>
             )}
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  }
-
-  // Special rendering for Q&A items
-  if (item.type === 'qa') {
-    return (
-      <TouchableOpacity
-        style={[styles.container, { backgroundColor: cardBackground }]}
-        onPress={handlePress}
-        activeOpacity={0.7}
-      >
-        {/* Question Section */}
-        <View style={styles.questionSection}>
-          <View style={styles.questionHeader}>
-            <MaterialIcons
-              name="help-outline"
-              size={20}
-              color="#FF9800"
-            />
-            <Text style={styles.questionLabel}>
-              Question
+            <Text style={styles.creatorName}>
+              {item.creator.firstName} {item.creator.lastName}
             </Text>
-          </View>
-          
-          <Text style={[styles.questionText, { color: textColor }]} numberOfLines={3}>
-            {item.metadata?.question || 'Question not available'}
-          </Text>
-        </View>
-
-        {/* Answer Section */}
-        <View style={styles.answerSection}>
-          <View style={styles.answerHeader}>
-            <MaterialIcons name="chat-bubble-outline" size={20} color="#2196F3" />
-            <Text style={styles.answerLabel}>Answer</Text>
-          </View>
-          
-          <Text style={[styles.answerText, { color: textColor }]} numberOfLines={4}>
-            {item.content || 'No answer content'}
-          </Text>
-
-          {/* Visibility Controls - Only show for owner */}
-          {isOwner && item.visibility && onVisibilityUpdate && (
-            <VisibilityToggle
-              visibility={item.visibility}
-              onUpdate={(newVisibility) => onVisibilityUpdate(item.id, newVisibility)}
-              size="small"
-            />
-          )}
-
-          {/* Media Preview */}
-          {item.media && item.media.length > 0 && (
-            <View style={styles.mediaSection}>
-              <MemoryMediaViewer attachments={item.media} maxPreviewCount={3} />
-            </View>
-          )}
-
-          {/* Reaction Bar */}
-          <View style={{ marginTop: 12 }}>
-            <ReactionBar targetType={mapItemTypeToTargetType(item.type)} targetId={item.id} />
-          </View>
-        </View>
-
-        {/* Date */}
-        <View style={styles.dateContainer}>
-          <Text style={[styles.date, { color: textColor }]}>
-            {formatDate(item.createdAt)}
-          </Text>
-        </View>
-
-        {/* Action buttons */}
-        {(onEdit || onDelete) && isOwner && (
-          <View style={styles.actionButtons}>
-            {onEdit && (
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: getTypeColor() }]}
-                onPress={() => onEdit(item)}
-              >
-                <MaterialIcons name="edit" size={16} color="white" />
-                <Text style={styles.actionButtonText}>Edit</Text>
-              </TouchableOpacity>
-            )}
-            {onDelete && (
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: '#ff4757' }]}
-                onPress={() => onDelete(item)}
-              >
-                <MaterialIcons name="delete" size={16} color="white" />
-                <Text style={styles.actionButtonText}>Delete</Text>
-              </TouchableOpacity>
-            )}
           </View>
         )}
       </TouchableOpacity>
-    );
-  }
-  
-  return (
-    <TouchableOpacity
-      style={[styles.container, { backgroundColor: cardBackground }]}
-      onPress={handlePress}
-      activeOpacity={0.7}
-    >
-      <View style={styles.header}>
-        <View style={[styles.iconContainer, { backgroundColor: getTypeColor() }]}>
-          <MaterialIcons name={getTypeIcon()} size={20} color="white" />
-        </View>
-        <View style={styles.headerText}>
-          <Text style={[styles.title, { color: textColor }]} numberOfLines={2}>
-            {item.title}
-          </Text>
-          <View style={styles.metaInfo}>
-            <Text style={[styles.typeLabel, { color: getTypeColor() }]}>
-              {getTypeLabel()}
-            </Text>
-            <Text style={[styles.date, { color: textColor }]}>
-              {formatDate(item.createdAt)}
-            </Text>
-          </View>
-        </View>
-      </View>
-      
-      {item.content && (
-        <Text style={[styles.content, { color: textColor }]} numberOfLines={3}>
-          {item.content}
-        </Text>
-      )}
-      
-      {/* Visibility Controls - Only show for owner */}
-      {isOwner && item.visibility && onVisibilityUpdate && (
-        <VisibilityToggle
-          visibility={item.visibility}
-          onUpdate={(newVisibility) => onVisibilityUpdate(item.id, newVisibility)}
-          size="small"
-        />
-      )}
-      
-      {/* Media Section - Sử dụng MemoryMediaViewer để đảm bảo tính thống nhất với MemoryItem */}
-      {(() => {
-        return item.media && item.media.length > 0 ? (
-          <View style={styles.mediaSection}>
-            <MemoryMediaViewer attachments={item.media} maxPreviewCount={3} />
-          </View>
-        ) : null;
-      })()}
-      
-      {item.metadata && (
-        <View style={styles.metadata}>
-          {item.metadata.type && (
-            <View style={[styles.tag, { backgroundColor: getTypeColor() + '20' }]}> 
-              <Text style={[styles.tagText, { color: getTypeColor() }]}> 
-                {item.metadata.type}
-              </Text>
-            </View>
-          )}
-          {item.metadata.location && (
-            <View style={styles.locationContainer}>
-              <MaterialIcons name="location-on" size={14} color="#666" />
-              <Text style={[styles.locationText, { color: textColor }]} numberOfLines={1}>
-                {typeof item.metadata.location === 'string' 
-                  ? item.metadata.location 
-                  : item.metadata.location.coordinates 
-                    ? `${item.metadata.location.coordinates[1].toFixed(4)}, ${item.metadata.location.coordinates[0].toFixed(4)}`
-                    : 'Location'
-                }
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
 
-      {/* Reaction Bar */}
-      <View style={{ marginTop: 12 }}>
-        <ReactionBar targetType={mapItemTypeToTargetType(item.type)} targetId={item.id} />
-      </View>
+      {/* Actions */}
+      <View style={styles.actions}>
+        <View style={styles.leftActions}>
+          <ReactionBar
+            targetType={getItemType()}
+            targetId={item.id}
+            onReactionChange={onLike}
+          />
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleCommentPress}
+          >
+            <MaterialIcons name="chat-bubble-outline" size={24} color="#1877F2" />
+            <Text style={styles.actionText}>
+              {commentCount > 0 ? `${commentCount} bình luận` : 'Bình luận'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Action buttons */}
-      {(onEdit || onDelete) && isOwner && (
-        <View style={styles.actionButtons}>
+        <View style={styles.rightActions}>
+          {onVisibilityUpdate && (
+            <VisibilityToggle
+              visibility={item.visibility || "private"}
+              onUpdate={async (visibility) =>
+                onVisibilityUpdate(item.id, visibility)
+              }
+            />
+          )}
           {onEdit && (
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: getTypeColor() }]}
-              onPress={() => onEdit(item)}
-            >
-              <MaterialIcons name="edit" size={16} color="white" />
-              <Text style={styles.actionButtonText}>Edit</Text>
+            <TouchableOpacity style={styles.actionButton} onPress={onEdit}>
+              <MaterialIcons name="edit" size={20} color="#666" />
             </TouchableOpacity>
           )}
           {onDelete && (
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: '#ff4757' }]}
-              onPress={() => onDelete(item)}
-            >
-              <MaterialIcons name="delete" size={16} color="white" />
-              <Text style={styles.actionButtonText}>Delete</Text>
+            <TouchableOpacity style={styles.actionButton} onPress={onDelete}>
+              <MaterialIcons name="delete" size={20} color="#e53935" />
             </TouchableOpacity>
           )}
         </View>
+      </View>
+
+      {/* Comments Section */}
+      {showComments && (
+        <View style={styles.commentsSection}>
+          <CommentSystem
+            targetType={getItemTypeForComment()}
+            targetId={item.id}
+            useScrollView={true}
+            onCommentAdded={(comment) => {
+              // Comment added successfully
+            }}
+            onCommentDeleted={(commentId) => {
+              // Comment deleted successfully
+            }}
+            onCommentEdited={(comment) => {
+              // Comment edited successfully
+            }}
+          />
+        </View>
       )}
-    </TouchableOpacity>
+
+      {/* Comment Modal */}
+      {item?.id && (
+        <CommentModal
+          visible={showCommentModal}
+          onClose={() => setShowCommentModal(false)}
+          targetType={getItemTypeForComment()}
+          targetId={item.id}
+          onCommentAdded={(comment) => {
+            // Update comment count when comment is added
+            setCommentCount(prev => prev + 1);
+          }}
+          onCommentDeleted={(commentId) => {
+            // Update comment count when comment is deleted
+            setCommentCount(prev => Math.max(0, prev - 1));
+          }}
+          onCommentEdited={(comment) => {
+            // Comment edited successfully
+          }}
+        />
+      )}
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    backgroundColor: "#fff",
     borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    marginBottom: 16,
+    shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
+    overflow: "hidden",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    paddingBottom: 8,
   },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  headerText: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-    lineHeight: 20,
-  },
-  metaInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  typeLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-  },
-  date: {
-    fontSize: 12,
-    opacity: 0.7,
-  },
-  content: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  mediaSection: {
-    marginTop: 8,
-  },
-  metadata: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
-  tag: {
+  typeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#4f8cff",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
-  tagText: {
-    fontSize: 11,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  locationText: {
-    fontSize: 12,
+  typeText: {
+    fontSize: 10,
+    color: "#fff",
+    fontWeight: "bold",
     marginLeft: 4,
-    opacity: 0.7,
   },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    marginTop: 12,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
-  },
-  actionButtonText: {
-    color: 'white',
+  date: {
     fontSize: 12,
-    fontWeight: '600',
+    color: "#666",
   },
-  // Q&A specific styles
-  questionSection: {
-    marginBottom: 16,
+  content: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
-  questionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  questionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginLeft: 8,
-    flex: 1,
-  },
-  questionText: {
+  title: {
     fontSize: 16,
-    fontWeight: '500',
-    lineHeight: 22,
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 8,
   },
-  answerSection: {
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    paddingTop: 16,
-  },
-  answerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  answerLabel: {
+  description: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginLeft: 8,
-  },
-  answerText: {
-    fontSize: 15,
+    color: "#666",
     lineHeight: 20,
     marginBottom: 12,
   },
-  dateContainer: {
-    marginTop: 12,
-    alignItems: 'flex-end',
-  },
-  // New styles for memory item
-  memoryContainer: {
-    marginBottom: 16,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  memoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  profilePicture: {
-    marginRight: 12,
-  },
-  userDetails: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#999',
-  },
-  optionsButton: {
-    padding: 8,
-  },
-  memoryContent: {
-    padding: 16,
-  },
-  memoryTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 8,
-  },
-  memoryDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 22,
+  mediaContainer: {
     marginBottom: 12,
   },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  creatorInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
   },
-  interactionBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  creatorAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  creatorAvatarPlaceholder: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#f0f0f0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  creatorName: {
+    fontSize: 12,
+    color: "#666",
+  },
+  actions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: "#f0f0f0",
   },
   leftActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
-  memoryActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  rightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   actionText: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
-  rightActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  otherUsers: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  smallProfilePicture: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#4f8cff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  otherUsersText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  memoryActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  memoryActionButtonIcon: {
-    padding: 8,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  visibilityBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  visibilityText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#666',
-    marginLeft: 4,
+  commentsSection: {
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+    maxHeight: 400,
   },
 });
-
-export default TimelineItem; 

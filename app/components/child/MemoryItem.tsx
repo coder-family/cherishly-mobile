@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,8 +8,10 @@ import {
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { updateMemory } from '../../redux/slices/memorySlice';
+import { commentService } from '../../services/commentService';
 import { Memory } from '../../services/memoryService';
 import { User } from '../../services/userService';
+import CommentModal from '../CommentModal';
 import Avatar from '../ui/Avatar';
 import ReactionBar from '../ui/ReactionBar';
 import VisibilityToggle from '../ui/VisibilityToggle';
@@ -34,6 +36,9 @@ export default function MemoryItem({
   onLike, 
   onComment 
 }: MemoryItemProps) {
+
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
   const dispatch = useAppDispatch();
   const currentUser = useAppSelector((state) => state.auth.user);
   const { children } = useAppSelector((state) => state.children);
@@ -67,7 +72,6 @@ export default function MemoryItem({
     });
   
 
-
   const handleVisibilityUpdate = async (newVisibility: 'private' | 'public') => {
     try {
       await dispatch(updateMemory({
@@ -78,6 +82,40 @@ export default function MemoryItem({
       throw error; // Re-throw to let VisibilityToggle handle the error
     }
   };
+
+  const handleCommentPress = () => {
+    setShowCommentModal(true);
+    onComment?.(memory);
+  };
+
+  // Fetch comment count
+  useEffect(() => {
+    if (!memory?.id) return;
+    
+    const fetchCommentCount = async () => {
+      try {
+        const response = await commentService.getComments('memory', memory.id, 1, 1);
+        
+        // Handle nested response format from backend
+        let total = 0;
+        const responseData = response as any;
+        if (responseData.data?.pagination?.total) {
+          // Backend returns: { data: { pagination: { total: 5 } } }
+          total = responseData.data.pagination.total;
+        } else if (responseData.pagination?.total) {
+          // Direct format
+          total = responseData.pagination.total;
+        }
+        
+        setCommentCount(total);
+      } catch (error) {
+        console.error('Error fetching comment count:', error);
+        setCommentCount(0);
+      }
+    };
+
+    fetchCommentCount();
+  }, [memory?.id]);
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -104,6 +142,14 @@ export default function MemoryItem({
     if (creator) {
       return creator.firstName + (creator.lastName ? ` ${creator.lastName}` : '');
     }
+    // If no creator info available, show creator ID or generic name
+    if (memory.parentId) {
+      if (typeof memory.parentId === 'string') {
+        return `User ${memory.parentId.slice(-4)}`; // Show last 4 characters of creator ID
+      } else if (typeof memory.parentId === 'object' && (memory.parentId as any)._id) {
+        return `User ${(memory.parentId as any)._id.slice(-4)}`; // Show last 4 characters of creator ID
+      }
+    }
     // If no creator, show current user's name
     if (currentUser) {
       return currentUser.firstName + (currentUser.lastName ? ` ${currentUser.lastName}` : '');
@@ -112,13 +158,11 @@ export default function MemoryItem({
   };
 
   const renderTags = () => {
-    if (!memory.tags || memory.tags.length === 0) {
-      return null;
-    }
-
+    if (!memory.tags || memory.tags.length === 0) return null;
+    
     return (
       <View style={styles.tagsContainer}>
-        {memory.tags.map((tag) => (
+        {memory.tags.map((tag: string) => (
           <View key={tag} style={styles.tag}>
             <Text style={styles.tagText}>#{tag}</Text>
           </View>
@@ -129,7 +173,7 @@ export default function MemoryItem({
 
   return (
     <View style={styles.container}>
-      {/* Post Header */}
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.userInfo}>
           <Avatar uri={creator?.avatar || (currentUser as any)?.avatar} size={36} style={styles.profilePicture} />
@@ -140,54 +184,57 @@ export default function MemoryItem({
         </View>
         
         <View style={styles.headerActions}>
-          {/* Visibility badge removed */}
+          {/* Visibility toggle - Only show for owner */}
+          {isOwner && memory.visibility && (
+            <VisibilityToggle
+              visibility={memory.visibility}
+              onUpdate={handleVisibilityUpdate}
+              size="small"
+            />
+          )}
         </View>
       </View>
 
+      {/* Content */}
       <View style={styles.content}>
-        {memory.title && (
-          <Text style={styles.title} numberOfLines={2}>
-            {memory.title}
-          </Text>
-        )}
+        <Text style={styles.title} numberOfLines={2}>
+          {memory.title}
+        </Text>
         
         <Text style={styles.description} numberOfLines={3}>
           {memory.content}
         </Text>
 
-        {/* Visibility Controls - Only show for owner */}
-        {isOwner && (
-          <VisibilityToggle
-            visibility={memory.visibility || 'private'}
-            onUpdate={handleVisibilityUpdate}
-            size="small"
-          />
-        )}
-
         {/* Tags */}
         {renderTags()}
-        
-        {/* Media Attachments */}
-        {memory.attachments && memory.attachments.length > 0 && (
-          <MemoryMediaViewer attachments={memory.attachments} />
-        )}
 
+        {/* Media Preview */}
+        {memory.attachments && memory.attachments.length > 0 && (
+          <View style={styles.mediaSection}>
+            <MemoryMediaViewer attachments={memory.attachments} maxPreviewCount={3} />
+          </View>
+        )}
       </View>
 
       {/* Interaction Bar */}
       <View style={styles.interactionBar}>
         <View style={styles.leftActions}>
           <ReactionBar
-            targetType={'Memory'}
+            targetType="Memory"
             targetId={memory.id}
             onReactionChange={() => onLike?.(memory)}
           />
           <TouchableOpacity 
             style={styles.actionButton}
-            onPress={() => onComment?.(memory)}
+            onPress={handleCommentPress}
           >
             <MaterialIcons name="chat-bubble-outline" size={20} color="#666" />
-            <Text style={styles.actionText}>Bình luận</Text>
+            <Text style={styles.actionText}>
+              {(() => {
+                const text = commentCount > 0 ? `${commentCount} bình luận` : 'Bình luận';
+                return text;
+              })()}
+            </Text>
           </TouchableOpacity>
         </View>
         
@@ -196,7 +243,7 @@ export default function MemoryItem({
             <View style={styles.memoryActions}>
               {onEdit && (
                 <TouchableOpacity
-                  style={styles.memoryActionButton}
+                  style={styles.actionButtonIcon}
                   onPress={() => onEdit(memory)}
                   hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                 >
@@ -205,7 +252,7 @@ export default function MemoryItem({
               )}
               {onDelete && (
                 <TouchableOpacity
-                  style={styles.memoryActionButton}
+                  style={styles.actionButtonIcon}
                   onPress={() => onDelete(memory)}
                   hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                 >
@@ -216,6 +263,27 @@ export default function MemoryItem({
           )}
         </View>
       </View>
+
+      {/* Comment Modal */}
+      <CommentModal
+        visible={showCommentModal}
+        onClose={() => setShowCommentModal(false)}
+        targetType="memory"
+        targetId={memory.id}
+        onCommentAdded={(comment) => {
+          // Update comment count when comment is added
+          setCommentCount(prev => prev + 1);
+        }}
+        onCommentDeleted={(commentId) => {
+          // Update comment count when comment is deleted
+          setCommentCount(prev => Math.max(0, prev - 1));
+        }}
+        onCommentEdited={(comment) => {
+          // Comment edited successfully
+        }}
+      />
+      
+
     </View>
   );
 }
@@ -224,35 +292,30 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   profilePicture: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#e0e0e0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
+    marginRight: 12,
   },
   userDetails: {
     flex: 1,
@@ -264,92 +327,86 @@ const styles = StyleSheet.create({
   },
   timestamp: {
     fontSize: 12,
-    color: '#666',
-  },
-  optionsButton: {
-    padding: 4,
+    color: '#999',
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  visibilityBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#e0f2f7',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  visibilityText: {
-    fontSize: 12,
-    color: '#4f8cff',
-    fontWeight: '500',
-    marginLeft: 4,
+    gap: 8,
   },
   content: {
-    marginBottom: 12,
+    padding: 16,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#333',
-    lineHeight: 22,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   description: {
     fontSize: 14,
     color: '#666',
-    lineHeight: 20,
+    lineHeight: 22,
+    marginBottom: 12,
   },
-
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 8,
+    gap: 8,
+    marginBottom: 12,
   },
   tag: {
-    backgroundColor: '#f0f8ff',
-    borderRadius: 12,
-    paddingHorizontal: 8,
+    backgroundColor: '#e0e7ff',
     paddingVertical: 4,
-    marginRight: 6,
-    marginBottom: 4,
+    paddingHorizontal: 8,
+    borderRadius: 5,
   },
   tagText: {
     fontSize: 12,
     color: '#4f8cff',
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  mediaSection: {
+    marginTop: 8,
   },
   interactionBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
   },
   leftActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 16,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 8,
+    gap: 4,
   },
   actionText: {
     fontSize: 12,
     color: '#666',
-    marginLeft: 5,
   },
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 16,
   },
   memoryActions: {
     flexDirection: 'row',
+    gap: 8,
   },
-  memoryActionButton: {
-    padding: 4,
-    marginLeft: 8,
+  actionButtonIcon: {
+    padding: 8,
+  },
+  commentsSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    maxHeight: 400,
   },
 }); 

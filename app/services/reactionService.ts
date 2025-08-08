@@ -32,14 +32,25 @@ export interface GetReactionsResponse {
   total: number;
 }
 
+// Validation function for MongoDB ObjectId
+function validateObjectId(id: string): boolean {
+  if (!id || typeof id !== 'string') return false;
+  const trimmedId = id.trim();
+  if (!trimmedId) return false;
+  
+  // MongoDB ObjectId validation: 24 character hex string
+  const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+  return objectIdRegex.test(trimmedId);
+}
+
 export async function getReactions(
   targetType: TargetType,
   targetId: string
 ): Promise<GetReactionsResponse> {
   try {
-    const res = await apiService.get(`/reactions`, {
-      params: { targetType, targetId },
-    });
+    const params = { targetType, targetId };
+    
+    const res = await apiService.get(`/reactions`, { params });
     const data = (res.data || res)?.data || (res.data || res);
     const reactions = data.reactions || {};
     const total = typeof data.total === 'number'
@@ -48,7 +59,7 @@ export async function getReactions(
           .reduce((acc: number, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0);
     return { reactions, total } as GetReactionsResponse;
   } catch (error) {
-    console.error('Error getting reactions:', error);
+    console.error('❌ Error getting reactions:', error);
     throw error;
   }
 }
@@ -59,9 +70,11 @@ export async function setReaction(
   type: ReactionType
 ): Promise<void> {
   try {
-    await apiService.post(`/reactions`, { targetType, targetId, type });
+    const requestBody = { targetType, targetId, type };
+    
+    await apiService.post(`/reactions`, requestBody);
   } catch (error) {
-    console.error('Error setting reaction:', error);
+    console.error('❌ Error setting reaction:', error);
     throw error;
   }
 }
@@ -71,13 +84,17 @@ export async function deleteReaction(
   targetId: string
 ): Promise<void> {
   try {
-    await apiService.delete(`/reactions`, {
-      params: { targetType, targetId },
-    });
+    const params = { targetType, targetId };
+    
+    await apiService.delete(`/reactions`, { params });
   } catch (error) {
-    console.error('Error deleting reaction:', error);
+    console.error('❌ Error deleting reaction:', error);
     throw error;
   }
+}
+
+export function getReactionUsers(reactions: ReactionEntry[], type: string): ReactionUser[] {
+  return (reactions as ReactionEntry[]).filter(reaction => reaction.type === type).map(reaction => reaction.user);
 }
 
 export default {
