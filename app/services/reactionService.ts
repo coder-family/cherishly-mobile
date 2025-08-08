@@ -36,16 +36,21 @@ export async function getReactions(
   targetType: TargetType,
   targetId: string
 ): Promise<GetReactionsResponse> {
-  const res = await apiService.get(`/reactions`, {
-    params: { targetType, targetId },
-  });
-  const data = (res.data || res)?.data || (res.data || res);
-  const reactions = data.reactions || {};
-  const total = typeof data.total === 'number'
-    ? data.total
-    : (Object.values(reactions) as Array<ReactionEntry[] | undefined>)
-        .reduce((acc: number, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0);
-  return { reactions, total } as GetReactionsResponse;
+  try {
+    const res = await apiService.get(`/reactions`, {
+      params: { targetType, targetId },
+    });
+    const data = (res.data || res)?.data || (res.data || res);
+    const reactions = data.reactions || {};
+    const total = typeof data.total === 'number'
+      ? data.total
+      : (Object.values(reactions) as Array<ReactionEntry[] | undefined>)
+          .reduce((acc: number, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0);
+    return { reactions, total } as GetReactionsResponse;
+  } catch (error) {
+    console.error('Error getting reactions:', error);
+    throw error;
+  }
 }
 
 export async function setReaction(
@@ -53,16 +58,26 @@ export async function setReaction(
   targetId: string,
   type: ReactionType
 ): Promise<void> {
-  await apiService.post(`/reactions`, { targetType, targetId, type });
+  try {
+    await apiService.post(`/reactions`, { targetType, targetId, type });
+  } catch (error) {
+    console.error('Error setting reaction:', error);
+    throw error;
+  }
 }
 
 export async function deleteReaction(
   targetType: TargetType,
   targetId: string
 ): Promise<void> {
-  await apiService.delete(`/reactions`, {
-    params: { targetType, targetId },
-  });
+  try {
+    await apiService.delete(`/reactions`, {
+      params: { targetType, targetId },
+    });
+  } catch (error) {
+    console.error('Error deleting reaction:', error);
+    throw error;
+  }
 }
 
 export default {
