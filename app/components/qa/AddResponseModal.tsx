@@ -1,20 +1,21 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-  Alert,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { useAppDispatch } from '../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { createResponse } from '../../redux/slices/promptResponseSlice';
 import { Prompt } from '../../services/promptService';
 import MultiMediaPicker, { MediaFile } from '../media/MultiMediaPicker';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import VisibilityToggle, { VisibilityType } from '../ui/VisibilityToggle';
 
 interface AddResponseModalProps {
   visible: boolean;
@@ -32,9 +33,16 @@ export default function AddResponseModal({
   onSuccess 
 }: AddResponseModalProps) {
   const dispatch = useAppDispatch();
+  const { children } = useAppSelector((state) => state.children);
+  const currentUser = useAppSelector((state) => state.auth.user);
   const [content, setContent] = useState('');
   const [attachments, setAttachments] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [visibility, setVisibility] = useState<VisibilityType>('private');
+
+  // Check if current user is the owner of the child
+  const isCreator = currentUser && childId && 
+    children && children.some(child => child.id === childId);
 
   const handleSubmit = async () => {
     if (!content.trim()) {
@@ -58,11 +66,13 @@ export default function AddResponseModal({
         childId,
         content: content.trim(),
         attachments: convertedAttachments as any,
+        visibility: visibility,
       })).unwrap();
 
       // Reset form
       setContent('');
       setAttachments([]);
+      setVisibility('private');
       onSuccess();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to create response');
@@ -179,6 +189,18 @@ export default function AddResponseModal({
               maxFileSize={50}
             />
           </View>
+
+          {/* Visibility Toggle - Only show for creator */}
+          {isCreator && (
+            <View style={styles.visibilityContainer}>
+              <Text style={styles.inputLabel}>Visibility</Text>
+              <VisibilityToggle
+                visibility={visibility}
+                onUpdate={async (newVisibility) => setVisibility(newVisibility)}
+                size="small"
+              />
+            </View>
+          )}
         </ScrollView>
       </View>
     </Modal>
@@ -287,5 +309,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 12,
+  },
+  visibilityContainer: {
+    margin: 16,
   },
 }); 

@@ -38,8 +38,10 @@ apiService.interceptors.request.use(
     try {
       const authService = (await import('./authService')).default;
       const token = await authService.getAccessToken();
+      
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        
         conditionalLog.auth('Auth token added to request:', { 
           hasToken: !!token, 
           tokenLength: token ? token.length : 0,

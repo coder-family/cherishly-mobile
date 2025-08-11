@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   switch: {
-    transform: [{ scaleX: 0.6 }, { scaleY: 0.6 }],
+    transform: [{ scaleX: 0.55 }, { scaleY: 0.55 }],
   },
 });
 

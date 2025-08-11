@@ -5,6 +5,7 @@ import { commentService } from "../../services/commentService";
 import CommentModal from "../CommentModal";
 import CommentSystem from "../CommentSystem";
 import MediaViewerBase from "../media/MediaViewerBase";
+import { DeleteButton, EditButton } from "../ui/EditDeleteButtons";
 import ReactionBar from "../ui/ReactionBar";
 import VisibilityToggle from "../ui/VisibilityToggle";
 
@@ -19,6 +20,8 @@ interface TimelineItemProps {
     itemId: string,
     visibility: "private" | "public"
   ) => void;
+  // New: whether the current viewer is the owner of the content's child
+  isOwner?: boolean;
 }
 
 export default function TimelineItem({
@@ -29,6 +32,7 @@ export default function TimelineItem({
   onLike,
   onComment,
   onVisibilityUpdate,
+  isOwner = false,
 }: TimelineItemProps) {
   const [showComments, setShowComments] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
@@ -220,7 +224,7 @@ export default function TimelineItem({
         </View>
 
         <View style={styles.rightActions}>
-          {onVisibilityUpdate && (
+          {isOwner && onVisibilityUpdate && (
             <VisibilityToggle
               visibility={item.visibility || "private"}
               onUpdate={async (visibility) =>
@@ -228,15 +232,11 @@ export default function TimelineItem({
               }
             />
           )}
-          {onEdit && (
-            <TouchableOpacity style={styles.actionButton} onPress={onEdit}>
-              <MaterialIcons name="edit" size={20} color="#666" />
-            </TouchableOpacity>
+          {isOwner && onEdit && (
+            <EditButton onPress={onEdit} />
           )}
-          {onDelete && (
-            <TouchableOpacity style={styles.actionButton} onPress={onDelete}>
-              <MaterialIcons name="delete" size={20} color="#e53935" />
-            </TouchableOpacity>
+          {isOwner && onDelete && (
+            <DeleteButton onPress={onDelete} />
           )}
         </View>
       </View>

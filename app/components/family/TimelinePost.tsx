@@ -93,42 +93,49 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
             )}
           </>
         );
+      
+      case 'promptresponse':
+        // Support multiple backend shapes for prompt and attachments
+        const promptObj = post.promptId || post.prompt || {};
+        const questionTitle = promptObj.title || promptObj.question || promptObj.content;
+        const questionBody = promptObj.question || promptObj.content;
+        const qaAttachments = post.attachments || post.response?.attachments || [];
+        const answerText = (typeof post.response === 'object' && post.response?.content)
+          ? post.response.content
+          : post.response;
         
-      case 'promptResponse':
+        // Avoid showing duplicate question text twice
+        const normalize = (s: any) => (typeof s === 'string' ? s : s ? String(s) : '').trim().toLowerCase();
+        const shouldShowBody = !!questionBody && normalize(questionBody) !== normalize(questionTitle);
+
         return (
           <>
-            {post.promptId?.title && <Text style={styles.postTitle}>Q: {safeText(post.promptId.title)}</Text>}
-            {post.promptId?.question && <Text style={styles.postText}>{safeText(post.promptId.question)}</Text>}
-            {post.response && (
+            {questionTitle && (
+              <Text style={styles.postTitle}>{safeText(questionTitle)}</Text>
+            )}
+            {shouldShowBody && (
+              <Text style={styles.postText}>{safeText(questionBody)}</Text>
+            )}
+            {answerText && (
               <View style={[styles.responseContainer, { flexDirection: 'row', alignItems: 'center' }]}> 
-                <Text style={styles.responseLabel}>Answer: </Text>
-                <Text style={styles.responseText}>
-                  {typeof post.response === 'object' && post.response.content 
-                    ? safeText(post.response.content)
-                    : safeText(post.response)
-                  }
-                </Text>
+                <Text style={styles.responseLabel}></Text>
+                <Text style={styles.responseText}>{safeText(answerText)}</Text>
               </View>
             )}
-            {post.attachments && post.attachments.length > 0 && (
-              <View style={styles.attachmentsContainer}>
-                {post.attachments.map((attachment: any, index: number) => (
-                  <View key={index} style={styles.attachmentItem}>
-                    {attachment.type === 'image' && (
-                      <Image 
-                        source={{ uri: attachment.url }} 
-                        style={styles.attachmentImage}
-                        resizeMode="cover"
-                      />
-                    )}
-                  </View>
-                ))}
+            {qaAttachments && qaAttachments.length > 0 && (
+              <View style={styles.mediaContainer}>
+                <MediaViewerBase
+                  attachments={qaAttachments}
+                  maxPreviewCount={3}
+                  onAttachmentPress={(attachment: any, index: number) => {
+                  }}
+                />
               </View>
             )}
           </>
         );
-        
-      case 'growthRecord':
+      
+      case 'growthrecord':
         return (
           <>
             <Text style={styles.postTitle}>{safeText(post.type)}</Text>
@@ -138,8 +145,8 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
             {post.notes && <Text style={styles.postText}>{safeText(post.notes)}</Text>}
           </>
         );
-        
-      case 'healthRecord':
+      
+      case 'healthrecord':
         return (
           <>
             <Text style={styles.postTitle}>{safeText(post.title || post.type)}</Text>
@@ -156,7 +163,7 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
             )}
           </>
         );
-        
+      
       default:
         return (
           <>
@@ -174,12 +181,13 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
 
   // Fetch comment count
   useEffect(() => {
-    if (!post?.id) return;
+    const postId = post?._id || post?.id;
+    if (!postId) return;
     
     const fetchCommentCount = async () => {
       try {
         const targetType = mapContentTypeToCommentTargetType(contentType);
-        const apiResponse = await commentService.getComments(targetType, post.id, 1, 1);
+        const apiResponse = await commentService.getComments(targetType, postId, 1, 1);
         
         // Handle nested response format from backend
         let total = 0;
@@ -200,7 +208,7 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
     };
 
     fetchCommentCount();
-  }, [post?.id, contentType]);
+  }, [post?._id, post?.id, contentType]);
 
   return (
     <View style={styles.timelinePost}>
@@ -222,9 +230,9 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
         </View>
         <View style={styles.postTypeBadge}>
           <Text style={styles.postTypeText}>
-            {contentType === 'promptResponse' ? 'Q&A' : 
-             contentType === 'growthRecord' ? 'Growth' :
-             contentType === 'healthRecord' ? 'Health' : contentType}
+            {contentType.toLowerCase() === 'promptresponse' ? 'Q&A' : 
+             contentType.toLowerCase() === 'growthrecord' ? 'Growth' :
+             contentType.toLowerCase() === 'healthrecord' ? 'Health' : contentType}
           </Text>
         </View>
       </View>

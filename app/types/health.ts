@@ -101,14 +101,15 @@ export interface HealthRecord {
 }
 
 export interface CreateHealthRecordData {
-  childId: string;
-  type: 'vaccination' | 'illness' | 'medication';
+  child: string; // Backend expects 'child' not 'childId'
+  type: string;
   title: string;
   description: string;
-  startDate: string;
+  date: string; // Backend expects 'date' not 'startDate'
   endDate?: string;
-  doctorName?: string;
+  doctor?: string; // Backend expects 'doctor' not 'doctorName'
   location?: string;
+  visibility?: 'private' | 'public';
   attachments?: string[];
 }
 

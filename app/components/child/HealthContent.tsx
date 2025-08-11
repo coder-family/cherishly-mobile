@@ -11,6 +11,7 @@ import EditGrowthRecordModal from '../health/EditGrowthRecordModal';
 import EditHealthRecordModal from '../health/EditHealthRecordModal';
 import GrowthChart from '../health/GrowthChart';
 import HealthRecordItem from '../health/HealthRecordItem';
+import { DeleteButton, EditButton } from '../ui/EditDeleteButtons';
 import ErrorView from '../ui/ErrorView';
 import SectionCard from '../ui/SectionCard';
 import VisibilityToggle from '../ui/VisibilityToggle';
@@ -433,7 +434,7 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
                   <Text style={styles.tableCell}>
                     {recordAgeInMonths}m
                   </Text>
-                  <View style={styles.tableCell}>
+                  <View style={styles.tableCellVisibility}>
                     {record.visibility && isOwner && (
                       <VisibilityToggle
                         visibility={record.visibility}
@@ -442,23 +443,11 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
                       />
                     )}
                   </View>
-                  <View style={[styles.actionButtons, { flex: 1.2 }]}>
+                  <View style={styles.actionButtonsRow}>
                     {isOwner && (
                       <>
-                        <TouchableOpacity
-                          style={[styles.actionButton, styles.editButton]}
-                          onPress={() => handleEditGrowthRecord(record)}
-                          activeOpacity={0.7}
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                          <MaterialIcons name="edit" size={16} color={Colors.light.primary} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.actionButton, styles.deleteButton]}
-                          onPress={() => handleDeleteGrowthRecord(record.id)}
-                        >
-                          <MaterialIcons name="delete" size={16} color="#EF4444" />
-                        </TouchableOpacity>
+                        <EditButton onPress={() => handleEditGrowthRecord(record)} style={{ padding: 4 }} size={16} />
+                        <DeleteButton onPress={() => handleDeleteGrowthRecord(record.id)} style={{ padding: 4, marginLeft: 4 }} size={16} />
                       </>
                     )}
                   </View>
@@ -529,46 +518,13 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
         record={recordToEdit}
         onSuccess={handleEditModalSuccess}
       />
-      {/* Debug info for modal - COMMENTED OUT */}
-      {/* {__DEV__ && (
-        <View style={{ position: 'absolute', top: 50, right: 10, backgroundColor: 'rgba(0,0,0,0.8)', padding: 10, borderRadius: 5 }}>
-          <Text style={{ color: 'white', fontSize: 10 }}>
-            Growth Modal: {showEditGrowthModal ? 'OPEN' : 'CLOSED'}
-          </Text>
-          <Text style={{ color: 'white', fontSize: 10 }}>
-            Record: {recordToEdit ? recordToEdit.id : 'NONE'}
-          </Text>
-        </View>
-      )} */}
-      {/* Debug info for modal - COMMENTED OUT TO REDUCE NOISE */}
-      {/* {__DEV__ && (
-        <View style={{ position: 'absolute', top: 100, right: 10, backgroundColor: 'rgba(0,0,0,0.8)', padding: 10, borderRadius: 5 }}>
-          <Text style={{ color: 'white', fontSize: 10 }}>
-            Growth Modal: {showEditGrowthModal ? 'OPEN' : 'CLOSED'}
-          </Text>
-          <Text style={{ color: 'white', fontSize: 10 }}>
-            Record: {recordToEdit ? recordToEdit.id : 'NONE'}
-          </Text>
-        </View>
-      )} */}
-
+      
       <EditHealthRecordModal
         visible={showEditHealthModal}
         onClose={handleEditHealthModalClose}
         record={healthRecordToEdit}
         onSuccess={handleEditHealthModalSuccess}
       />
-      {/* Debug info for health modal - COMMENTED OUT */}
-      {/* {__DEV__ && (
-        <View style={{ position: 'absolute', top: 100, right: 10, backgroundColor: 'rgba(0,0,0,0.8)', padding: 10, borderRadius: 5 }}>
-          <Text style={{ color: 'white', fontSize: 10 }}>
-            Health Modal: {showEditHealthModal ? 'OPEN' : 'CLOSED'}
-          </Text>
-          <Text style={{ color: 'white', fontSize: 10 }}>
-            Record: {healthRecordToEdit ? healthRecordToEdit.id : 'NONE'}
-          </Text>
-        </View>
-      )} */}
     </View>
   );
 };
@@ -690,10 +646,19 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'left',
   },
-  actionButtons: {
+  tableCellVisibility: {
+    flexBasis: 80,
+    flexGrow: 0,
+    flexShrink: 0,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    paddingRight: 4,
+  },
+  actionButtonsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: 80, // Fixed width for action buttons
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    width: 64,
   },
   actionButton: {
     padding: 8,

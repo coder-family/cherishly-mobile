@@ -4,6 +4,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { commentService } from '../../services/commentService';
 import CommentModal from '../CommentModal';
 import CommentSystem from '../CommentSystem';
+import { DeleteButton, EditButton } from '../ui/EditDeleteButtons';
 import ReactionBar from '../ui/ReactionBar';
 
 export type QAMemoryType = 'text' | 'image' | 'audio' | 'video';
@@ -150,14 +151,10 @@ const QAMemoryItem: React.FC<QAMemoryItemProps> = ({
         
         <View style={styles.rightActions}>
           {onEdit && (
-            <TouchableOpacity style={styles.actionButton} onPress={onEdit}>
-              <MaterialIcons name="edit" size={20} color="#666" />
-            </TouchableOpacity>
+            <EditButton onPress={onEdit} />
           )}
           {onDelete && (
-            <TouchableOpacity style={styles.actionButton} onPress={onDelete}>
-              <MaterialIcons name="delete" size={20} color="#e53935" />
-            </TouchableOpacity>
+            <DeleteButton onPress={onDelete} />
           )}
         </View>
       </View>

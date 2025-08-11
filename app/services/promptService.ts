@@ -69,6 +69,7 @@ export interface CreatePromptResponseData {
   childId: string;
   content: string;
   attachments?: File[];
+  visibility?: 'private' | 'public';
 }
 
 export interface UpdatePromptResponseData {

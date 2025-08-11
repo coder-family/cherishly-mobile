@@ -6,6 +6,7 @@ import { updateResponse } from '../../redux/slices/promptResponseSlice';
 import { commentService } from '../../services/commentService';
 import { Prompt, PromptResponse } from '../../services/promptService';
 import CommentModal from '../CommentModal';
+import { DeleteButton, EditButton } from '../ui/EditDeleteButtons';
 import ReactionBar from '../ui/ReactionBar';
 import VisibilityToggle from '../ui/VisibilityToggle';
 import QAMediaViewer from './QAMediaViewer';
@@ -166,14 +167,22 @@ export default function QuestionAnswerCard({
 
           {/* Reaction Bar for Q&A response */}
           {response?.id && (
-            <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-              <ReactionBar targetType={'PromptResponse'} targetId={response.id} />
-              <TouchableOpacity style={styles.actionButton} onPress={handleCommentPress}>
-                <MaterialIcons name="chat-bubble-outline" size={24} color="#1877F2" />
-                <Text style={styles.actionText}>
-                  {commentCount > 0 ? `${commentCount} bình luận` : 'Bình luận'}
-                </Text>
-              </TouchableOpacity>
+            <View style={styles.actionsRow}>
+              <View style={styles.leftActions}>
+                <ReactionBar targetType={'PromptResponse'} targetId={response.id} />
+                <TouchableOpacity style={styles.actionButton} onPress={handleCommentPress}>
+                  <MaterialIcons name="chat-bubble-outline" size={24} color="#1877F2" />
+                  <Text style={styles.actionText}>
+                    {commentCount > 0 ? `${commentCount} bình luận` : 'Bình luận'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {isOwner && (
+                <View style={styles.rightActions}>
+                  <EditButton onPress={onEditResponse!} />
+                  <DeleteButton onPress={onDeleteResponse!} />
+                </View>
+              )}
             </View>
           )}
 
@@ -190,33 +199,6 @@ export default function QuestionAnswerCard({
               </Text>
             </View>
           )}
-        </View>
-      )}
-
-      {/* Action Buttons - Only show for answered questions */}
-      {showAddButton && hasResponse && isOwner && (
-        <View style={styles.actionButtonsContainer}>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={onEditResponse}
-            activeOpacity={0.8}
-            disabled={isDeleting}
-          >
-            <MaterialIcons name="edit" size={20} color="#fff" />
-            <Text style={styles.buttonText}>Edit</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.deleteButton, isDeleting && styles.disabledButton]}
-            onPress={onDeleteResponse}
-            activeOpacity={0.8}
-            disabled={isDeleting}
-          >
-            <MaterialIcons name="delete" size={20} color="#fff" />
-            <Text style={styles.buttonText}>
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </Text>
-          </TouchableOpacity>
         </View>
       )}
 
@@ -392,6 +374,28 @@ const styles = StyleSheet.create({
     color: '#1877F2',
     fontWeight: '500',
   },
-
+  actionButtonsInline: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 12,
+  },
+  actionsRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  leftActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    flexShrink: 1,
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
 });
 

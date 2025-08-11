@@ -734,4 +734,28 @@ export async function declineInvitation(token: string): Promise<void> {
       }
     }
   }
+}
+
+// Remove member from family group (only for owners and admins)
+export async function removeMemberFromFamilyGroup(groupId: string, memberId: string): Promise<void> {
+  try {
+    await apiService.delete(`/family-groups/${groupId}/members/${memberId}`);
+  } catch (error: any) {
+    conditionalLog.family('Error removing member from family group:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Member or group not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to remove this member');
+      } else if (error.response.status === 400) {
+        throw new Error(error.response.data?.message || 'Cannot remove this member');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to remove member');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to remove member');
+    } else {
+      throw new Error('Failed to remove member: ' + (error.message || 'Unknown error'));
+    }
+  }
 } 

@@ -7,6 +7,7 @@ import { updateHealthRecord } from '../../redux/slices/healthSlice';
 import { commentService } from '../../services/commentService';
 import { HealthRecord } from '../../types/health';
 import CommentModal from '../CommentModal';
+import { DeleteButton, EditButton } from '../ui/EditDeleteButtons';
 import ReactionBar from '../ui/ReactionBar';
 import VisibilityToggle from '../ui/VisibilityToggle';
 
@@ -306,22 +307,10 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
           {(onEdit || onDelete) && isOwner && (
             <View style={styles.actionButtons}>
               {onEdit && (
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: getTypeColor(record.type) }]}
-                  onPress={() => onEdit(record)}
-                >
-                  <MaterialIcons name="edit" size={16} color="white" />
-                  <Text style={styles.actionButtonText}>Edit</Text>
-                </TouchableOpacity>
+                <EditButton onPress={() => onEdit(record)} />
               )}
               {onDelete && (
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: '#ff4757' }]}
-                  onPress={() => onDelete(record.id)}
-                >
-                  <MaterialIcons name="delete" size={16} color="white" />
-                  <Text style={styles.actionButtonText}>Delete</Text>
-                </TouchableOpacity>
+                <DeleteButton onPress={() => onDelete(record.id)} />
               )}
             </View>
           )}
