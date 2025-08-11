@@ -1,10 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import CommentSystem from '../CommentSystem';
 import MediaViewerBase from '../media/MediaViewerBase';
-import CommentButton from './CommentButton';
 // import ReactionSystem from './ReactionSystem';
+import { commentService } from '../../services/commentService';
 import type { TargetType } from '../../services/reactionService';
+import CommentModal from '../CommentModal';
 import ReactionBar from '../ui/ReactionBar';
 
 interface TimelinePostProps {
@@ -14,25 +16,30 @@ interface TimelinePostProps {
 }
 
 export default function TimelinePost({ post, onReactionPress, onCommentPress }: TimelinePostProps) {
-  const contentType = post.contentType || 'memory';
+  const [showComments, setShowComments] = useState(false);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
+  const contentType = (post.contentType || 'memory');
   
   const safeText = (text: any) => {
     if (typeof text === 'string') return text;
     if (typeof text === 'number') return text.toString();
     if (text && typeof text === 'object') {
-      console.log('Attempting to render object as text:', text);
       return JSON.stringify(text);
     }
     return '';
   };
 
   const mapContentTypeToTargetType = (ct: string): TargetType => {
-    switch (ct) {
-      case 'promptResponse':
+    // Normalize the content type to handle both PascalCase and camelCase
+    const normalizedCt = ct.toLowerCase();
+    
+    switch (normalizedCt) {
+      case 'promptresponse':
         return 'PromptResponse';
-      case 'growthRecord':
+      case 'growthrecord':
         return 'GrowthRecord';
-      case 'healthRecord':
+      case 'healthrecord':
         return 'HealthRecord';
       case 'memory':
       default:
@@ -40,8 +47,26 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
     }
   };
 
+  const mapContentTypeToCommentTargetType = (ct: string): 'promptResponse' | 'memory' | 'healthRecord' | 'growthRecord' | 'comment' => {
+    // Normalize the content type to handle both PascalCase and camelCase
+    const normalizedCt = ct.toLowerCase();
+    
+    switch (normalizedCt) {
+      case 'promptresponse':
+        return 'promptResponse';
+      case 'growthrecord':
+        return 'growthRecord';
+      case 'healthrecord':
+        return 'healthRecord';
+      case 'memory':
+      default:
+        return 'memory';
+    }
+  };
+
   const renderPostContent = () => {
-    switch (contentType) {
+    const normalizedContentType = contentType.toLowerCase();
+    switch (normalizedContentType) {
       case 'memory':
         return (
           <>
@@ -62,49 +87,55 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
                   attachments={post.attachments}
                   maxPreviewCount={3}
                   onAttachmentPress={(attachment: any, index: number) => {
-                    console.log('Memory attachment pressed:', attachment, index);
                   }}
                 />
               </View>
             )}
           </>
         );
+      
+      case 'promptresponse':
+        // Support multiple backend shapes for prompt and attachments
+        const promptObj = post.promptId || post.prompt || {};
+        const questionTitle = promptObj.title || promptObj.question || promptObj.content;
+        const questionBody = promptObj.question || promptObj.content;
+        const qaAttachments = post.attachments || post.response?.attachments || [];
+        const answerText = (typeof post.response === 'object' && post.response?.content)
+          ? post.response.content
+          : post.response;
         
-      case 'promptResponse':
+        // Avoid showing duplicate question text twice
+        const normalize = (s: any) => (typeof s === 'string' ? s : s ? String(s) : '').trim().toLowerCase();
+        const shouldShowBody = !!questionBody && normalize(questionBody) !== normalize(questionTitle);
+
         return (
           <>
-            {post.promptId?.title && <Text style={styles.postTitle}>Q: {safeText(post.promptId.title)}</Text>}
-            {post.promptId?.question && <Text style={styles.postText}>{safeText(post.promptId.question)}</Text>}
-            {post.response && (
+            {questionTitle && (
+              <Text style={styles.postTitle}>{safeText(questionTitle)}</Text>
+            )}
+            {shouldShowBody && (
+              <Text style={styles.postText}>{safeText(questionBody)}</Text>
+            )}
+            {answerText && (
               <View style={[styles.responseContainer, { flexDirection: 'row', alignItems: 'center' }]}> 
-                <Text style={styles.responseLabel}>Answer: </Text>
-                <Text style={styles.responseText}>
-                  {typeof post.response === 'object' && post.response.content 
-                    ? safeText(post.response.content)
-                    : safeText(post.response)
-                  }
-                </Text>
+                <Text style={styles.responseLabel}></Text>
+                <Text style={styles.responseText}>{safeText(answerText)}</Text>
               </View>
             )}
-            {post.attachments && post.attachments.length > 0 && (
-              <View style={styles.attachmentsContainer}>
-                {post.attachments.map((attachment: any, index: number) => (
-                  <View key={index} style={styles.attachmentItem}>
-                    {attachment.type === 'image' && (
-                      <Image 
-                        source={{ uri: attachment.url }} 
-                        style={styles.attachmentImage}
-                        resizeMode="cover"
-                      />
-                    )}
-                  </View>
-                ))}
+            {qaAttachments && qaAttachments.length > 0 && (
+              <View style={styles.mediaContainer}>
+                <MediaViewerBase
+                  attachments={qaAttachments}
+                  maxPreviewCount={3}
+                  onAttachmentPress={(attachment: any, index: number) => {
+                  }}
+                />
               </View>
             )}
           </>
         );
-        
-      case 'growthRecord':
+      
+      case 'growthrecord':
         return (
           <>
             <Text style={styles.postTitle}>{safeText(post.type)}</Text>
@@ -114,8 +145,8 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
             {post.notes && <Text style={styles.postText}>{safeText(post.notes)}</Text>}
           </>
         );
-        
-      case 'healthRecord':
+      
+      case 'healthrecord':
         return (
           <>
             <Text style={styles.postTitle}>{safeText(post.title || post.type)}</Text>
@@ -126,14 +157,13 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
                   attachments={post.attachments}
                   maxPreviewCount={3}
                   onAttachmentPress={(attachment: any, index: number) => {
-                    console.log('Health record attachment pressed:', attachment, index);
                   }}
                 />
               </View>
             )}
           </>
         );
-        
+      
       default:
         return (
           <>
@@ -143,6 +173,42 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
         );
     }
   };
+
+  const handleCommentPress = () => {
+    setShowCommentModal(true);
+    onCommentPress?.();
+  };
+
+  // Fetch comment count
+  useEffect(() => {
+    const postId = post?._id || post?.id;
+    if (!postId) return;
+    
+    const fetchCommentCount = async () => {
+      try {
+        const targetType = mapContentTypeToCommentTargetType(contentType);
+        const apiResponse = await commentService.getComments(targetType, postId, 1, 1);
+        
+        // Handle nested response format from backend
+        let total = 0;
+        const responseData = apiResponse as any;
+        if (responseData.data?.pagination?.total) {
+          // Backend returns: { data: { pagination: { total: 5 } } }
+          total = responseData.data.pagination.total;
+        } else if (responseData.pagination?.total) {
+          // Direct format
+          total = responseData.pagination.total;
+        }
+        
+        setCommentCount(total);
+      } catch (error) {
+        console.error('Error fetching comment count:', error);
+        setCommentCount(0);
+      }
+    };
+
+    fetchCommentCount();
+  }, [post?._id, post?.id, contentType]);
 
   return (
     <View style={styles.timelinePost}>
@@ -164,23 +230,71 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
         </View>
         <View style={styles.postTypeBadge}>
           <Text style={styles.postTypeText}>
-            {contentType === 'promptResponse' ? 'Q&A' : 
-             contentType === 'growthRecord' ? 'Growth' :
-             contentType === 'healthRecord' ? 'Health' : contentType}
+            {contentType.toLowerCase() === 'promptresponse' ? 'Q&A' : 
+             contentType.toLowerCase() === 'growthrecord' ? 'Growth' :
+             contentType.toLowerCase() === 'healthrecord' ? 'Health' : contentType}
           </Text>
         </View>
       </View>
       <View style={styles.postContent}>
         {renderPostContent()}
         <View style={styles.actionRow}>
-          <ReactionBar 
-            targetType={mapContentTypeToTargetType(contentType)}
-            targetId={post._id || post.id}
-            onReactionChange={(type) => onReactionPress?.(type || '')}
-          />
-          <CommentButton onPress={onCommentPress} />
+          {(post._id || post.id) && (
+            <ReactionBar 
+              targetType={mapContentTypeToTargetType(contentType)}
+              targetId={post._id || post.id}
+              onReactionChange={(type) => onReactionPress?.(type || '')}
+            />
+          )}
+          <TouchableOpacity style={styles.actionButton} onPress={handleCommentPress}>
+            <MaterialIcons name="chat-bubble-outline" size={24} color="#1877F2" />
+            <Text style={styles.actionText}>
+              {commentCount > 0 ? `${commentCount} bình luận` : 'Bình luận'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
+      
+      {/* Comments Section */}
+      {showComments && (
+        <View style={styles.commentsSection}>
+          <CommentSystem
+            targetType={mapContentTypeToCommentTargetType(contentType)}
+            targetId={post._id || post.id}
+            useScrollView={true}
+            onCommentAdded={(comment) => {
+              // Comment added successfully
+            }}
+            onCommentDeleted={(commentId) => {
+              // Comment deleted successfully
+            }}
+            onCommentEdited={(comment) => {
+              // Comment edited successfully
+            }}
+          />
+        </View>
+      )}
+
+      {/* Comment Modal */}
+      {(post._id || post.id) && (
+        <CommentModal
+          visible={showCommentModal}
+          onClose={() => setShowCommentModal(false)}
+          targetType={mapContentTypeToCommentTargetType(contentType)}
+          targetId={post._id || post.id}
+          onCommentAdded={(comment) => {
+            // Update comment count when comment is added
+            setCommentCount(prev => prev + 1);
+          }}
+          onCommentDeleted={(commentId) => {
+            // Update comment count when comment is deleted
+            setCommentCount(prev => Math.max(0, prev - 1));
+          }}
+          onCommentEdited={(comment) => {
+            // Comment edited successfully
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -327,5 +441,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 16,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e0e7ff',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#d0e3ff',
+  },
+  actionText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#1877F2',
+    fontWeight: 'bold',
+  },
+  commentsSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    maxHeight: 400,
   },
 }); 

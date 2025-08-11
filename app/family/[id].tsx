@@ -7,7 +7,9 @@ import EditFamilyGroupModal from '../components/family/EditFamilyGroupModal';
 import FamilyGroupPermissions from '../components/family/FamilyGroupPermissions';
 import InvitationQRModal from '../components/family/InvitationQRModal';
 import InviteMemberModal from '../components/family/InviteMemberModal';
+import LeaveGroupModal from '../components/family/LeaveGroupModal';
 import PendingInvitationsModal from '../components/family/PendingInvitationsModal';
+import RemoveMemberModal from '../components/family/RemoveMemberModal';
 import TimelinePost from '../components/family/TimelinePost';
 
 import AppHeader from '../components/layout/AppHeader';
@@ -45,8 +47,11 @@ export default function FamilyGroupDetailScreen() {
   const [showAddChildModal, setShowAddChildModal] = useState(false);
   const [showEditGroupModal, setShowEditGroupModal] = useState(false);
   const [showInviteMemberModal, setShowInviteMemberModal] = useState(false);
+  const [showLeaveGroupModal, setShowLeaveGroupModal] = useState(false);
   const [showPendingInvitationsModal, setShowPendingInvitationsModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [showRemoveMemberModal, setShowRemoveMemberModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<any>(null);
   const [invitationData, setInvitationData] = useState<{
     token: string;
     groupName: string;
@@ -59,6 +64,7 @@ export default function FamilyGroupDetailScreen() {
   const [loadingTimeline, setLoadingTimeline] = useState(false);
   const [timelinePage, setTimelinePage] = useState(1);
   const [hasMoreTimeline, setHasMoreTimeline] = useState(true);
+  const TIMELINE_LIMIT = 50;
 
   // Search state
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -97,7 +103,7 @@ export default function FamilyGroupDetailScreen() {
     if (!currentGroup?.id) return;
     setLoadingTimeline(true);
     try {
-      const response = await familyService.getFamilyGroupTimeline(currentGroup.id, timelinePage);
+      const response = await familyService.getFamilyGroupTimeline(currentGroup.id, timelinePage, TIMELINE_LIMIT);
       if (timelinePage === 1) {
         setTimelinePosts(response.timeline || []);
       } else {
@@ -129,6 +135,18 @@ export default function FamilyGroupDetailScreen() {
     }
   }, [activeTab, currentGroup?.id]);
 
+  // Fetch next pages when timelinePage changes (after initial load)
+  useEffect(() => {
+    if (activeTab === 'timeline' && timelinePage > 1) {
+      fetchTimelinePosts();
+    }
+  }, [timelinePage]);
+
+  const handleLoadMoreTimeline = () => {
+    if (loadingTimeline || !hasMoreTimeline) return;
+    setTimelinePage(prev => prev + 1);
+  };
+
   // Handle child press
   const handleChildPress = (childId: string) => {
     router.push(`/children/${childId}/profile`);
@@ -153,6 +171,22 @@ export default function FamilyGroupDetailScreen() {
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     });
     setShowQRModal(true);
+  };
+
+  const handleRemoveMember = (member: any) => {
+    setSelectedMember(member);
+    setShowRemoveMemberModal(true);
+  };
+
+  const handleLeaveGroup = () => {
+    setShowLeaveGroupModal(true);
+  };
+
+  const handleMemberActionSuccess = () => {
+    // Refresh group data after member action
+    if (id) {
+      dispatch(fetchFamilyGroup(id as string));
+    }
   };
 
   // Render children section
@@ -223,6 +257,16 @@ export default function FamilyGroupDetailScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+        {/* Owner-only: Add Child Button */}
+        {currentGroup?.ownerId === user?.id && (
+          <TouchableOpacity
+            style={styles.addChildButton}
+            onPress={() => setShowAddChildModal(true)}
+          >
+            <MaterialIcons name="add" size={24} color="#fff" />
+            <Text style={styles.addChildButtonText}>Add Child to Group</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -266,6 +310,29 @@ export default function FamilyGroupDetailScreen() {
               onCommentPress={handleCommentPress}
             />
           ))}
+          {hasMoreTimeline && (
+            <TouchableOpacity
+              style={{
+                alignSelf: 'center',
+                marginVertical: 12,
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                borderRadius: 8,
+                backgroundColor: '#eef3ff',
+              }}
+              disabled={loadingTimeline}
+              onPress={handleLoadMoreTimeline}
+            >
+              <Text style={{ color: '#4f8cff', fontWeight: '600' }}>
+                {loadingTimeline ? 'Đang tải...' : 'Xem thêm'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {!hasMoreTimeline && timelinePosts.length > 0 && (
+            <Text style={{ textAlign: 'center', color: '#999', marginVertical: 8 }}>
+              Đã hiển thị tất cả bài viết
+            </Text>
+          )}
         </ScrollView>
       </View>
     );
@@ -280,6 +347,13 @@ export default function FamilyGroupDetailScreen() {
         </View>
       );
     }
+
+    // Check user permissions
+    const isOwner = currentGroup?.ownerId === user?.id;
+    const isAdmin = currentGroup?.members?.some((member: any) => 
+      member.userId === user?.id && (member.role === 'admin' || member.role === 'owner')
+    );
+    const canRemoveMembers = isOwner || isAdmin;
 
     return (
       <View style={styles.membersContainer}>
@@ -312,28 +386,58 @@ export default function FamilyGroupDetailScreen() {
           </View>
         </View>
         <ScrollView style={styles.membersList} showsVerticalScrollIndicator={false}>
-          {currentGroup.members.map((member: any) => (
-            <View key={member.id || member._id} style={styles.memberCard}>
-              <View style={styles.memberInfo}>
-                <View style={styles.memberAvatar}>
-                  <Text style={styles.memberAvatarText}>
-                    {member.user?.firstName?.charAt(0).toUpperCase() || 
-                     member.user?.lastName?.charAt(0).toUpperCase() || 
-                     'U'}
-                  </Text>
+          {currentGroup.members.map((member: any) => {
+            const isCurrentUser = member.userId === user?.id || member.user?.id === user?.id;
+            const canRemoveThisMember = canRemoveMembers && !isCurrentUser;
+            
+            return (
+              <View key={member.id || member._id} style={styles.memberCard}>
+                <View style={styles.memberInfo}>
+                  <View style={styles.memberAvatar}>
+                    {member.user?.avatarUrl ? (
+                      <Image
+                        source={{ uri: member.user.avatarUrl }}
+                        style={styles.memberAvatarImage}
+                      />
+                    ) : (
+                      <Text style={styles.memberAvatarText}>
+                        {member.user?.firstName?.charAt(0).toUpperCase() || 
+                         member.user?.lastName?.charAt(0).toUpperCase() || 
+                         'U'}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.memberDetails}>
+                    <Text style={styles.memberName}>
+                      {member.user ? `${member.user.firstName} ${member.user.lastName}` : 'Unknown'}
+                    </Text>
+                    <Text style={styles.memberRole}>
+                      {member.role === 'admin' ? 'Admin' : 
+                       member.role === 'owner' ? 'Owner' : 'Member'}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.memberDetails}>
-                  <Text style={styles.memberName}>
-                    {member.user ? `${member.user.firstName} ${member.user.lastName}` : 'Unknown'}
-                  </Text>
-                  <Text style={styles.memberRole}>
-                    {member.role === 'admin' ? 'Admin' : 
-                     member.role === 'owner' ? 'Owner' : 'Member'}
-                  </Text>
+                <View style={styles.memberCardActions}>
+                  {canRemoveThisMember && (
+                    <TouchableOpacity
+                      style={styles.removeMemberButton}
+                      onPress={() => handleRemoveMember(member)}
+                    >
+                      <MaterialIcons name="remove-circle" size={20} color="#e74c3c" />
+                    </TouchableOpacity>
+                  )}
+                  {isCurrentUser && (
+                    <TouchableOpacity
+                      style={styles.leaveGroupButton}
+                      onPress={handleLeaveGroup}
+                    >
+                      <MaterialIcons name="exit-to-app" size={20} color="#e74c3c" />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </ScrollView>
       </View>
     );
@@ -563,14 +667,7 @@ export default function FamilyGroupDetailScreen() {
             <View style={styles.childrenSection}>
               {renderChildrenSection()}
               
-              {/* Add Child Button */}
-              <TouchableOpacity
-                style={styles.addChildButton}
-                onPress={() => setShowAddChildModal(true)}
-              >
-                <MaterialIcons name="add" size={24} color="#fff" />
-                <Text style={styles.addChildButtonText}>Add Child to Group</Text>
-              </TouchableOpacity>
+              
             </View>
           )}
 
@@ -624,6 +721,34 @@ export default function FamilyGroupDetailScreen() {
           }
         }}
         familyGroup={currentGroup}
+      />
+
+      {selectedMember && (
+        <RemoveMemberModal
+          visible={showRemoveMemberModal}
+          onClose={() => {
+            setShowRemoveMemberModal(false);
+            setSelectedMember(null);
+          }}
+          onSuccess={handleMemberActionSuccess}
+          member={selectedMember}
+          groupId={currentGroup.id}
+          groupName={currentGroup.name}
+          currentUserRole={user?.id || ''}
+        />
+      )}
+
+      <LeaveGroupModal
+        visible={showLeaveGroupModal}
+        onClose={() => setShowLeaveGroupModal(false)}
+        onSuccess={() => {
+          // Navigate back to home after leaving group
+          router.push('/tabs/home');
+        }}
+        groupId={currentGroup.id}
+        groupName={currentGroup.name}
+        userRole={user?.id || ''}
+        isOwner={currentGroup?.ownerId === user?.id}
       />
     </View>
   );
@@ -1134,6 +1259,7 @@ const styles = StyleSheet.create({
     elevation: 2,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     padding: 16,
   },
   memberInfo: {
@@ -1152,6 +1278,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#4f8cff",
+  },
+  memberAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   memberDetails: {
     marginLeft: 12,
@@ -1239,5 +1370,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
+  },
+  memberCardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  removeMemberButton: {
+    padding: 4,
+  },
+  leaveGroupButton: {
+    padding: 4,
   },
 });

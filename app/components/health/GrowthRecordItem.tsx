@@ -1,10 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { updateGrowthRecord } from '../../redux/slices/healthSlice';
 import { GrowthRecord } from '../../types/health';
+import { DeleteButton, EditButton } from '../ui/EditDeleteButtons';
 import VisibilityToggle from '../ui/VisibilityToggle';
 
 interface GrowthRecordItemProps {
@@ -164,20 +165,10 @@ const GrowthRecordItem: React.FC<GrowthRecordItemProps> = ({
 
       <View style={styles.actions}>
         {onEdit && isOwner && (
-          <TouchableOpacity 
-            style={styles.actionButton} 
-            onPress={() => onEdit(record)}
-          >
-            <MaterialIcons name="edit" size={20} color={Colors.light.textSecondary} />
-          </TouchableOpacity>
+          <EditButton onPress={() => onEdit(record)} />
         )}
         {onDelete && isOwner && (
-          <TouchableOpacity 
-            style={styles.actionButton} 
-            onPress={() => onDelete(record.id)}
-          >
-            <MaterialIcons name="delete" size={20} color="#EF4444" />
-          </TouchableOpacity>
+          <DeleteButton onPress={() => onDelete(record.id)} />
         )}
       </View>
     </View>

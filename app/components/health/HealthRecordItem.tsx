@@ -1,10 +1,13 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dimensions, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { updateHealthRecord } from '../../redux/slices/healthSlice';
+import { commentService } from '../../services/commentService';
 import { HealthRecord } from '../../types/health';
+import CommentModal from '../CommentModal';
+import { DeleteButton, EditButton } from '../ui/EditDeleteButtons';
 import ReactionBar from '../ui/ReactionBar';
 import VisibilityToggle from '../ui/VisibilityToggle';
 
@@ -57,6 +60,8 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
   
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
   const [showMediaModal, setShowMediaModal] = useState(false);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
 
   const handleVisibilityUpdate = async (newVisibility: 'private' | 'public') => {
     try {
@@ -80,6 +85,39 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
     setShowMediaModal(false);
     setSelectedMedia(null);
   };
+
+  const handleCommentPress = () => {
+    setShowCommentModal(true);
+  };
+
+  // Fetch comment count
+  useEffect(() => {
+    if (!record?.id) return;
+    
+    const fetchCommentCount = async () => {
+      try {
+        const apiResponse = await commentService.getComments('healthRecord', record.id, 1, 1);
+        
+        // Handle nested response format from backend
+        let total = 0;
+        const responseData = apiResponse as any;
+        if (responseData.data?.pagination?.total) {
+          // Backend returns: { data: { pagination: { total: 5 } } }
+          total = responseData.data.pagination.total;
+        } else if (responseData.pagination?.total) {
+          // Direct format
+          total = responseData.pagination.total;
+        }
+        
+        setCommentCount(total);
+      } catch (error) {
+        console.error('Error fetching comment count:', error);
+        setCommentCount(0);
+      }
+    };
+
+    fetchCommentCount();
+  }, [record?.id]);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -269,22 +307,10 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
           {(onEdit || onDelete) && isOwner && (
             <View style={styles.actionButtons}>
               {onEdit && (
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: getTypeColor(record.type) }]}
-                  onPress={() => onEdit(record)}
-                >
-                  <MaterialIcons name="edit" size={16} color="white" />
-                  <Text style={styles.actionButtonText}>Edit</Text>
-                </TouchableOpacity>
+                <EditButton onPress={() => onEdit(record)} />
               )}
               {onDelete && (
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: '#ff4757' }]}
-                  onPress={() => onDelete(record.id)}
-                >
-                  <MaterialIcons name="delete" size={16} color="white" />
-                  <Text style={styles.actionButtonText}>Delete</Text>
-                </TouchableOpacity>
+                <DeleteButton onPress={() => onDelete(record.id)} />
               )}
             </View>
           )}
@@ -370,9 +396,17 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
         )}
 
         {/* Reaction bar */}
-        <View style={{ marginTop: 12 }}>
-          <ReactionBar targetType={'HealthRecord'} targetId={record.id} />
-        </View>
+        {record?.id && (
+          <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+            <ReactionBar targetType={'HealthRecord'} targetId={record.id} />
+            <TouchableOpacity style={styles.actionButton} onPress={handleCommentPress}>
+              <MaterialIcons name="chat-bubble-outline" size={24} color="#1877F2" />
+              <Text style={styles.actionText}>
+                {commentCount > 0 ? `${commentCount} bình luận` : 'Bình luận'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Media Preview Modal */}
@@ -422,6 +456,27 @@ const HealthRecordItem: React.FC<HealthRecordItemProps> = ({
           </View>
         </View>
       </Modal>
+
+      {/* Comment Modal */}
+      {record?.id && (
+        <CommentModal
+          visible={showCommentModal}
+          onClose={() => setShowCommentModal(false)}
+          targetType="healthRecord"
+          targetId={record.id}
+          onCommentAdded={(comment) => {
+            // Update comment count when comment is added
+            setCommentCount(prev => prev + 1);
+          }}
+          onCommentDeleted={(commentId) => {
+            // Update comment count when comment is deleted
+            setCommentCount(prev => Math.max(0, prev - 1));
+          }}
+          onCommentEdited={(comment) => {
+            // Comment edited successfully
+          }}
+        />
+      )}
     </View>
   );
 };
@@ -636,6 +691,11 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     marginTop: 8,
     textAlign: 'center',
+  },
+  actionText: {
+    fontSize: 12,
+    color: '#1877F2',
+    marginLeft: 4,
   },
 });
 

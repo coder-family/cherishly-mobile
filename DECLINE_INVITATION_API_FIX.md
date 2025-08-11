@@ -80,7 +80,7 @@ await dispatch(declineInvitation(invitation.token)).unwrap();
 ```json
 POST /family-groups/decline-invitation
 {
-  "token": "f313063a3b51a9e5750ddd2915843198"
+  "token": "YOUR_TOKEN_HERE"
 }
 ```
 

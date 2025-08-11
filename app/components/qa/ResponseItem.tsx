@@ -1,7 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Prompt, PromptResponse } from '../../services/promptService';
+import { DeleteButton, EditButton } from '../ui/EditDeleteButtons';
 
 interface ResponseItemProps {
   response: PromptResponse;
@@ -83,15 +84,8 @@ export default function ResponseItem({ response, prompt }: ResponseItemProps) {
       )}
       
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
-          <MaterialIcons name="edit" size={16} color="#4f8cff" />
-          <Text style={styles.actionButtonText}>Edit</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
-          <MaterialIcons name="delete" size={16} color="#f44336" />
-          <Text style={[styles.actionButtonText, { color: '#f44336' }]}>Delete</Text>
-        </TouchableOpacity>
+        <EditButton onPress={() => {}} />
+        <DeleteButton onPress={() => {}} />
       </View>
     </View>
   );

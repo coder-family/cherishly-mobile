@@ -57,6 +57,7 @@ export default function ReactionBar({ targetType, targetId, onReactionChange }: 
   const [showPicker, setShowPicker] = useState(false);
   const [showList, setShowList] = useState(false);
   const [reactionsByType, setReactionsByType] = useState<ReactionsByType>({});
+  const [reactions, setReactions] = useState<ReactionEntry[]>([]);
 
   const findUserInfoById = (id: string | undefined | null) => {
     if (!id) return null;
@@ -121,6 +122,18 @@ export default function ReactionBar({ targetType, targetId, onReactionChange }: 
 
   const fetchData = async () => {
     try {
+      // Validate parameters before making API call
+      if (!targetType || !targetId) {
+        console.warn('ReactionBar: Missing required parameters', { targetType, targetId });
+        return;
+      }
+
+      // Additional validation for targetId format
+      if (typeof targetId !== 'string' || targetId.trim() === '') {
+        console.warn('ReactionBar: Invalid targetId format', { targetId });
+        return;
+      }
+
       const res = await getReactions(targetType, targetId);
       const nextCounts: Record<ReactionType, number> = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 };
       (Object.keys(nextCounts) as ReactionType[]).forEach((t) => {
@@ -144,7 +157,8 @@ export default function ReactionBar({ targetType, targetId, onReactionChange }: 
       setUserReaction(current);
       setReactionsByType(res.reactions || {});
     } catch (e) {
-      // silent fail UI
+      console.warn('ReactionBar: Error fetching reactions:', e);
+      // Keep existing state on error
     }
   };
 
@@ -214,12 +228,25 @@ export default function ReactionBar({ targetType, targetId, onReactionChange }: 
     onReactionChange?.(type);
 
     try {
+      // Validate parameters before making API call
+      if (!targetType || !targetId) {
+        console.warn('ReactionBar: Missing required parameters for reaction', { targetType, targetId });
+        return;
+      }
+
+      // Additional validation for targetId format
+      if (typeof targetId !== 'string' || targetId.trim() === '') {
+        console.warn('ReactionBar: Invalid targetId format for reaction', { targetId });
+        return;
+      }
+
       if (type === null) {
         await deleteReaction(targetType, targetId);
       } else {
         await setReaction(targetType, targetId, type);
       }
     } catch (e) {
+      console.warn('ReactionBar: Error applying reaction:', e);
       // rollback if error
       await fetchData();
     } finally {
@@ -246,7 +273,7 @@ export default function ReactionBar({ targetType, targetId, onReactionChange }: 
   }, [userReaction]);
 
   const flatReactions = useMemo(() => {
-    const entries: Array<{ type: ReactionType; entry: ReactionEntry }> = [];
+    const entries: { type: ReactionType; entry: ReactionEntry }[] = [];
     (Object.keys(REACTION_COLOR) as ReactionType[]).forEach((t) => {
       const arr = (reactionsByType as any)[t] as ReactionEntry[] | undefined;
       if (arr && arr.length) arr.forEach((e) => entries.push({ type: t, entry: e }));

@@ -4,26 +4,27 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native';
 import * as yup from 'yup';
 import { Colors } from '../../constants/Colors';
-import { useAppDispatch } from '../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { createHealthRecord } from '../../redux/slices/healthSlice';
 import { CreateHealthRecordData } from '../../types/health';
 import ErrorText from '../form/ErrorText';
 import FormWrapper from '../form/FormWrapper';
 import InputField from '../form/InputField';
 import PrimaryButton from '../form/PrimaryButton';
+import VisibilityToggle, { VisibilityType } from '../ui/VisibilityToggle';
 
 const schema = yup.object().shape({
   type: yup.string().required('Type is required'),
@@ -49,9 +50,16 @@ const AddHealthRecordModal: React.FC<AddHealthRecordModalProps> = ({
   onSuccess,
 }) => {
   const dispatch = useAppDispatch();
+  const { children } = useAppSelector((state) => state.children);
+  const currentUser = useAppSelector((state) => state.auth.user);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [selectedType, setSelectedType] = useState<'vaccination' | 'illness' | 'medication'>('vaccination');
+  const [visibility, setVisibility] = useState<VisibilityType>('private');
+
+  // Check if current user is the owner of the child
+  const isCreator = currentUser && childId && 
+    children && children.some(child => child.id === childId);
 
   const {
     control,
@@ -102,23 +110,59 @@ const AddHealthRecordModal: React.FC<AddHealthRecordModalProps> = ({
 
   const onSubmit = async (data: any) => {
     try {
+      // Check if user is authenticated
+      if (!currentUser) {
+        Alert.alert('Error', 'User not authenticated');
+        return;
+      }
+      
+      // Check if child exists and user has access
+      if (!childId) {
+        Alert.alert('Error', 'Child ID is required');
+        return;
+      }
+      
+      const childExists = children && children.some(child => child.id === childId);
+      
+      if (!childExists) {
+        Alert.alert('Error', 'Child not found or access denied');
+        return;
+      }
+
       const healthData: CreateHealthRecordData = {
-        childId,
+        child: childId, // Backend expects 'child' not 'childId'
         type: data.type,
         title: data.title,
         description: data.description,
-        startDate: data.startDate,
-        endDate: data.endDate || undefined,
-        doctorName: data.doctorName || undefined,
-        location: data.location || undefined,
+        date: new Date(data.startDate).toISOString(), // Backend expects 'date' not 'startDate'
+        ...(data.endDate && { endDate: new Date(data.endDate).toISOString() }),
+        ...(data.doctorName && { doctor: data.doctorName }), // Backend expects 'doctor' not 'doctorName'
+        ...(data.location && { location: data.location }),
+        visibility: visibility, // Add back visibility field
         attachments: [],
       };
+      
       await dispatch(createHealthRecord(healthData)).unwrap();
       reset();
+      setVisibility('private');
       onSuccess();
       Alert.alert('Success', 'Health record added successfully!');
-    } catch (_error) {
-      Alert.alert('Error', 'Failed to add health record. Please try again.');
+    } catch (error: any) {
+      let errorMessage = 'Failed to add health record. Please try again.';
+      
+      if (error?.status === 400) {
+        errorMessage = 'Invalid data. Please check all required fields.';
+      } else if (error?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (error?.status === 403) {
+        errorMessage = 'Access denied. You don\'t have permission to add records for this child.';
+      } else if (error?.status === 404) {
+        errorMessage = 'Child not found. Please check the child ID.';
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
     }
   };
 
@@ -291,6 +335,18 @@ const AddHealthRecordModal: React.FC<AddHealthRecordModalProps> = ({
                 )}
               />
             </View>
+
+            {/* Visibility Toggle - Only show for creator */}
+            {isCreator && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Visibility</Text>
+                <VisibilityToggle
+                  visibility={visibility}
+                  onUpdate={async (newVisibility) => setVisibility(newVisibility)}
+                  size="small"
+                />
+              </View>
+            )}
 
             <PrimaryButton
               title="Add Health Record"

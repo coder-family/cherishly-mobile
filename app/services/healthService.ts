@@ -565,10 +565,21 @@ export async function getHealthRecord(recordId: string): Promise<HealthRecord> {
 
 export async function createHealthRecord(data: CreateHealthRecordData): Promise<HealthRecord> {
   try {
+    // Check required fields
+    const requiredFields = ['child', 'type', 'title', 'description', 'date'];
+    const missingFields = requiredFields.filter(field => !data[field as keyof CreateHealthRecordData]);
+    
+    if (missingFields.length > 0) {
+      conditionalLog.health('Missing required fields:', missingFields);
+      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+    }
+    
     const response = await apiService.post('/health-records', data);
+    
     const rawData = response.data || response;
+    
     return transformHealthRecord(rawData);
-  } catch (error) {
+  } catch (error: any) {
     conditionalLog.health('Error creating health record:', error);
     throw error;
   }

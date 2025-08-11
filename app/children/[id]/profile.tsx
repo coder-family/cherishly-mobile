@@ -50,6 +50,9 @@ export default function ChildProfileScreen() {
   const { currentUser } = useAppSelector((state) => state.user);
   const [activeTab, setActiveTab] = useState<TabType>('timeline');
 
+  // Determine if the viewer is the owner (only owner should see edit/delete/visibility controls)
+  const viewerIsOwner = !!(currentUser?.id && currentChild?.parentId && currentUser.id === currentChild.parentId);
+
   // Animation refs
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerHeight = 200; // Height of the collapsible section (child info + tabs only)
@@ -1059,6 +1062,7 @@ export default function ChildProfileScreen() {
                       onLike={() => handleMemoryLike(item)}
                       onComment={() => handleMemoryComment(item)}
                       onVisibilityUpdate={handleVisibilityUpdate}
+                      isOwner={viewerIsOwner}
                     />
                   );
                 case 'qa':
@@ -1097,6 +1101,7 @@ export default function ChildProfileScreen() {
                         }
                       }}
                       onVisibilityUpdate={handleVisibilityUpdate}
+                      isOwner={viewerIsOwner}
                     />
                   );
                 case 'health':
@@ -1148,6 +1153,7 @@ export default function ChildProfileScreen() {
                         );
                       }}
                       onVisibilityUpdate={handleVisibilityUpdate}
+                      isOwner={viewerIsOwner}
                     />
                   );
                 case 'growth':
@@ -1206,11 +1212,12 @@ export default function ChildProfileScreen() {
                         );
                       }}
                       onVisibilityUpdate={handleVisibilityUpdate}
+                      isOwner={viewerIsOwner}
                     />
                   );
                 default:
                   return (
-                    <TimelineItem key={uniqueKey} item={item} />
+                    <TimelineItem key={uniqueKey} item={item} isOwner={viewerIsOwner} />
                   );
               }
             })}

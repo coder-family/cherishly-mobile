@@ -31,7 +31,33 @@ yarn-error.*
 
 *env.d.ts
 
+# Environment files
 .env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Security
+*.key
+*.pem
+*.p12
+*.jks
+*.keystore
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+ehthumbs.db
 
 # typescript
 *.tsbuildinfo
