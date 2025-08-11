@@ -739,7 +739,15 @@ export async function declineInvitation(token: string): Promise<void> {
 // Remove member from family group (only for owners and admins)
 export async function removeMemberFromFamilyGroup(groupId: string, memberId: string): Promise<void> {
   try {
-    await apiService.delete(`/family-groups/${groupId}/members/${memberId}`);
+    const url = `/family-groups/${groupId}/members/${memberId}`;
+    console.log('Removing member - API call:', {
+      url,
+      groupId,
+      memberId,
+      method: 'DELETE'
+    });
+    
+    await apiService.delete(url);
   } catch (error: any) {
     conditionalLog.family('Error removing member from family group:', error);
     if (error.response) {

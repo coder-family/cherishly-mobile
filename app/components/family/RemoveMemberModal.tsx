@@ -48,9 +48,18 @@ export default function RemoveMemberModal({
       return;
     }
 
+    console.log('Removing member:', {
+      memberId: member.id,
+      memberUserId: member.userId,
+      groupId: groupId,
+      memberName: member.user ? `${member.user.firstName} ${member.user.lastName}` : 'Unknown'
+    });
+
     setIsSubmitting(true);
     try {
-      await familyService.removeMemberFromFamilyGroup(groupId, member.id);
+      // Try using userId instead of member.id - backend might expect user ID
+      const memberIdToUse = member.userId || member.id;
+      await familyService.removeMemberFromFamilyGroup(groupId, memberIdToUse);
       Alert.alert(
         'Success',
         `${member.user ? `${member.user.firstName} ${member.user.lastName}` : 'Member'} has been removed from the group.`,
@@ -65,6 +74,7 @@ export default function RemoveMemberModal({
         ]
       );
     } catch (error: any) {
+      console.error('Remove member error:', error);
       Alert.alert('Error', error.message || 'Failed to remove member');
     } finally {
       setIsSubmitting(false);
