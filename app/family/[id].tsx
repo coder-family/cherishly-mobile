@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AddChildToGroupModal from '../components/family/AddChildToGroupModal';
 import EditFamilyGroupModal from '../components/family/EditFamilyGroupModal';
 import FamilyGroupPermissions from '../components/family/FamilyGroupPermissions';
@@ -186,6 +186,29 @@ export default function FamilyGroupDetailScreen() {
     // Refresh group data after member action
     if (id) {
       dispatch(fetchFamilyGroup(id as string));
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!currentGroup?.id) return;
+    
+    try {
+      await familyService.deleteFamilyGroup(currentGroup.id);
+      Alert.alert(
+        'Success',
+        'Family group has been deleted successfully.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigate back to home after deleting group
+              router.push('/tabs/home');
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to delete family group');
     }
   };
 
@@ -426,7 +449,7 @@ export default function FamilyGroupDetailScreen() {
                       <MaterialIcons name="remove-circle" size={20} color="#e74c3c" />
                     </TouchableOpacity>
                   )}
-                  {isCurrentUser && (
+                  {isCurrentUser && !isOwner && (
                     <TouchableOpacity
                       style={styles.leaveGroupButton}
                       onPress={handleLeaveGroup}
@@ -721,6 +744,8 @@ export default function FamilyGroupDetailScreen() {
           }
         }}
         familyGroup={currentGroup}
+        onDeleteGroup={handleDeleteGroup}
+        currentUser={user}
       />
 
       {selectedMember && (

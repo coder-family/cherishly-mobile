@@ -1,12 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import * as familyService from '../../services/familyService';
 import LoadingSpinner from '../ui/LoadingSpinner';
@@ -48,9 +48,18 @@ export default function RemoveMemberModal({
       return;
     }
 
+    console.log('Removing member:', {
+      memberId: member.id,
+      memberUserId: member.userId,
+      groupId: groupId,
+      memberName: member.user ? `${member.user.firstName} ${member.user.lastName}` : 'Unknown'
+    });
+
     setIsSubmitting(true);
     try {
-      await familyService.removeMemberFromFamilyGroup(groupId, member.id);
+      // Try using userId instead of member.id - backend might expect user ID
+      const memberIdToUse = member.userId || member.id;
+      await familyService.removeMemberFromFamilyGroup(groupId, memberIdToUse);
       Alert.alert(
         'Success',
         `${member.user ? `${member.user.firstName} ${member.user.lastName}` : 'Member'} has been removed from the group.`,
@@ -65,7 +74,10 @@ export default function RemoveMemberModal({
         ]
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to remove member');
+      console.error('Remove member error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to remove member';
+      console.error('Detailed error:', JSON.stringify(error, null, 2));
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
     }

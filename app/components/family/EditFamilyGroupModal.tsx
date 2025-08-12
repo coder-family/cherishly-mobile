@@ -1,14 +1,14 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { updateFamilyGroupDetails, uploadFamilyGroupAvatar } from '../../services/familyService';
@@ -19,12 +19,16 @@ interface EditFamilyGroupModalProps {
   visible: boolean;
   onClose: () => void;
   familyGroup: any;
+  onDeleteGroup?: () => void;
+  currentUser?: any;
 }
 
 export default function EditFamilyGroupModal({
   visible,
   onClose,
   familyGroup,
+  onDeleteGroup,
+  currentUser,
 }: EditFamilyGroupModalProps) {
   const dispatch = useAppDispatch();
   const { loading, error } = useAppSelector((state) => state.family);
@@ -95,6 +99,24 @@ export default function EditFamilyGroupModal({
   const handleCancel = () => {
     if (isSubmitting) return;
     onClose();
+  };
+
+  const handleDeleteGroup = () => {
+    Alert.alert(
+      'Delete Family Group',
+      'Are you sure you want to delete this family group? This action cannot be undone and will remove all group data including memories, timeline posts, and member associations.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => {
+            onDeleteGroup?.();
+            onClose();
+          }
+        }
+      ]
+    );
   };
 
   const isFormValid = name.trim().length > 0;
@@ -207,6 +229,32 @@ export default function EditFamilyGroupModal({
               </View>
             </View>
           </View>
+
+          {/* Delete Group Section - Only for owners */}
+          {familyGroup?.ownerId && currentUser?.id === familyGroup.ownerId && onDeleteGroup && (
+            <View style={styles.deleteSection}>
+              <Text style={styles.sectionTitle}>Danger Zone</Text>
+              <View style={styles.deleteCard}>
+                <View style={styles.deleteInfo}>
+                  <MaterialIcons name="warning" size={24} color="#e74c3c" />
+                  <View style={styles.deleteTextContainer}>
+                    <Text style={styles.deleteTitle}>Delete Family Group</Text>
+                    <Text style={styles.deleteDescription}>
+                      This will permanently delete the family group and all associated data including memories, timeline posts, and member associations.
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={handleDeleteGroup}
+                  disabled={isSubmitting}
+                >
+                  <MaterialIcons name="delete-forever" size={20} color="#fff" />
+                  <Text style={styles.deleteButtonText}>Delete Group</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </ScrollView>
 
         {/* Loading Overlay */}
@@ -356,5 +404,55 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  deleteSection: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  deleteCard: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e74c3c',
+  },
+  deleteInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  deleteTextContainer: {
+    marginLeft: 12,
+  },
+  deleteTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e74c3c',
+    marginBottom: 4,
+  },
+  deleteDescription: {
+    fontSize: 14,
+    color: '#666',
+  },
+  deleteButton: {
+    backgroundColor: '#e74c3c',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 }); 
