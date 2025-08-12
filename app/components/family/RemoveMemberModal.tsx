@@ -1,12 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import * as familyService from '../../services/familyService';
 import LoadingSpinner from '../ui/LoadingSpinner';
@@ -75,7 +75,9 @@ export default function RemoveMemberModal({
       );
     } catch (error: any) {
       console.error('Remove member error:', error);
-      Alert.alert('Error', error.message || 'Failed to remove member');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to remove member';
+      console.error('Detailed error:', JSON.stringify(error, null, 2));
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
     }

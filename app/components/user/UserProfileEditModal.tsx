@@ -299,6 +299,7 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: '#eee',
     paddingVertical: 12,
+    marginTop: 16,
     borderRadius: 8,
     alignItems: 'center',
   },
@@ -306,6 +307,7 @@ const styles = StyleSheet.create({
     color: '#333',
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   buttonRow: {
     flexDirection: 'row',
