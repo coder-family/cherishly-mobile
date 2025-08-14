@@ -57,6 +57,7 @@ class CommentService {
   async createComment(data: CreateCommentData): Promise<Comment> {
     try {
       const response = await apiService.post('/comments', data) as any;
+      
       // Handle nested response format from backend
       let commentData: Comment;
       if (response.success) {

@@ -1,6 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { commentService } from "../../services/commentService";
 import CommentModal from "../CommentModal";
 import CommentSystem from "../CommentSystem";
@@ -22,6 +22,8 @@ interface TimelineItemProps {
   ) => void;
   // New: whether the current viewer is the owner of the content's child
   isOwner?: boolean;
+  // New: highlight the item if it matches focusPost
+  highlight?: boolean;
 }
 
 export default function TimelineItem({
@@ -33,10 +35,15 @@ export default function TimelineItem({
   onComment,
   onVisibilityUpdate,
   isOwner = false,
+  highlight = false,
 }: TimelineItemProps) {
   const [showComments, setShowComments] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
+  
+  // Animation for highlight effect
+  const highlightAnimation = useRef(new Animated.Value(0)).current;
+  const borderAnimation = useRef(new Animated.Value(0)).current;
 
   const getItemType = () => {
     switch (item.type) {
@@ -117,38 +124,104 @@ export default function TimelineItem({
     onComment?.();
   };
 
-  // Fetch comment count
+  // Fetch comment count - memoized to prevent unnecessary API calls
+  const targetType = useMemo(() => getItemTypeForComment(), [item?.type]);
+  
   useEffect(() => {
     if (!item?.id) return;
     
-    const fetchCommentCount = async () => {
-      try {
-        const targetType = getItemTypeForComment();
-        const apiResponse = await commentService.getComments(targetType, item.id, 1, 1);
-        
-        // Handle nested response format from backend
-        let total = 0;
-        const responseData = apiResponse as any;
-        if (responseData.data?.pagination?.total) {
-          // Backend returns: { data: { pagination: { total: 5 } } }
-          total = responseData.data.pagination.total;
-        } else if (responseData.pagination?.total) {
-          // Direct format
-          total = responseData.pagination.total;
+    // Only fetch comment count if not already loaded
+    if (commentCount === 0) {
+      const fetchCommentCount = async () => {
+        try {
+          const apiResponse = await commentService.getComments(targetType, item.id, 1, 1);
+          
+          // Handle nested response format from backend
+          let total = 0;
+          const responseData = apiResponse as any;
+          if (responseData.data?.pagination?.total) {
+            // Backend returns: { data: { pagination: { total: 5 } } }
+            total = responseData.data.pagination.total;
+          } else if (responseData.pagination?.total) {
+            // Direct format
+            total = responseData.pagination.total;
+          }
+          
+          setCommentCount(total);
+        } catch (error) {
+          console.error('Error fetching comment count:', error);
+          setCommentCount(0);
         }
-        
-        setCommentCount(total);
-      } catch (error) {
-        console.error('Error fetching comment count:', error);
-        setCommentCount(0);
-      }
-    };
+      };
 
-    fetchCommentCount();
-  }, [item?.id, getItemTypeForComment]);
+      fetchCommentCount();
+    }
+  }, [item?.id, targetType, commentCount]);
+
+  // Highlight animation effect
+  useEffect(() => {
+    if (highlight) {
+      // Reset animations
+      highlightAnimation.setValue(0);
+      borderAnimation.setValue(0);
+      
+      // Start highlight animation
+      Animated.sequence([
+        // Fade in highlight
+        Animated.timing(highlightAnimation, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+        // Pulse border animation
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(borderAnimation, {
+              toValue: 1,
+              duration: 1000,
+              useNativeDriver: false,
+            }),
+            Animated.timing(borderAnimation, {
+              toValue: 0,
+              duration: 1000,
+              useNativeDriver: false,
+            }),
+          ]),
+          { iterations: 3 }
+        ),
+        // Fade out highlight
+        Animated.timing(highlightAnimation, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    }
+  }, [highlight]); // Remove highlightAnimation and borderAnimation from dependencies
 
   return (
     <View style={styles.container}>
+      {/* Highlight overlay - separate from main content */}
+      <Animated.View 
+        style={[
+          styles.highlightOverlay,
+          {
+            backgroundColor: highlightAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['transparent', 'rgba(79, 140, 255, 0.1)'],
+            }),
+            borderWidth: borderAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 3],
+            }),
+            borderColor: borderAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['transparent', '#4f8cff'],
+            }),
+          },
+        ]}
+        pointerEvents="none"
+      />
       {/* Item Header */}
       <View style={styles.header}>
         <View style={styles.typeBadge}>
@@ -295,6 +368,16 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
     overflow: "hidden",
+    position: "relative",
+  },
+  highlightOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 12,
+    zIndex: 1,
   },
   header: {
     flexDirection: "row",

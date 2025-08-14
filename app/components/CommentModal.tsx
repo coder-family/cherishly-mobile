@@ -1,20 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    Modal,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Colors } from '../constants/Colors';
+import { refreshNotificationCount } from '../redux/slices/notificationSlice';
 import { RootState } from '../redux/store';
 import { commentService } from '../services/commentService';
 
@@ -220,9 +221,9 @@ const CommentItem: React.FC<{
       {hasReplies && (
         <View style={styles.repliesContainer}>
           {showReplies ? (
-            comment.replies?.map((reply) => (
+            comment.replies?.map((reply, index) => (
               <CommentItem
-                key={reply._id}
+                key={`${reply._id}-${index}`}
                 comment={reply}
                 currentUserId={currentUserId}
                 onReply={onReply}
@@ -269,8 +270,9 @@ const CommentModal: React.FC<CommentModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
 
   const currentUser = useSelector((state: RootState) => state.auth.user);
+  const dispatch = useDispatch();
 
-  const fetchComments = async (pageNum = 1, refresh = false) => {
+  const fetchComments = useCallback(async (pageNum = 1, refresh = false) => {
     if (loading) return;
 
     setLoading(true);
@@ -308,13 +310,13 @@ const CommentModal: React.FC<CommentModalProps> = ({
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [targetType, targetId]);
 
   useEffect(() => {
     if (visible) {
       fetchComments(1, true);
     }
-  }, [visible, fetchComments]);
+  }, [visible, targetType, targetId]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -330,6 +332,12 @@ const CommentModal: React.FC<CommentModalProps> = ({
   const handleCommentAdded = (newComment: Comment) => {
     setComments(prev => [newComment, ...prev]);
     onCommentAdded?.(newComment);
+    
+    // Refresh notification count after adding comment
+    // This will trigger notification creation on backend
+    setTimeout(() => {
+      dispatch(refreshNotificationCount());
+    }, 1000);
   };
 
   const handleCommentDeleted = (commentId: string) => {
@@ -363,6 +371,11 @@ const CommentModal: React.FC<CommentModalProps> = ({
 
       setNewComment('');
       handleCommentAdded(comment);
+      
+      // Refresh notification count after adding comment
+      setTimeout(() => {
+        dispatch(refreshNotificationCount());
+      }, 1000);
     } catch (error) {
       console.error('Error creating comment:', error);
       Alert.alert('Lỗi', 'Không thể tạo bình luận. Vui lòng thử lại.');
@@ -382,10 +395,23 @@ const CommentModal: React.FC<CommentModalProps> = ({
         parentCommentId: replyingTo,
       });
       setReplyComment('');
-      // Refresh comments to show the new reply
-      fetchComments(1, true); // Changed from handleCommentAdded(comment)
+      // Add the new reply to the existing comment
+      setComments(prev => prev.map(c => {
+        if (c._id === replyingTo) {
+          return {
+            ...c,
+            replies: [...(c.replies || []), comment]
+          };
+        }
+        return c;
+      }));
       setShowReplyInput(false);
       setReplyingTo(null);
+      
+      // Refresh notification count after adding reply
+      setTimeout(() => {
+        dispatch(refreshNotificationCount());
+      }, 1000);
     } catch (error: any) {
       Alert.alert('Lỗi', 'Không thể tạo bình luận. Vui lòng thử lại.');
     } finally {
@@ -472,7 +498,7 @@ const CommentModal: React.FC<CommentModalProps> = ({
             <FlatList
               data={comments}
               renderItem={renderComment}
-              keyExtractor={(item) => item._id || Math.random().toString()}
+              keyExtractor={(item, index) => item._id || `comment-${index}`}
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
               }

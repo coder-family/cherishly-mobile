@@ -64,13 +64,84 @@ interface MediaViewerBaseProps<T extends BaseAttachment> {
 const { width: screenWidth } = Dimensions.get("window");
 const MAX_PREVIEW_COUNT = 2; // Show only 2 items initially
 
-export default function MediaViewerBase<T extends BaseAttachment>({
+// Generate stable keys for video components
+const generateVideoKey = (attachment: BaseAttachment, prefix: string = 'video') => {
+  return `${prefix}-${attachment.id || attachment.url}`;
+};
+
+// Separate VideoPlayer component to prevent re-renders
+const VideoPlayer = React.memo(({ uri, onPress }: { uri: string; onPress?: () => void }) => {
+  const player = useVideoPlayer({ uri }, (player) => {
+    player.loop = false;
+    player.muted = false;
+    player.volume = 1.0;
+  });
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+      <VideoView
+        player={player}
+        style={styles.fullWidthMediaPreview}
+        contentFit="cover"
+      />
+    </TouchableOpacity>
+  );
+});
+
+// Custom hook to manage video players efficiently
+const useVideoPlayers = (videoAttachments: BaseAttachment[]) => {
+  // Only create players for actual video attachments
+  const videoUrls = useMemo(() => 
+    videoAttachments.map(att => att.url).filter(Boolean), 
+    [videoAttachments]
+  );
+  
+  // Create individual players with stable references
+  const player1 = videoUrls[0] ? useVideoPlayer({ uri: videoUrls[0] }, (player) => {
+    player.loop = false;
+    player.muted = false;
+    player.volume = 1.0;
+  }) : null;
+  
+  const player2 = videoUrls[1] ? useVideoPlayer({ uri: videoUrls[1] }, (player) => {
+    player.loop = false;
+    player.muted = false;
+    player.volume = 1.0;
+  }) : null;
+  
+  const player3 = videoUrls[2] ? useVideoPlayer({ uri: videoUrls[2] }, (player) => {
+    player.loop = false;
+    player.muted = false;
+    player.volume = 1.0;
+  }) : null;
+  
+  const player4 = videoUrls[3] ? useVideoPlayer({ uri: videoUrls[3] }, (player) => {
+    player.loop = false;
+    player.muted = false;
+    player.volume = 1.0;
+  }) : null;
+  
+  const player5 = videoUrls[4] ? useVideoPlayer({ uri: videoUrls[4] }, (player) => {
+    player.loop = false;
+    player.muted = false;
+    player.volume = 1.0;
+  }) : null;
+  
+  // Return memoized array to prevent unnecessary re-renders
+  return useMemo(() => [player1, player2, player3, player4, player5].filter(Boolean), 
+    [player1, player2, player3, player4, player5]
+  );
+};
+
+function MediaViewerBase<T extends BaseAttachment>({
   attachments,
   maxPreviewCount = MAX_PREVIEW_COUNT,
   onAttachmentPress,
   renderCustomContent,
   enableOrientationControl = false, // Default to false for safety
 }: MediaViewerBaseProps<T>) {
+  // Memoize attachments to prevent unnecessary re-renders
+  const memoizedAttachments = useMemo(() => attachments, [attachments]);
   const [selectedAttachment, setSelectedAttachment] =
     useState<T | null>(null);
   const [showFullScreen, setShowFullScreen] = useState(false);
@@ -78,24 +149,22 @@ export default function MediaViewerBase<T extends BaseAttachment>({
   const [currentScrollIndex, setCurrentScrollIndex] = useState<number>(0);
   const [showCounter, setShowCounter] = useState<boolean>(true);
   const [modalKey, setModalKey] = useState<number>(0);
-  const [_playingVideoId, setPlayingVideoId] = useState<string | null>(null);
+
   const [isExpanded, setIsExpanded] = useState(false);
-  const [audioToggleKey, setAudioToggleKey] = useState<number>(0); // Add this for forcing re-render when audio changes
   const [mutedStates, setMutedStates] = useState<Record<string, boolean>>({}); // Track muted state per video
   const [modalOpeningKey, setModalOpeningKey] = useState<number>(0); // Track when modal is opening
-  const [_videoTimestamp, setVideoTimestamp] = useState<number>(Date.now()); // Track video timestamp
   const [isLandscape, setIsLandscape] = useState<boolean>(false); // Track orientation state
   const [_originalOrientation, setOriginalOrientation] = useState<number | null>(null); // Store original orientation
   const scrollViewRef = React.useRef<ScrollView>(null);
 
   // Ensure attachments are valid and have required fields
   const safeAttachments = useMemo(() => {
-    if (!attachments || !Array.isArray(attachments)) {
+    if (!memoizedAttachments || !Array.isArray(memoizedAttachments)) {
   
       return [];
     }
     
-    const filtered = attachments
+    const filtered = memoizedAttachments
       .filter((att) => att && att.url && att.type)
       .sort((a, b) => {
         // Sort images first, then videos, then audio
@@ -106,69 +175,27 @@ export default function MediaViewerBase<T extends BaseAttachment>({
 
     
     return filtered;
-  }, [attachments]);
+  }, [memoizedAttachments]);
 
   // Create video players for all video attachments at the top level
-  const videoAttachments = safeAttachments.filter(att => att.type === 'video');
+  const videoAttachments = useMemo(() => 
+    safeAttachments.filter(att => att.type === 'video'), 
+    [safeAttachments]
+  );
   
-
+  // Use custom hook for video players
+  const players = useVideoPlayers(videoAttachments);
   
-  // Create individual video players at the top level with unique keys - always create all 5
-  const player1 = useVideoPlayer({ uri: videoAttachments[0]?.url || '' }, (player) => {
-    if (videoAttachments[0]) {
-
-      player.loop = false;
-      player.muted = false; // Enable audio
-      player.volume = 1.0; // Set volume to maximum
-    }
-  });
-  
-  const player2 = useVideoPlayer({ uri: videoAttachments[1]?.url || '' }, (player) => {
-    if (videoAttachments[1]) {
-
-      player.loop = false;
-      player.muted = false; // Enable audio
-      player.volume = 1.0; // Set volume to maximum
-    }
-  });
-  
-  const player3 = useVideoPlayer({ uri: videoAttachments[2]?.url || '' }, (player) => {
-    if (videoAttachments[2]) {
-
-      player.loop = false;
-      player.muted = false; // Enable audio
-      player.volume = 1.0; // Set volume to maximum
-    }
-  });
-  
-  const player4 = useVideoPlayer({ uri: videoAttachments[3]?.url || '' }, (player) => {
-    if (videoAttachments[3]) {
-
-      player.loop = false;
-      player.muted = false; // Enable audio
-      player.volume = 1.0; // Set volume to maximum
-    }
-  });
-  
-  const player5 = useVideoPlayer({ uri: videoAttachments[4]?.url || '' }, (player) => {
-    if (videoAttachments[4]) {
-
-      player.loop = false;
-      player.muted = false; // Enable audio
-      player.volume = 1.0; // Set volume to maximum
-    }
-  });
-
-  const players = [player1, player2, player3, player4, player5];
-  
-  const videoPlayers = videoAttachments.map((attachment, index) => ({
-    attachment: {
-      ...attachment,
-      // Use URL as fallback ID if attachment.id is undefined
-      id: attachment.id || attachment.url
-    },
-    player: players[index]
-  }));
+  const videoPlayers = useMemo(() => 
+    videoAttachments.map((attachment, index) => ({
+      attachment: {
+        ...attachment,
+        // Use URL as fallback ID if attachment.id is undefined
+        id: attachment.id || attachment.url
+      },
+      player: players[index] || null
+    })), [videoAttachments, players]
+  );
 
 
 
@@ -236,17 +263,12 @@ export default function MediaViewerBase<T extends BaseAttachment>({
     }
   }, []);
 
-  // Control playing status - track which video is currently playing
-  const handleVideoPlay = useCallback((videoId: string) => {
 
-    setPlayingVideoId(videoId);
-  }, []);
 
   // Stop all videos when modal closes
   const handleModalClose = useCallback(() => {
 
     setShowFullScreen(false);
-    setPlayingVideoId(null);
     
     // Unlock orientation when modal closes (only if enabled)
     if (enableOrientationControl) {
@@ -259,20 +281,17 @@ export default function MediaViewerBase<T extends BaseAttachment>({
 
       return newKey;
     });
-  }, [modalKey, unlockOrientation, enableOrientationControl]);
+  }, [unlockOrientation, enableOrientationControl]);
 
   // Reset video player when modal opens
   const handleModalOpen = useCallback((attachment: T) => {
     
-    // Force video player reset by incrementing modalOpeningKey and updating timestamp
+    // Force video player reset by incrementing modalOpeningKey
     setModalOpeningKey(prev => {
       const newKey = prev + 1;
 
       return newKey;
     });
-    
-    // Update video timestamp to force remounting
-    setVideoTimestamp(Date.now());
 
     
     const actualIndex = safeAttachments.findIndex(att => att.id === attachment.id);
@@ -286,10 +305,8 @@ export default function MediaViewerBase<T extends BaseAttachment>({
       lockToLandscape();
     }
     
-    // Track which video is playing
-    handleVideoPlay(attachment.id || attachment.url);
     onAttachmentPress?.(attachment, actualIndex >= 0 ? actualIndex : 0);
-  }, [safeAttachments, modalKey, handleVideoPlay, onAttachmentPress, lockToLandscape, enableOrientationControl]);
+  }, [safeAttachments, onAttachmentPress, lockToLandscape, enableOrientationControl]);
 
   // Cleanup video players when component unmounts or attachments change
   useEffect(() => {
@@ -395,7 +412,6 @@ export default function MediaViewerBase<T extends BaseAttachment>({
           ...prev,
           [videoId]: newMutedState
         }));
-        setAudioToggleKey(prev => prev + 1); // Force re-render to update the icon
       }
     };
 
@@ -406,12 +422,10 @@ export default function MediaViewerBase<T extends BaseAttachment>({
           handleModalOpen(attachment);
         }}
         activeOpacity={0.7}
-        key={`video-${attachment.id || index}`}
       >
         <View style={styles.videoThumbnailContainer}>
           {player && (
             <VideoView
-              key={`video-thumbnail-${modalKey}-${attachment.id || attachment.url}-${Date.now()}`}
               player={player}
               style={styles.videoThumbnail}
               contentFit="contain"
@@ -439,7 +453,6 @@ export default function MediaViewerBase<T extends BaseAttachment>({
           activeOpacity={0.7}
         >
           <MaterialIcons
-            key={`audio-icon-${audioToggleKey}-${isMuted ? 'muted' : 'unmuted'}`}
             name={isMuted ? "volume-off" : "volume-up"}
             size={24}
             color="#fff"
@@ -480,17 +493,35 @@ export default function MediaViewerBase<T extends BaseAttachment>({
     return (
       <View style={styles.fullWidthMediaContainer}>
         {displayItems.map((item, index) => {
+          const key = item.id || `${item.type}-${index}`;
+          
           if (renderCustomContent) {
-            return renderCustomContent(item, index);
+            return (
+              <View key={key}>
+                {renderCustomContent(item, index)}
+              </View>
+            );
           }
 
           switch (item.type) {
             case "image":
-              return renderImagePreview(item, index);
+              return (
+                <View key={key}>
+                  {renderImagePreview(item, index)}
+                </View>
+              );
             case "video":
-              return renderVideoPreview(item, index);
+              return (
+                <View key={key}>
+                  {renderVideoPreview(item, index)}
+                </View>
+              );
             case "audio":
-              return renderAudioPreview(item);
+              return (
+                <View key={key}>
+                  {renderAudioPreview(item)}
+                </View>
+              );
             default:
               return null;
           }
@@ -639,7 +670,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
                       isLandscape && styles.fullScreenVideoLandscape
                     ]}>
                       <VideoView
-                        key={`video-fullscreen-${modalKey}-${modalOpeningKey}-${attachment.id || attachment.url}-${Date.now()}-${showFullScreen ? 'open' : 'closed'}`}
+                        key={`video-fullscreen-${attachment.id || attachment.url}`}
                         player={player}
                         style={[
                           styles.fullScreenVideo,
@@ -729,7 +760,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
                       isLandscape && styles.fullScreenVideoLandscape
                     ]}>
                       <VideoView
-                        key={`video-fullscreen-${modalKey}-${modalOpeningKey}-${attachment.id || attachment.url}-${Date.now()}-${showFullScreen ? 'open' : 'closed'}`}
+                        key={`video-fullscreen-${attachment.id || attachment.url}`}
                         player={player}
                         style={[
                           styles.fullScreenVideo,
@@ -819,7 +850,7 @@ export default function MediaViewerBase<T extends BaseAttachment>({
                       isLandscape && styles.fullScreenVideoLandscape
                     ]}>
                       <VideoView
-                        key={`video-fullscreen-${modalKey}-${modalOpeningKey}-${attachment.id || attachment.url}-${Date.now()}-${showFullScreen ? 'open' : 'closed'}`}
+                        key={`video-fullscreen-${attachment.id || attachment.url}`}
                         player={player}
                         style={[
                           styles.fullScreenVideo,
@@ -1088,3 +1119,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
 }); 
+
+// Memoize the component to prevent unnecessary re-renders
+export default React.memo(MediaViewerBase) as typeof MediaViewerBase;

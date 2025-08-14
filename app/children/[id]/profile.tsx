@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -38,7 +38,11 @@ import { useFilteredContent } from '../../utils/contentPermissionUtils';
 type TabType = 'timeline' | 'health' | 'qa' | 'memories' | 'profile';
 
 export default function ChildProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, focusPost, postType } = useLocalSearchParams<{ 
+    id: string; 
+    focusPost?: string; 
+    postType?: string; 
+  }>();
   const router = useRouter();
   const dispatch = useAppDispatch();
   
@@ -49,6 +53,16 @@ export default function ChildProfileScreen() {
   const { healthRecords, growthRecords } = useAppSelector((state) => state.health);
   const { currentUser } = useAppSelector((state) => state.user);
   const [activeTab, setActiveTab] = useState<TabType>('timeline');
+  const [hasProcessedFocusPost, setHasProcessedFocusPost] = useState(false);
+  const [hasScrolledToFocusPost, setHasScrolledToFocusPost] = useState(false);
+  
+  // Store layout positions for each timeline item
+  const itemPositionsRef = useRef<Map<string, number>>(new Map());
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [scrollRetryCount, setScrollRetryCount] = useState(0);
+  const TOP_OFFSET = 80; // AppHeader height
+  const MAX_SCROLL_RETRIES = 10; // Prevent infinite loop
 
   // Determine if the viewer is the owner (only owner should see edit/delete/visibility controls)
   const viewerIsOwner = !!(currentUser?.id && currentChild?.parentId && currentUser.id === currentChild.parentId);
@@ -61,6 +75,9 @@ export default function ChildProfileScreen() {
     outputRange: [0, -headerHeight],
     extrapolate: 'clamp',
   });
+
+  // Scroll ref for focusing on specific post
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -224,11 +241,143 @@ export default function ChildProfileScreen() {
   // Filter timeline items based on user permissions
   const filteredTimelineItems = useFilteredContent(timelineItems);
 
+  // Handle focus post from notification
+  useEffect(() => {
+    if (focusPost && postType && !hasProcessedFocusPost) {
+      console.log('🔍 [ChildProfile] Processing focus post:', focusPost, 'type:', postType);
+      
+      // Set active tab based on post type (only once when focusPost changes)
+      switch (postType) {
+        case 'memory':
+          setActiveTab('timeline'); // Memory posts are shown in timeline
+          break;
+        case 'prompt_response':
+          setActiveTab('timeline'); // Q&A responses are shown in timeline
+          break;
+        case 'health_record':
+        case 'growth_record':
+          setActiveTab('timeline'); // Health records are shown in timeline
+          break;
+        default:
+          setActiveTab('timeline');
+      }
+      
+      setHasProcessedFocusPost(true);
+    }
+  }, [focusPost, postType, hasProcessedFocusPost]); // Added hasProcessedFocusPost dependency
+
+  // Separate useEffect for scrolling when timeline items are loaded
+  useEffect(() => {
+    if (focusPost && filteredTimelineItems.length > 0 && activeTab === 'timeline' && !hasScrolledToFocusPost) {
+      console.log('🔍 [ChildProfile] Attempting to scroll to focus post');
+      
+      // Find the post in timeline items
+      const targetItem = filteredTimelineItems.find(item => {
+        // Direct ID match
+        if (item._id === focusPost || item.id === focusPost) {
+          return true;
+        }
+        
+        // For memories, check if focusPost matches the memory's MongoDB _id
+        if (item.type === 'memory' && postType === 'memory') {
+          const originalMemory = memories.find(m => m.id === item.id);
+          if (originalMemory && (originalMemory as any)._id === focusPost) {
+            return true;
+          }
+        }
+        
+        // For Q&A responses, check if focusPost matches the response's MongoDB _id
+        if (item.type === 'qa' && postType === 'prompt_response') {
+          const originalResponse = responses.find(r => r.id === item.id);
+          if (originalResponse && (originalResponse as any)._id === focusPost) {
+            return true;
+          }
+        }
+        
+        // For health records, check if focusPost matches the record's MongoDB _id
+        if (item.type === 'health' && postType === 'health_record') {
+          const originalRecord = healthRecords.find(r => r.id === item.id);
+          if (originalRecord && (originalRecord as any)._id === focusPost) {
+            return true;
+          }
+        }
+        
+        // For growth records, check if focusPost matches the record's MongoDB _id
+        if (item.type === 'growth' && postType === 'growth_record') {
+          const originalRecord = growthRecords.find(r => r.id === item.id);
+          if (originalRecord && (originalRecord as any)._id === focusPost) {
+            return true;
+          }
+        }
+        
+        return false;
+      });
+      
+      if (targetItem && scrollViewRef.current) {
+        console.log('🔍 [ChildProfile] Found target item:', targetItem.id, 'type:', targetItem.type);
+        
+        // Wait for layout to complete and then scroll
+        let retryCount = 0;
+        const attemptScroll = () => {
+          const itemPosition = itemPositionsRef.current.get(targetItem.id);
+          if (itemPosition !== undefined) {
+            console.log('🔍 [ChildProfile] Scrolling to position:', itemPosition - TOP_OFFSET);
+            scrollViewRef.current?.scrollTo({
+              y: itemPosition - TOP_OFFSET,
+              animated: true
+            });
+            setHasScrolledToFocusPost(true);
+            setScrollRetryCount(0); // Reset retry count on success
+          } else {
+            retryCount++;
+            console.log('🔍 [ChildProfile] Item position not available yet, retrying...', retryCount);
+            // Retry after a short delay with max retries to prevent infinite loop
+            if (retryCount < MAX_SCROLL_RETRIES) {
+              setTimeout(() => {
+                if (!hasScrolledToFocusPost) {
+                  attemptScroll();
+                }
+              }, 100);
+            } else {
+              console.log('🔍 [ChildProfile] Max retries reached, stopping scroll attempts');
+              setHasScrolledToFocusPost(true); // Stop trying
+            }
+          }
+        };
+        
+        // Use setTimeout to ensure layout is complete
+        setTimeout(attemptScroll, 100);
+      } else {
+        console.log('🔍 [ChildProfile] Target item not found or scrollView not available');
+        console.log('🔍 [ChildProfile] Available IDs in timeline:', filteredTimelineItems.map(item => ({
+          id: item.id,
+          _id: item._id,
+          type: item.type
+        })));
+      }
+    }
+  }, [focusPost, filteredTimelineItems, activeTab, postType, memories, responses, healthRecords, growthRecords]);
+
   // Handle edit completion from HealthContent
   const handleHealthEditComplete = useCallback(() => {
     setEditingHealthItem(null);
     setEditingGrowthItem(null);
   }, []);
+
+  // Handle onLayout for timeline items to store their positions
+  const handleItemLayout = useCallback((itemId: string, event: any) => {
+    const { y } = event.nativeEvent.layout;
+    itemPositionsRef.current.set(itemId, y);
+    
+    // Clear existing timeout and set new one to batch updates
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+    updateTimeoutRef.current = setTimeout(() => {
+      forceUpdate();
+      updateTimeoutRef.current = null;
+    }, 16); // ~60fps
+  }, [forceUpdate]);
 
   // Retry loading memories
   const retryLoadMemories = useCallback(() => {
@@ -263,7 +412,17 @@ export default function ChildProfileScreen() {
 
   // Fetch child data when component mounts
   useEffect(() => {
+    console.log('🔍 [ChildProfile] Component mounted with id:', id);
+    
+    // Reset focus post processing state when component mounts or id changes
+    setHasProcessedFocusPost(false);
+    setHasScrolledToFocusPost(false);
+    setHasLoadedTimelineData(false);
+    itemPositionsRef.current.clear(); // Reset item positions
+    setScrollRetryCount(0); // Reset retry count
+    
     if (id) {
+      console.log('🔍 [ChildProfile] Fetching child data for id:', id);
       dispatch(fetchChild(id));
       // Fetch memories for this child, newest first - increased limit to show more memories
       dispatch(fetchMemories({ 
@@ -276,23 +435,32 @@ export default function ChildProfileScreen() {
     
     // Cleanup when component unmounts
     return () => {
+      console.log('🔍 [ChildProfile] Component unmounting, clearing data');
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
       dispatch(clearCurrentChild());
       dispatch(clearMemories());
     };
   }, [id, dispatch]);
 
-  // Load Q&A and health data when timeline tab is active
+  // Load Q&A and health data when timeline tab is active (only once)
+  const [hasLoadedTimelineData, setHasLoadedTimelineData] = useState(false);
+  
   useEffect(() => {
-    if (id && activeTab === 'timeline') {
-
+    if (id && activeTab === 'timeline' && !hasLoadedTimelineData) {
+      console.log('🔍 [ChildProfile] Loading timeline data for child:', id);
+      
       // Load Q&A responses for this child
       dispatch(fetchChildResponses({ childId: id, page: 1, limit: 50 }));
       // Load health and growth records for this child
       dispatch(fetchHealthRecords({ childId: id }));
       dispatch(fetchGrowthRecords({ childId: id }));
       dispatch(fetchPrompts({ isActive: true, limit: 50 })); // Load all active prompts
+      
+      setHasLoadedTimelineData(true);
     }
-  }, [id, activeTab, dispatch]);
+  }, [id, activeTab, dispatch, hasLoadedTimelineData]);
 
   // Refresh memories when add memory modal closes
   useEffect(() => {
@@ -820,6 +988,7 @@ export default function ChildProfileScreen() {
 
           {/* Scrollable Content */}
           <Animated.ScrollView
+            ref={scrollViewRef}
             style={styles.scrollableContent}
             contentContainerStyle={[
               styles.scrollableContentContainer,
@@ -849,7 +1018,10 @@ export default function ChildProfileScreen() {
 
     // For other tabs, use ScrollView
     return (
-      <ScrollView style={styles.container}>
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.container}
+      >
         {/* App Header */}
         <AppHeader
           title={currentChild ? `${getDisplayName(currentChild)}'s Profile` : 'Child Profile'}
@@ -1045,179 +1217,204 @@ export default function ChildProfileScreen() {
               switch (item.type) {
                 case 'memory':
                   return (
-                    <TimelineItem 
-                      key={uniqueKey} 
-                      item={item}
-                      onPress={() => handleMemoryPress(item)}
-                      onEdit={() => {
-                        // Find the original memory from memories array
-                        const originalMemory = memories.find(m => m.id === item.id);
-                        if (originalMemory) {
-                          handleMemoryEdit(originalMemory);
-                        } else {
-                          handleMemoryEdit(item);
-                        }
-                      }}
-                      onDelete={() => handleMemoryDelete(item)}
-                      onLike={() => handleMemoryLike(item)}
-                      onComment={() => handleMemoryComment(item)}
-                      onVisibilityUpdate={handleVisibilityUpdate}
-                      isOwner={viewerIsOwner}
-                    />
+                    <View 
+                      key={uniqueKey}
+                      onLayout={(event) => handleItemLayout(item.id, event)}
+                    >
+                      <TimelineItem 
+                        item={item}
+                        highlight={item._id === focusPost || item.id === focusPost}
+                        onPress={() => handleMemoryPress(item)}
+                        onEdit={() => {
+                          // Find the original memory from memories array
+                          const originalMemory = memories.find(m => m.id === item.id);
+                          if (originalMemory) {
+                            handleMemoryEdit(originalMemory);
+                          } else {
+                            handleMemoryEdit(item);
+                          }
+                        }}
+                        onDelete={() => handleMemoryDelete(item)}
+                        onLike={() => handleMemoryLike(item)}
+                        onComment={() => handleMemoryComment(item)}
+                        onVisibilityUpdate={handleVisibilityUpdate}
+                        isOwner={viewerIsOwner}
+                      />
+                    </View>
                   );
                 case 'qa':
                   return (
-                    <TimelineItem 
-                      key={uniqueKey} 
-                      item={item}
-                      onEdit={() => handleQAEdit(item)}
-                      onDelete={async () => {
-                        if (!item?.id) {
-                          Alert.alert('Error', 'Cannot delete: No Q&A response ID available');
-                          return;
-                        }
-
-                        const confirmed = confirm(`Are you sure you want to delete this Q&A response?\n\n"${item.content}"`);
-                        
-                        if (!confirmed) return;
-
-                        try {
-                          await dispatch(deleteResponse(item.id)).unwrap();
-                          Alert.alert('Success', 'Q&A response deleted successfully');
-                        } catch (error: any) {
-                          let errorMessage = 'Failed to delete Q&A response';
-                          
-                          if (error?.status === 401) {
-                            errorMessage = 'Authentication failed. Please log in again.';
-                          } else if (error?.status === 403) {
-                            errorMessage = 'You do not have permission to delete this response.';
-                          } else if (error?.status === 404) {
-                            errorMessage = 'Q&A response not found. It may have already been deleted.';
-                          } else if (error?.message) {
-                            errorMessage = error.message;
+                    <View 
+                      key={uniqueKey}
+                      onLayout={(event) => handleItemLayout(item.id, event)}
+                    >
+                      <TimelineItem 
+                        item={item}
+                        highlight={item._id === focusPost || item.id === focusPost}
+                        onEdit={() => handleQAEdit(item)}
+                        onDelete={async () => {
+                          if (!item?.id) {
+                            Alert.alert('Error', 'Cannot delete: No Q&A response ID available');
+                            return;
                           }
+
+                          const confirmed = confirm(`Are you sure you want to delete this Q&A response?\n\n"${item.content}"`);
                           
-                          Alert.alert('Error', errorMessage);
-                        }
-                      }}
-                      onVisibilityUpdate={handleVisibilityUpdate}
-                      isOwner={viewerIsOwner}
-                    />
+                          if (!confirmed) return;
+
+                          try {
+                            await dispatch(deleteResponse(item.id)).unwrap();
+                            Alert.alert('Success', 'Q&A response deleted successfully');
+                          } catch (error: any) {
+                            let errorMessage = 'Failed to delete Q&A response';
+                            
+                            if (error?.status === 401) {
+                              errorMessage = 'Authentication failed. Please log in again.';
+                            } else if (error?.status === 403) {
+                              errorMessage = 'You do not have permission to delete this response.';
+                            } else if (error?.status === 404) {
+                              errorMessage = 'Q&A response not found. It may have already been deleted.';
+                            } else if (error?.message) {
+                              errorMessage = error.message;
+                            }
+                            
+                            Alert.alert('Error', errorMessage);
+                          }
+                        }}
+                        onVisibilityUpdate={handleVisibilityUpdate}
+                        isOwner={viewerIsOwner}
+                      />
+                    </View>
                   );
                 case 'health':
                   // For health records, use TimelineItem for now
                   return (
-                    <TimelineItem 
-                      key={uniqueKey} 
-                      item={item}
-                      onEdit={() => {
-                        setEditingHealthItem(item);
-                        // Don't automatically switch to health tab - let user stay on timeline
-                      }}
-                      onDelete={async () => {
-                        if (!item?.id) {
-                          Alert.alert('Error', 'Cannot delete: No health record ID available');
-                          return;
-                        }
+                    <View 
+                      key={uniqueKey}
+                      onLayout={(event) => handleItemLayout(item.id, event)}
+                    >
+                      <TimelineItem 
+                        item={item}
+                        highlight={item._id === focusPost || item.id === focusPost}
+                        onEdit={() => {
+                          setEditingHealthItem(item);
+                          // Don't automatically switch to health tab - let user stay on timeline
+                        }}
+                        onDelete={async () => {
+                          if (!item?.id) {
+                            Alert.alert('Error', 'Cannot delete: No health record ID available');
+                            return;
+                          }
 
-                        Alert.alert(
-                          'Delete Health Record',
-                          `Are you sure you want to delete this health record?\n\n"${item.title}"`,
-                          [
-                            { text: 'Cancel', style: 'cancel' },
-                            {
-                              text: 'Delete',
-                              style: 'destructive',
-                              onPress: async () => {
-                                try {
-                                  await dispatch(deleteHealthRecord(item.id)).unwrap();
-                                  Alert.alert('Success', 'Health record deleted successfully');
-                                } catch (error: any) {
-                                  let errorMessage = 'Failed to delete health record';
-                                  
-                                  if (error?.status === 401) {
-                                    errorMessage = 'Authentication failed. Please log in again.';
-                                  } else if (error?.status === 403) {
-                                    errorMessage = 'You do not have permission to delete this record.';
-                                  } else if (error?.status === 404) {
-                                    errorMessage = 'Health record not found. It may have already been deleted.';
-                                  } else if (error?.message) {
-                                    errorMessage = error.message;
+                          Alert.alert(
+                            'Delete Health Record',
+                            `Are you sure you want to delete this health record?\n\n"${item.title}"`,
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              {
+                                text: 'Delete',
+                                style: 'destructive',
+                                onPress: async () => {
+                                  try {
+                                    await dispatch(deleteHealthRecord(item.id)).unwrap();
+                                    Alert.alert('Success', 'Health record deleted successfully');
+                                  } catch (error: any) {
+                                    let errorMessage = 'Failed to delete health record';
+                                    
+                                    if (error?.status === 401) {
+                                      errorMessage = 'Authentication failed. Please log in again.';
+                                    } else if (error?.status === 403) {
+                                      errorMessage = 'You do not have permission to delete this record.';
+                                    } else if (error?.status === 404) {
+                                      errorMessage = 'Health record not found. It may have already been deleted.';
+                                    } else if (error?.message) {
+                                      errorMessage = error.message;
+                                    }
+                                    
+                                    Alert.alert('Error', errorMessage);
                                   }
-                                  
-                                  Alert.alert('Error', errorMessage);
-                                }
+                                },
                               },
-                            },
-                          ]
-                        );
-                      }}
-                      onVisibilityUpdate={handleVisibilityUpdate}
-                      isOwner={viewerIsOwner}
-                    />
+                            ]
+                          );
+                        }}
+                        onVisibilityUpdate={handleVisibilityUpdate}
+                        isOwner={viewerIsOwner}
+                      />
+                    </View>
                   );
                 case 'growth':
                   // For growth records, use TimelineItem for now
                   return (
-                    <TimelineItem 
-                      key={uniqueKey} 
-                      item={item}
-                      onEdit={async () => {
-                        // Fetch full record data before editing
-                        try {
-                          const fullRecord = await dispatch(fetchGrowthRecord(item.id)).unwrap();
-                          setEditingGrowthItem(fullRecord);
-                        } catch (error) {
-                          // Fallback to using the timeline item
-                          setEditingGrowthItem(item);
-                        }
-                        // Don't automatically switch to health tab - let user stay on timeline
-                      }}
-                      onDelete={async () => {
-                        if (!item?.id) {
-                          Alert.alert('Error', 'Cannot delete: No growth record ID available');
-                          return;
-                        }
+                    <View 
+                      key={uniqueKey}
+                      onLayout={(event) => handleItemLayout(item.id, event)}
+                    >
+                      <TimelineItem 
+                        item={item}
+                        highlight={item._id === focusPost || item.id === focusPost}
+                        onEdit={async () => {
+                          // Fetch full record data before editing
+                          try {
+                            const fullRecord = await dispatch(fetchGrowthRecord(item.id)).unwrap();
+                            setEditingGrowthItem(fullRecord);
+                          } catch (error) {
+                            // Fallback to using the timeline item
+                            setEditingGrowthItem(item);
+                          }
+                          // Don't automatically switch to health tab - let user stay on timeline
+                        }}
+                        onDelete={async () => {
+                          if (!item?.id) {
+                            Alert.alert('Error', 'Cannot delete: No growth record ID available');
+                            return;
+                          }
 
-                        Alert.alert(
-                          'Delete Growth Record',
-                          `Are you sure you want to delete this growth record?\n\n"${item.title}"`,
-                          [
-                            { text: 'Cancel', style: 'cancel' },
-                            {
-                              text: 'Delete',
-                              style: 'destructive',
-                              onPress: async () => {
-                                try {
-                                  await dispatch(deleteGrowthRecord(item.id)).unwrap();
-                                  Alert.alert('Success', 'Growth record deleted successfully');
-                                } catch (error: any) {
-                                  let errorMessage = 'Failed to delete growth record';
-                                  
-                                  if (error?.status === 401) {
-                                    errorMessage = 'Authentication failed. Please log in again.';
-                                  } else if (error?.status === 403) {
-                                    errorMessage = 'You do not have permission to delete this record.';
-                                  } else if (error?.status === 404) {
-                                    errorMessage = 'Growth record not found. It may have already been deleted.';
-                                  } else if (error?.message) {
-                                    errorMessage = error.message;
+                          Alert.alert(
+                            'Delete Growth Record',
+                            `Are you sure you want to delete this growth record?\n\n"${item.title}"`,
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              {
+                                text: 'Delete',
+                                style: 'destructive',
+                                onPress: async () => {
+                                  try {
+                                    await dispatch(deleteGrowthRecord(item.id)).unwrap();
+                                    Alert.alert('Success', 'Growth record deleted successfully');
+                                  } catch (error: any) {
+                                    let errorMessage = 'Failed to delete growth record';
+                                    
+                                    if (error?.status === 401) {
+                                      errorMessage = 'Authentication failed. Please log in again.';
+                                    } else if (error?.status === 403) {
+                                      errorMessage = 'You do not have permission to delete this record.';
+                                    } else if (error?.status === 404) {
+                                      errorMessage = 'Growth record not found. It may have already been deleted.';
+                                    } else if (error?.message) {
+                                      errorMessage = error.message;
+                                    }
+                                    
+                                    Alert.alert('Error', errorMessage);
                                   }
-                                  
-                                  Alert.alert('Error', errorMessage);
-                                }
+                                },
                               },
-                            },
-                          ]
-                        );
-                      }}
-                      onVisibilityUpdate={handleVisibilityUpdate}
-                      isOwner={viewerIsOwner}
-                    />
+                            ]
+                          );
+                        }}
+                        onVisibilityUpdate={handleVisibilityUpdate}
+                        isOwner={viewerIsOwner}
+                      />
+                    </View>
                   );
                 default:
                   return (
-                    <TimelineItem key={uniqueKey} item={item} isOwner={viewerIsOwner} />
+                    <View 
+                      key={uniqueKey}
+                      onLayout={(event) => handleItemLayout(item.id, event)}
+                    >
+                      <TimelineItem item={item} highlight={item._id === focusPost || item.id === focusPost} isOwner={viewerIsOwner} />
+                    </View>
                   );
               }
             })}

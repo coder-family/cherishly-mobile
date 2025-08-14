@@ -148,3 +148,30 @@ export async function logout(): Promise<void> {
 
 // Note: Login and createUser are handled in authService.ts
 // since they're authentication-related operations 
+
+/**
+ * Lấy thông tin chi tiết của user theo userId
+ * Sử dụng API GET /api/users/{userId}
+ */
+export async function getUserById(userId: string): Promise<User> {
+  try {
+    const response = await apiService.get(`/users/${userId}`);
+    const userData = response.data || response;
+    return transformUserData(userData);
+  } catch (error: any) {
+    conditionalLog.user('Error fetching user by ID:', error);
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('User not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to view this user');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to fetch user');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to fetch user');
+    } else {
+      throw new Error('Failed to fetch user: ' + (error.message || 'Unknown error'));
+    }
+  }
+} 
