@@ -41,18 +41,14 @@ class NotificationNavigationService {
     token: string
   ): Promise<void> {
     try {
-      console.log('🔍 [NotificationNavigation] Handling notification click:', notification._id);
-      
       // Xử lý thông báo thành viên mới
       if (notification.type === 'member_joined' && notification.sender) {
-        console.log('🔍 [NotificationNavigation] Member joined notification - will show modal');
         // Logic modal sẽ được xử lý ở component level
         return;
       }
       
       // Xử lý thông báo thành viên rời/xóa - không cần điều hướng
       if (notification.type === 'member_left' || notification.type === 'member_removed') {
-        console.log('🔍 [NotificationNavigation] Member left/removed - no navigation needed');
         return;
       }
       
@@ -62,15 +58,32 @@ class NotificationNavigationService {
         const childId = typeof notification.childId === 'object' && notification.childId !== null 
           ? (notification.childId as any)._id 
           : notification.childId;
-        console.log('🔍 [NotificationNavigation] Using childId:', childId);
         
         // Sử dụng childId trực tiếp từ notification
         await this.navigateToChildProfile(notification.targetType, notification.targetId, childId, navigation);
         return;
       }
       
+      // Nếu không có childId, thử lấy thông tin navigation từ API
+      try {
+        const navigationResponse = await this.getNotificationNavigation(notification._id, token);
+        const navigationInfo = navigationResponse.data.navigation;
+        
+        if (navigationInfo && navigationInfo.childId) {
+          await this.navigateToChildProfile(navigationInfo.targetType, navigationInfo.targetId, navigationInfo.childId, navigation);
+          return;
+        }
+      } catch (apiError) {
+        // API navigation failed, show alert and fallback to home
+        Alert.alert(
+          'Lỗi',
+          'Không thể mở nội dung này. Vui lòng thử lại sau.',
+          [{ text: 'OK', onPress: () => this.navigateToHome(navigation) }]
+        );
+        return;
+      }
+      
       // Fallback: điều hướng về Home
-      console.log('🔍 [NotificationNavigation] No specific navigation, falling back to Home');
       this.navigateToHome(navigation);
     } catch (error) {
       console.error('🔍 [NotificationNavigation] Error handling notification click:', error);
@@ -118,8 +131,6 @@ class NotificationNavigationService {
   private async navigateToContent(navigationInfo: NavigationInfo, navigation: any): Promise<void> {
     const { targetType, targetId, childId, deepLinks } = navigationInfo;
 
-    console.log('🔍 [NotificationNavigation] Navigating to:', { targetType, targetId, childId });
-
     try {
       // Thử sử dụng deep link trước
       if (deepLinks?.mobile) {
@@ -160,12 +171,10 @@ class NotificationNavigationService {
       case 'member_joined':
         // Hiển thị modal thông tin thành viên mới
         // Logic này sẽ được xử lý ở component level
-        console.log('🔍 [NotificationNavigation] Member joined - show modal');
         break;
       case 'member_left':
       case 'member_removed':
         // Không cần điều hướng gì cả
-        console.log('🔍 [NotificationNavigation] Member left/removed - no navigation needed');
         break;
       default:
         console.warn('🔍 [NotificationNavigation] Unknown target type:', targetType);

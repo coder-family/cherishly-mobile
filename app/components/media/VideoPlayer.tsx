@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
 interface VideoPlayerProps {
@@ -21,13 +21,24 @@ const VideoPlayer: React.FC<VideoPlayerProps> = React.memo(({
   const [isLoaded, setIsLoaded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
-  // Only create video player when component is visible
-  const player = isVisible ? useVideoPlayer({ uri }, (player) => {
+  // Always call useVideoPlayer to follow React Hooks rules
+  const player = useVideoPlayer({ uri }, (player) => {
+    // Initialize player with default settings
     player.loop = false;
     player.muted = false;
     player.volume = 1.0;
     setIsLoaded(true);
-  }) : null;
+  });
+
+  // Use useEffect to manage player state based on visibility
+  useEffect(() => {
+    if (player && isVisible) {
+      // Player is now visible, ensure it's properly configured
+      player.loop = false;
+      player.muted = false;
+      player.volume = 1.0;
+    }
+  }, [player, isVisible]);
 
   const handlePress = useCallback(() => {
     if (!isVisible) {
@@ -46,18 +57,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = React.memo(({
 
   return (
     <TouchableOpacity onPress={onPress} style={style} activeOpacity={0.8}>
-      {player && (
-        <VideoView
-          player={player}
-          style={style}
-          contentFit="cover"
-          nativeControls={showControls}
-          allowsFullscreen={true}
-        />
-      )}
+      <VideoView
+        player={player}
+        style={style}
+        contentFit="cover"
+        nativeControls={showControls}
+        allowsFullscreen={true}
+      />
     </TouchableOpacity>
   );
 });
+
+VideoPlayer.displayName = 'VideoPlayer';
 
 const styles = StyleSheet.create({
   placeholder: {

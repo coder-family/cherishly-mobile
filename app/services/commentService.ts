@@ -40,7 +40,15 @@ interface CommentsResponse extends ApiResponse<Comment[]> {
   };
 }
 
-interface CommentResponse extends ApiResponse<Comment> {}
+interface CommentResponse extends ApiResponse<Comment> {
+  // Extends ApiResponse<Comment> with additional properties if needed
+  pagination?: {
+    total: number;
+    page: number;
+    pages: number;
+    limit: number;
+  };
+}
 
 class CommentService {
   private static instance: CommentService;

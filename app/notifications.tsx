@@ -46,12 +46,8 @@ export default function NotificationsScreen() {
   }, [isAuthenticated]);
 
   const handleNotificationPress = useCallback(async (notification: Notification) => {
-    console.log('🔍 [NotificationPress] Handler called with notification:', notification);
-    console.log('🔍 [NotificationPress] User authenticated:', isAuthenticated);
-    
     // Mark notification as read first
     if (!notification.isRead) {
-      console.log('🔍 [NotificationPress] Marking as read');
       dispatch(markNotificationAsRead(notification._id) as any);
     }
     
@@ -66,8 +62,6 @@ export default function NotificationsScreen() {
         // Fallback: điều hướng về Home
         router.push('/tabs/home');
       }
-    } else {
-      console.log('🔍 [NotificationPress] User not authenticated, staying on current screen');
     }
   }, [router, dispatch, isAuthenticated]);
 

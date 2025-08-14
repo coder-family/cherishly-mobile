@@ -29,20 +29,14 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   }
 
   const handlePress = () => {
-    console.log('🔍 [NotificationItem] Pressed notification:', notification._id);
-    
     // Mark as read if not already read
     if (!notification.isRead) {
-      console.log('🔍 [NotificationItem] Marking as read');
       dispatch(markNotificationAsRead(notification._id) as any);
     }
     
     // Call onPress callback if provided
     if (onPress) {
-      console.log('🔍 [NotificationItem] Calling onPress callback');
       onPress(notification);
-    } else {
-      console.log('🔍 [NotificationItem] No onPress callback provided');
     }
   };
 

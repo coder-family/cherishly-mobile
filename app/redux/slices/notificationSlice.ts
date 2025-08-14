@@ -98,7 +98,15 @@ export const deleteNotification = createAsyncThunk(
 // Thêm polling functionality
 export const startNotificationPolling = createAsyncThunk(
   'notification/startPolling',
-  async (intervalMs: number = 30000, { dispatch }) => {
+  async (intervalMs: number = 30000, { dispatch, getState }) => {
+    const state = getState() as any;
+    const currentInterval = state.notification.pollInterval;
+    
+    // Clear existing interval before creating a new one
+    if (currentInterval) {
+      clearInterval(currentInterval);
+    }
+    
     const pollInterval = setInterval(async () => {
       try {
         await dispatch(fetchUnreadCount());
@@ -117,6 +125,21 @@ export const refreshNotifications = createAsyncThunk(
   async (_, { dispatch }) => {
     await dispatch(fetchNotifications({ page: 1, limit: 20 }));
     await dispatch(fetchUnreadCount());
+  }
+);
+
+// Stop polling functionality
+export const stopNotificationPolling = createAsyncThunk(
+  'notification/stopPolling',
+  async (_, { dispatch, getState }) => {
+    const state = getState() as any;
+    const currentInterval = state.notification.pollInterval;
+    
+    if (currentInterval) {
+      clearInterval(currentInterval);
+    }
+    
+    dispatch(stopPolling());
   }
 );
 
@@ -252,6 +275,13 @@ const notificationSlice = createSlice({
         state.pollInterval = action.payload;
       })
       .addCase(startNotificationPolling.rejected, (state) => {
+        state.polling = false;
+        state.pollInterval = null;
+      });
+
+    // stopNotificationPolling
+    builder
+      .addCase(stopNotificationPolling.fulfilled, (state) => {
         state.polling = false;
         state.pollInterval = null;
       });

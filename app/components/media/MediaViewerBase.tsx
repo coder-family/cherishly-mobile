@@ -88,6 +88,8 @@ const VideoPlayer = React.memo(({ uri, onPress }: { uri: string; onPress?: () =>
   );
 });
 
+VideoPlayer.displayName = 'VideoPlayer';
+
 // Custom hook to manage video players efficiently
 const useVideoPlayers = (videoAttachments: BaseAttachment[]) => {
   // Only create players for actual video attachments
@@ -96,40 +98,56 @@ const useVideoPlayers = (videoAttachments: BaseAttachment[]) => {
     [videoAttachments]
   );
   
-  // Create individual players with stable references
-  const player1 = videoUrls[0] ? useVideoPlayer({ uri: videoUrls[0] }, (player) => {
-    player.loop = false;
-    player.muted = false;
-    player.volume = 1.0;
-  }) : null;
+  // Always call useVideoPlayer to follow React Hooks rules
+  const player1 = useVideoPlayer({ uri: videoUrls[0] || '' }, (player) => {
+    if (videoUrls[0]) {
+      player.loop = false;
+      player.muted = false;
+      player.volume = 1.0;
+    }
+  });
   
-  const player2 = videoUrls[1] ? useVideoPlayer({ uri: videoUrls[1] }, (player) => {
-    player.loop = false;
-    player.muted = false;
-    player.volume = 1.0;
-  }) : null;
+  const player2 = useVideoPlayer({ uri: videoUrls[1] || '' }, (player) => {
+    if (videoUrls[1]) {
+      player.loop = false;
+      player.muted = false;
+      player.volume = 1.0;
+    }
+  });
   
-  const player3 = videoUrls[2] ? useVideoPlayer({ uri: videoUrls[2] }, (player) => {
-    player.loop = false;
-    player.muted = false;
-    player.volume = 1.0;
-  }) : null;
+  const player3 = useVideoPlayer({ uri: videoUrls[2] || '' }, (player) => {
+    if (videoUrls[2]) {
+      player.loop = false;
+      player.muted = false;
+      player.volume = 1.0;
+    }
+  });
   
-  const player4 = videoUrls[3] ? useVideoPlayer({ uri: videoUrls[3] }, (player) => {
-    player.loop = false;
-    player.muted = false;
-    player.volume = 1.0;
-  }) : null;
+  const player4 = useVideoPlayer({ uri: videoUrls[3] || '' }, (player) => {
+    if (videoUrls[3]) {
+      player.loop = false;
+      player.muted = false;
+      player.volume = 1.0;
+    }
+  });
   
-  const player5 = videoUrls[4] ? useVideoPlayer({ uri: videoUrls[4] }, (player) => {
-    player.loop = false;
-    player.muted = false;
-    player.volume = 1.0;
-  }) : null;
+  const player5 = useVideoPlayer({ uri: videoUrls[4] || '' }, (player) => {
+    if (videoUrls[4]) {
+      player.loop = false;
+      player.muted = false;
+      player.volume = 1.0;
+    }
+  });
   
   // Return memoized array to prevent unnecessary re-renders
-  return useMemo(() => [player1, player2, player3, player4, player5].filter(Boolean), 
-    [player1, player2, player3, player4, player5]
+  return useMemo(() => [
+    videoUrls[0] ? player1 : null,
+    videoUrls[1] ? player2 : null,
+    videoUrls[2] ? player3 : null,
+    videoUrls[3] ? player4 : null,
+    videoUrls[4] ? player5 : null
+  ].filter(Boolean), 
+    [player1, player2, player3, player4, player5, videoUrls]
   );
 };
 

@@ -83,7 +83,6 @@ const NotificationList: React.FC<NotificationListProps> = ({
       }
 
       // Fallback: chỉ mark as read
-      console.log('🔍 [NotificationList] No navigation available, only marking as read');
     } catch (error) {
       console.error('🔍 [NotificationList] Error handling notification press:', error);
     }

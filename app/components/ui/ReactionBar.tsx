@@ -146,7 +146,7 @@ export default function ReactionBar({ targetType, targetId, onReactionChange }: 
 
       if (currentUser) {
         (Object.keys(nextCounts) as ReactionType[]).forEach((t) => {
-          const arr = (res.reactions as any)[t] as Array<ReactionEntry> | undefined;
+          const arr = (res.reactions as any)[t] as ReactionEntry[] | undefined;
           if (arr && arr.some((r) => isSameUser(r.user, currentUser))) {
             current = t;
           }
