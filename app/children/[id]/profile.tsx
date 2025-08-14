@@ -1,6 +1,12 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { MaterialIcons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, {
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import {
   Alert,
   Animated,
@@ -10,48 +16,96 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
-} from 'react-native';
-import AddMemoryModal from '../../components/child/AddMemoryModal';
-import EditChildProfileModal from '../../components/child/EditChildProfileModal';
-import EditMemoryModal from '../../components/child/EditMemoryModal';
-import HealthContent from '../../components/child/HealthContent';
-import MemoryItem from '../../components/child/MemoryItem';
-import AppHeader from '../../components/layout/AppHeader';
-import { QAContent } from '../../components/qa';
-import EditResponseModal from '../../components/qa/EditResponseModal';
-import TimelineItem from '../../components/timeline/TimelineItem';
-import ErrorView from '../../components/ui/ErrorView';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import ModalConfirm from '../../components/ui/ModalConfirm';
-import SearchResults from '../../components/ui/SearchResults';
-import { useAppDispatch, useAppSelector } from '../../redux/hooks';
-import { clearCurrentChild, deleteChild, fetchChild } from '../../redux/slices/childSlice';
-import { deleteGrowthRecord, deleteHealthRecord, fetchGrowthRecord, fetchGrowthRecords, fetchHealthRecords, updateGrowthRecord, updateHealthRecord } from '../../redux/slices/healthSlice';
-import { clearMemories, deleteMemory, fetchMemories, updateMemory } from '../../redux/slices/memorySlice';
-import { deleteResponse, fetchChildResponses, updateResponse } from '../../redux/slices/promptResponseSlice';
-import { fetchPrompts } from '../../redux/slices/promptSlice';
-import { Memory } from '../../services/memoryService';
-import { SearchResult, searchService } from '../../services/searchService';
-import { useFilteredContent } from '../../utils/contentPermissionUtils';
+  View,
+} from "react-native";
+import AddMemoryModal from "../../components/child/AddMemoryModal";
+import EditChildProfileModal from "../../components/child/EditChildProfileModal";
+import EditMemoryModal from "../../components/child/EditMemoryModal";
+import HealthContent from "../../components/child/HealthContent";
+import MemoryItem from "../../components/child/MemoryItem";
+import AppHeader from "../../components/layout/AppHeader";
+import { QAContent } from "../../components/qa";
+import EditResponseModal from "../../components/qa/EditResponseModal";
+import TimelineItem from "../../components/timeline/TimelineItem";
+import ErrorView from "../../components/ui/ErrorView";
+import LoadingSpinner from "../../components/ui/LoadingSpinner";
+import ModalConfirm from "../../components/ui/ModalConfirm";
+import SearchResults from "../../components/ui/SearchResults";
+import { useAppDispatch, useAppSelector } from "../../redux/hooks";
+import {
+  clearCurrentChild,
+  deleteChild,
+  fetchChild,
+} from "../../redux/slices/childSlice";
+import {
+  deleteGrowthRecord,
+  deleteHealthRecord,
+  fetchGrowthRecord,
+  fetchGrowthRecords,
+  fetchHealthRecords,
+  updateGrowthRecord,
+  updateHealthRecord,
+} from "../../redux/slices/healthSlice";
+import {
+  clearMemories,
+  deleteMemory,
+  fetchMemories,
+  updateMemory,
+} from "../../redux/slices/memorySlice";
+import {
+  deleteResponse,
+  fetchChildResponses,
+  updateResponse,
+} from "../../redux/slices/promptResponseSlice";
+import { fetchPrompts } from "../../redux/slices/promptSlice";
+import { Memory } from "../../services/memoryService";
+import { SearchResult, searchService } from "../../services/searchService";
+import { useFilteredContent } from "../../utils/contentPermissionUtils";
 
-type TabType = 'timeline' | 'health' | 'qa' | 'memories' | 'profile';
+type TabType = "timeline" | "health" | "qa" | "memories" | "profile";
 
 export default function ChildProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, focusPost, postType } = useLocalSearchParams<{
+    id: string;
+    focusPost?: string;
+    postType?: string;
+  }>();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  
-  const { currentChild, loading, error } = useAppSelector((state) => state.children);
-  const { memories, loading: memoriesLoading, error: memoriesError, hasMore } = useAppSelector((state) => state.memories);
+
+  const { currentChild, loading, error } = useAppSelector(
+    (state) => state.children
+  );
+  const {
+    memories,
+    loading: memoriesLoading,
+    error: memoriesError,
+    hasMore,
+  } = useAppSelector((state) => state.memories);
   const { responses } = useAppSelector((state) => state.promptResponses);
   const { prompts } = useAppSelector((state) => state.prompts);
-  const { healthRecords, growthRecords } = useAppSelector((state) => state.health);
+  const { healthRecords, growthRecords } = useAppSelector(
+    (state) => state.health
+  );
   const { currentUser } = useAppSelector((state) => state.user);
-  const [activeTab, setActiveTab] = useState<TabType>('timeline');
+  const [activeTab, setActiveTab] = useState<TabType>("timeline");
+  const [hasProcessedFocusPost, setHasProcessedFocusPost] = useState(false);
+  const [hasScrolledToFocusPost, setHasScrolledToFocusPost] = useState(false);
+
+  // Store layout positions for each timeline item
+  const itemPositionsRef = useRef<Map<string, number>>(new Map());
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [scrollRetryCount, setScrollRetryCount] = useState(0);
+  const TOP_OFFSET = 80; // AppHeader height
+  const MAX_SCROLL_RETRIES = 10; // Prevent infinite loop
 
   // Determine if the viewer is the owner (only owner should see edit/delete/visibility controls)
-  const viewerIsOwner = !!(currentUser?.id && currentChild?.parentId && currentUser.id === currentChild.parentId);
+  const viewerIsOwner = !!(
+    currentUser?.id &&
+    currentChild?.parentId &&
+    currentUser.id === currentChild.parentId
+  );
 
   // Animation refs
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -59,11 +113,14 @@ export default function ChildProfileScreen() {
   const headerTranslateY = scrollY.interpolate({
     inputRange: [0, headerHeight],
     outputRange: [0, -headerHeight],
-    extrapolate: 'clamp',
+    extrapolate: "clamp",
   });
 
+  // Scroll ref for focusing on specific post
+  const scrollViewRef = useRef<ScrollView>(null);
+
   // Search state
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -73,16 +130,16 @@ export default function ChildProfileScreen() {
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const [showEditMemoryModal, setShowEditMemoryModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
+
   // Child profile edit state
   const [showEditChildModal, setShowEditChildModal] = useState(false);
   const [showDeleteChildConfirm, setShowDeleteChildConfirm] = useState(false);
-  
+
   // Timeline edit state
   const [editingQAItem, setEditingQAItem] = useState<any>(null);
   const [editingHealthItem, setEditingHealthItem] = useState<any>(null);
   const [editingGrowthItem, setEditingGrowthItem] = useState<any>(null);
-  
+
   // Q&A edit modal state
   const [showEditResponseModal, setShowEditResponseModal] = useState(false);
   const [editingResponse, setEditingResponse] = useState<any>(null);
@@ -93,31 +150,29 @@ export default function ChildProfileScreen() {
   // Create timeline items and filter them based on permissions
   const timelineItems = React.useMemo(() => {
     if (!id) return [];
-    
+
     const items: any[] = [];
-    
+
     // Add memories
     const processedMemoryIds = new Set();
-    memories.forEach(memory => {
+    memories.forEach((memory) => {
       if (!processedMemoryIds.has(memory.id)) {
         processedMemoryIds.add(memory.id);
-        
 
-        
         // Extract creator info from parentId (which can be string or object)
         let creator = null;
-        if (memory.parentId && typeof memory.parentId === 'object') {
+        if (memory.parentId && typeof memory.parentId === "object") {
           creator = {
             id: memory.parentId._id || memory.parentId.id,
             firstName: memory.parentId.firstName,
             lastName: memory.parentId.lastName,
-            avatar: memory.parentId.avatar
+            avatar: memory.parentId.avatar,
           };
         }
-        
+
         items.push({
           id: memory.id,
-          type: 'memory',
+          type: "memory",
           title: memory.title,
           content: memory.content,
           date: memory.date,
@@ -129,100 +184,242 @@ export default function ChildProfileScreen() {
           metadata: {
             visibility: memory.visibility,
             location: memory.location,
-            tags: memory.tags
-          }
+            tags: memory.tags,
+          },
         });
       }
     });
-    
+
     // Add Q&A responses
     const processedResponseIds = new Set();
-    responses.filter(response => response.childId === id).forEach(response => {
-      if (!processedResponseIds.has(response.id)) {
-        processedResponseIds.add(response.id);
-        
-        let questionText = 'Question not available';
-        if (typeof response.promptId === 'object' && response.promptId) {
-          questionText = (response.promptId as any).question || (response.promptId as any).title || 'Question not available';
-        } else if (typeof response.promptId === 'string') {
-          const matchingPrompt = prompts.find((p: any) => p.id === response.promptId);
-          if (matchingPrompt) {
-            questionText = matchingPrompt.content || matchingPrompt.title || 'Question not available';
-          }
-        }
+    responses
+      .filter((response) => response.childId === id)
+      .forEach((response) => {
+        if (!processedResponseIds.has(response.id)) {
+          processedResponseIds.add(response.id);
 
-        items.push({
-          id: response.id,
-          type: 'qa',
-          title: 'Q&A Response',
-          content: response.content,
-          date: new Date(response.createdAt).toISOString().split('T')[0],
-          createdAt: response.createdAt,
-          media: response.attachments,
-          visibility: response.visibility,
-          metadata: {
-            promptId: response.promptId,
-            feedback: response.feedback,
-            question: questionText
+          let questionText = "Question not available";
+          if (typeof response.promptId === "object" && response.promptId) {
+            questionText =
+              (response.promptId as any).question ||
+              (response.promptId as any).title ||
+              "Question not available";
+          } else if (typeof response.promptId === "string") {
+            const matchingPrompt = prompts.find(
+              (p: any) => p.id === response.promptId
+            );
+            if (matchingPrompt) {
+              questionText =
+                matchingPrompt.content ||
+                matchingPrompt.title ||
+                "Question not available";
+            }
           }
-        });
-      }
-    });
-    
+
+          items.push({
+            id: response.id,
+            type: "qa",
+            title: "Q&A Response",
+            content: response.content,
+            date: new Date(response.createdAt).toISOString().split("T")[0],
+            createdAt: response.createdAt,
+            media: response.attachments,
+            visibility: response.visibility,
+            metadata: {
+              promptId: response.promptId,
+              feedback: response.feedback,
+              question: questionText,
+            },
+          });
+        }
+      });
+
     // Add health records
     const processedHealthIds = new Set();
-    healthRecords.filter(record => record.childId === id).forEach(record => {
-      if (!processedHealthIds.has(record.id)) {
-        processedHealthIds.add(record.id);
-        items.push({
-          id: record.id,
-          type: 'health',
-          title: record.title,
-          content: record.description,
-          date: record.startDate,
-          createdAt: record.createdAt,
-          media: record.attachments,
-          visibility: record.visibility,
-          metadata: {
-            type: record.type,
-            endDate: record.endDate,
-            doctorName: record.doctorName,
-            location: record.location
-          }
-        });
-      }
-    });
-    
+    healthRecords
+      .filter((record) => record.childId === id)
+      .forEach((record) => {
+        if (!processedHealthIds.has(record.id)) {
+          processedHealthIds.add(record.id);
+          items.push({
+            id: record.id,
+            type: "health",
+            title: record.title,
+            content: record.description,
+            date: record.startDate,
+            createdAt: record.createdAt,
+            media: record.attachments,
+            visibility: record.visibility,
+            metadata: {
+              type: record.type,
+              endDate: record.endDate,
+              doctorName: record.doctorName,
+              location: record.location,
+            },
+          });
+        }
+      });
+
     // Add growth records
     const processedGrowthIds = new Set();
-    growthRecords.filter(record => record.childId === id).forEach(record => {
-      if (!processedGrowthIds.has(record.id)) {
-        processedGrowthIds.add(record.id);
-        items.push({
-          id: record.id,
-          type: 'growth',
-          title: `${record.type} Record`,
-          content: `${record.value} ${record.unit}`,
-          date: record.date,
-          createdAt: record.createdAt,
-          visibility: record.visibility,
-          metadata: {
-            type: record.type,
-            value: record.value,
-            unit: record.unit,
-            source: record.source,
-            notes: record.notes
-          }
-        });
-      }
-    });
-    
+    growthRecords
+      .filter((record) => record.childId === id)
+      .forEach((record) => {
+        if (!processedGrowthIds.has(record.id)) {
+          processedGrowthIds.add(record.id);
+          items.push({
+            id: record.id,
+            type: "growth",
+            title: `${record.type} Record`,
+            content: `${record.value} ${record.unit}`,
+            date: record.date,
+            createdAt: record.createdAt,
+            visibility: record.visibility,
+            metadata: {
+              type: record.type,
+              value: record.value,
+              unit: record.unit,
+              source: record.source,
+              notes: record.notes,
+            },
+          });
+        }
+      });
+
     // Sort by date (newest first)
-    return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [id, memories, responses, healthRecords, growthRecords, prompts, currentUser]);
+    return items.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [
+    id,
+    memories,
+    responses,
+    healthRecords,
+    growthRecords,
+    prompts,
+    currentUser,
+  ]);
 
   // Filter timeline items based on user permissions
   const filteredTimelineItems = useFilteredContent(timelineItems);
+
+  // Handle focus post from notification
+  useEffect(() => {
+    if (focusPost && postType && !hasProcessedFocusPost) {
+      // Set active tab based on post type (only once when focusPost changes)
+      switch (postType) {
+        case "memory":
+          setActiveTab("timeline"); // Memory posts are shown in timeline
+          break;
+        case "prompt_response":
+          setActiveTab("timeline"); // Q&A responses are shown in timeline
+          break;
+        case "health_record":
+        case "growth_record":
+          setActiveTab("timeline"); // Health records are shown in timeline
+          break;
+        default:
+          setActiveTab("timeline");
+      }
+
+      setHasProcessedFocusPost(true);
+    }
+  }, [focusPost, postType, hasProcessedFocusPost]); // Added hasProcessedFocusPost dependency
+
+  // Separate useEffect for scrolling when timeline items are loaded
+  useEffect(() => {
+    if (
+      focusPost &&
+      filteredTimelineItems.length > 0 &&
+      activeTab === "timeline" &&
+      !hasScrolledToFocusPost
+    ) {
+      // Find the post in timeline items
+      const targetItem = filteredTimelineItems.find((item) => {
+        // Direct ID match
+        if (item._id === focusPost || item.id === focusPost) {
+          return true;
+        }
+
+        // For memories, check if focusPost matches the memory's MongoDB _id
+        if (item.type === "memory" && postType === "memory") {
+          const originalMemory = memories.find((m) => m.id === item.id);
+          if (originalMemory && (originalMemory as any)._id === focusPost) {
+            return true;
+          }
+        }
+
+        // For Q&A responses, check if focusPost matches the response's MongoDB _id
+        if (item.type === "qa" && postType === "prompt_response") {
+          const originalResponse = responses.find((r) => r.id === item.id);
+          if (originalResponse && (originalResponse as any)._id === focusPost) {
+            return true;
+          }
+        }
+
+        // For health records, check if focusPost matches the record's MongoDB _id
+        if (item.type === "health" && postType === "health_record") {
+          const originalRecord = healthRecords.find((r) => r.id === item.id);
+          if (originalRecord && (originalRecord as any)._id === focusPost) {
+            return true;
+          }
+        }
+
+        // For growth records, check if focusPost matches the record's MongoDB _id
+        if (item.type === "growth" && postType === "growth_record") {
+          const originalRecord = growthRecords.find((r) => r.id === item.id);
+          if (originalRecord && (originalRecord as any)._id === focusPost) {
+            return true;
+          }
+        }
+
+        return false;
+      });
+
+      if (targetItem && scrollViewRef.current) {
+        // Wait for layout to complete and then scroll
+        let retryCount = 0;
+        const attemptScroll = () => {
+          const itemPosition = itemPositionsRef.current.get(targetItem.id);
+          if (itemPosition !== undefined) {
+            scrollViewRef.current?.scrollTo({
+              y: itemPosition - TOP_OFFSET,
+              animated: true,
+            });
+            setHasScrolledToFocusPost(true);
+            setScrollRetryCount(0); // Reset retry count on success
+          } else {
+            retryCount++;
+
+            // Retry after a short delay with max retries to prevent infinite loop
+            if (retryCount < MAX_SCROLL_RETRIES) {
+              setTimeout(() => {
+                if (!hasScrolledToFocusPost) {
+                  attemptScroll();
+                }
+              }, 100);
+            } else {
+              setHasScrolledToFocusPost(true); // Stop trying
+            }
+          }
+        };
+
+        // Use setTimeout to ensure layout is complete
+        setTimeout(attemptScroll, 100);
+      } else {
+      }
+    }
+  }, [
+    focusPost,
+    filteredTimelineItems,
+    activeTab,
+    postType,
+    memories,
+    responses,
+    healthRecords,
+    growthRecords,
+  ]);
 
   // Handle edit completion from HealthContent
   const handleHealthEditComplete = useCallback(() => {
@@ -230,15 +427,35 @@ export default function ChildProfileScreen() {
     setEditingGrowthItem(null);
   }, []);
 
+  // Handle onLayout for timeline items to store their positions
+  const handleItemLayout = useCallback(
+    (itemId: string, event: any) => {
+      const { y } = event.nativeEvent.layout;
+      itemPositionsRef.current.set(itemId, y);
+
+      // Clear existing timeout and set new one to batch updates
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+      updateTimeoutRef.current = setTimeout(() => {
+        forceUpdate();
+        updateTimeoutRef.current = null;
+      }, 16); // ~60fps
+    },
+    [forceUpdate]
+  );
+
   // Retry loading memories
   const retryLoadMemories = useCallback(() => {
     if (id) {
       dispatch(clearMemories());
-      dispatch(fetchMemories({ 
-        childId: id, 
-        page: 1, 
-        limit: 50 // Increased to match initial load
-      }));
+      dispatch(
+        fetchMemories({
+          childId: id,
+          page: 1,
+          limit: 50, // Increased to match initial load
+        })
+      );
     }
   }, [id, dispatch]);
 
@@ -259,40 +476,53 @@ export default function ChildProfileScreen() {
     // });
   }, [memories]);
 
-
-
   // Fetch child data when component mounts
   useEffect(() => {
+    // Reset focus post processing state when component mounts or id changes
+    setHasProcessedFocusPost(false);
+    setHasScrolledToFocusPost(false);
+    setHasLoadedTimelineData(false);
+    itemPositionsRef.current.clear(); // Reset item positions
+    setScrollRetryCount(0); // Reset retry count
+
     if (id) {
       dispatch(fetchChild(id));
       // Fetch memories for this child, newest first - increased limit to show more memories
-      dispatch(fetchMemories({ 
-        childId: id, 
-        page: 1, 
-        limit: 50 // Increased from 10 to 50 to show more memories initially
-      }));
+      dispatch(
+        fetchMemories({
+          childId: id,
+          page: 1,
+          limit: 50, // Increased from 10 to 50 to show more memories initially
+        })
+      );
       // Health data is fetched by HealthContent component
     }
-    
+
     // Cleanup when component unmounts
     return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
       dispatch(clearCurrentChild());
       dispatch(clearMemories());
     };
   }, [id, dispatch]);
 
-  // Load Q&A and health data when timeline tab is active
-  useEffect(() => {
-    if (id && activeTab === 'timeline') {
+  // Load Q&A and health data when timeline tab is active (only once)
+  const [hasLoadedTimelineData, setHasLoadedTimelineData] = useState(false);
 
+  useEffect(() => {
+    if (id && activeTab === "timeline" && !hasLoadedTimelineData) {
       // Load Q&A responses for this child
       dispatch(fetchChildResponses({ childId: id, page: 1, limit: 50 }));
       // Load health and growth records for this child
       dispatch(fetchHealthRecords({ childId: id }));
       dispatch(fetchGrowthRecords({ childId: id }));
       dispatch(fetchPrompts({ isActive: true, limit: 50 })); // Load all active prompts
+
+      setHasLoadedTimelineData(true);
     }
-  }, [id, activeTab, dispatch]);
+  }, [id, activeTab, dispatch, hasLoadedTimelineData]);
 
   // Refresh memories when add memory modal closes
   useEffect(() => {
@@ -301,11 +531,13 @@ export default function ChildProfileScreen() {
       const timer = setTimeout(() => {
         // Don't clear memories on modal close to preserve loaded data
         // Just refresh the first page to get any new memories
-        dispatch(fetchMemories({ 
-          childId: id, 
-          page: 1, 
-          limit: 50
-        }));
+        dispatch(
+          fetchMemories({
+            childId: id,
+            page: 1,
+            limit: 50,
+          })
+        );
       }, 100);
       return () => clearTimeout(timer);
     }
@@ -315,7 +547,7 @@ export default function ChildProfileScreen() {
 
   // Auto-retry memories when switching to memories tab if there's an error
   useEffect(() => {
-    if (activeTab === 'memories' && memoriesError && id) {
+    if (activeTab === "memories" && memoriesError && id) {
       // Small delay to avoid immediate retry
       const timer = setTimeout(() => {
         retryLoadMemories();
@@ -354,36 +586,37 @@ export default function ChildProfileScreen() {
 
   const confirmDeleteChild = async () => {
     if (!id) return;
-    
+
     try {
       await dispatch(deleteChild(id)).unwrap();
       setShowDeleteChildConfirm(false);
       // Navigate back to home after successful deletion
-      router.push('/tabs/home');
+      router.push("/tabs/home");
     } catch (error: any) {
-      let errorMessage = 'Failed to delete child';
-      
+      let errorMessage = "Failed to delete child";
+
       if (error?.status === 401) {
-        errorMessage = 'Authentication failed. Please log in again.';
+        errorMessage = "Authentication failed. Please log in again.";
       } else if (error?.status === 403) {
-        errorMessage = 'You do not have permission to delete this child.';
+        errorMessage = "You do not have permission to delete this child.";
       } else if (error?.status === 404) {
-        errorMessage = 'Child not found.';
+        errorMessage = "Child not found.";
       } else if (error?.message) {
         errorMessage = error.message;
       }
-      
-      Alert.alert('Error', errorMessage);
+
+      Alert.alert("Error", errorMessage);
     }
   };
 
   // Ensure unique memories and create unique keys
   const getUniqueMemories = () => {
     const uniqueMemories = Array.from(
-      new Map(memories.map(memory => [memory.id, memory])).values()
+      new Map(memories.map((memory) => [memory.id, memory])).values()
     );
-    return uniqueMemories.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    return uniqueMemories.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   };
 
@@ -396,11 +629,13 @@ export default function ChildProfileScreen() {
   const loadMoreMemories = () => {
     if (hasMore && !memoriesLoading && id) {
       const nextPage = Math.floor(memories.length / 50) + 1; // Updated to match new limit
-      dispatch(fetchMemories({ 
-        childId: id, 
-        page: nextPage, 
-        limit: 50 // Increased to match initial load
-      }));
+      dispatch(
+        fetchMemories({
+          childId: id,
+          page: nextPage,
+          limit: 50, // Increased to match initial load
+        })
+      );
     }
   };
 
@@ -434,26 +669,26 @@ export default function ChildProfileScreen() {
 
   const confirmDeleteMemory = async () => {
     if (!editingMemory?.id) return;
-    
+
     try {
       await dispatch(deleteMemory(editingMemory.id)).unwrap();
-      Alert.alert('Success', 'Memory deleted successfully');
+      Alert.alert("Success", "Memory deleted successfully");
       setShowDeleteConfirm(false);
       setEditingMemory(null);
     } catch (error: any) {
-      let errorMessage = 'Failed to delete memory';
-      
+      let errorMessage = "Failed to delete memory";
+
       if (error?.status === 401) {
-        errorMessage = 'Authentication failed. Please log in again.';
+        errorMessage = "Authentication failed. Please log in again.";
       } else if (error?.status === 403) {
-        errorMessage = 'You do not have permission to delete this memory.';
+        errorMessage = "You do not have permission to delete this memory.";
       } else if (error?.status === 404) {
-        errorMessage = 'Memory not found. It may have already been deleted.';
+        errorMessage = "Memory not found. It may have already been deleted.";
       } else if (error?.message) {
         errorMessage = error.message;
       }
-      
-      Alert.alert('Error', errorMessage);
+
+      Alert.alert("Error", errorMessage);
     }
   };
 
@@ -469,33 +704,44 @@ export default function ChildProfileScreen() {
     // TODO: Implement comment functionality
   };
 
-  const handleVisibilityUpdate = async (itemId: string, visibility: 'private' | 'public') => {
+  const handleVisibilityUpdate = async (
+    itemId: string,
+    visibility: "private" | "public"
+  ) => {
     try {
       // Find the item type and update accordingly
-      const memory = memories.find(m => m.id === itemId);
+      const memory = memories.find((m) => m.id === itemId);
       if (memory) {
-        await dispatch(updateMemory({ memoryId: itemId, data: { visibility } })).unwrap();
+        await dispatch(
+          updateMemory({ memoryId: itemId, data: { visibility } })
+        ).unwrap();
         return;
       }
-      
-      const response = responses.find(r => r.id === itemId);
+
+      const response = responses.find((r) => r.id === itemId);
       if (response) {
-        await dispatch(updateResponse({ responseId: itemId, data: { visibility } })).unwrap();
+        await dispatch(
+          updateResponse({ responseId: itemId, data: { visibility } })
+        ).unwrap();
         return;
       }
-      
-      const healthRecord = healthRecords.find(h => h.id === itemId);
+
+      const healthRecord = healthRecords.find((h) => h.id === itemId);
       if (healthRecord) {
-        await dispatch(updateHealthRecord({ recordId: itemId, data: { visibility } })).unwrap();
+        await dispatch(
+          updateHealthRecord({ recordId: itemId, data: { visibility } })
+        ).unwrap();
         return;
       }
-      
-      const growthRecord = growthRecords.find(g => g.id === itemId);
+
+      const growthRecord = growthRecords.find((g) => g.id === itemId);
       if (growthRecord) {
-        await dispatch(updateGrowthRecord({ recordId: itemId, data: { visibility } })).unwrap();
+        await dispatch(
+          updateGrowthRecord({ recordId: itemId, data: { visibility } })
+        ).unwrap();
         return;
       }
-      
+
       // Item not found
     } catch (error) {
       throw error;
@@ -505,7 +751,7 @@ export default function ChildProfileScreen() {
   // Q&A handlers
   const handleQAEdit = (response: any) => {
     // Find the actual response from Redux state
-    const actualResponse = responses.find(r => r.id === response.id);
+    const actualResponse = responses.find((r) => r.id === response.id);
     if (actualResponse) {
       // console.log('handleQAEdit: Found actual response:', {
       //   id: actualResponse.id,
@@ -537,39 +783,44 @@ export default function ChildProfileScreen() {
 
   const handleQADelete = async (response: any) => {
     if (!response?.id) {
-      Alert.alert('Error', 'Cannot delete: No response ID available');
+      Alert.alert("Error", "Cannot delete: No response ID available");
       return;
     }
 
     // Show confirmation dialog
-    const confirmed = confirm(`Are you sure you want to delete this Q&A response?\n\n"${response.content?.substring(0, 100)}${response.content?.length > 100 ? '...' : ''}"`);
-    
+    const confirmed = confirm(
+      `Are you sure you want to delete this Q&A response?\n\n"${response.content?.substring(
+        0,
+        100
+      )}${response.content?.length > 100 ? "..." : ""}"`
+    );
+
     if (!confirmed) return;
 
     try {
       await dispatch(deleteResponse(response.id)).unwrap();
-      Alert.alert('Success', 'Q&A response deleted successfully');
+      Alert.alert("Success", "Q&A response deleted successfully");
     } catch (error: any) {
-      let errorMessage = 'Failed to delete Q&A response';
-      
+      let errorMessage = "Failed to delete Q&A response";
+
       if (error?.status === 401) {
-        errorMessage = 'Authentication failed. Please log in again.';
+        errorMessage = "Authentication failed. Please log in again.";
       } else if (error?.status === 403) {
-        errorMessage = 'You do not have permission to delete this response.';
+        errorMessage = "You do not have permission to delete this response.";
       } else if (error?.status === 404) {
-        errorMessage = 'Response not found. It may have already been deleted.';
+        errorMessage = "Response not found. It may have already been deleted.";
       } else if (error?.message) {
         errorMessage = error.message;
       }
-      
-      Alert.alert('Error', errorMessage);
+
+      Alert.alert("Error", errorMessage);
     }
   };
 
   // Handle search focused on current child
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
-    
+
     if (query.trim().length === 0) {
       setShowSearchResults(false);
       setSearchResults([]);
@@ -586,11 +837,11 @@ export default function ChildProfileScreen() {
     try {
       // Search all content but prioritize current child
       const results = await searchService.search(query);
-      
+
       // Filter and prioritize results for current child
-      const childResults = results.filter(result => result.id === id);
-      const otherResults = results.filter(result => result.id !== id);
-      
+      const childResults = results.filter((result) => result.id === id);
+      const otherResults = results.filter((result) => result.id !== id);
+
       setSearchResults([...childResults, ...otherResults]);
     } catch {
       // console.error('Search error:', error); // Commented out - not related to health/growth
@@ -604,35 +855,34 @@ export default function ChildProfileScreen() {
   const handleBack = () => {
     const prevPath = window.location.pathname;
     // console.log('Back button pressed from', prevPath);
-  
+
     router.back();
-  
+
     // Sau 300ms, nếu vẫn ở cùng trang, thì fallback về Home
     setTimeout(() => {
       const newPath = window.location.pathname;
       if (newPath === prevPath) {
         // console.log('No back history, fallback to /tabs/home');
-        router.push('/tabs/home');
+        router.push("/tabs/home");
       } else {
         // console.log('Back successful to', newPath);
       }
     }, 300);
   };
-  
 
   // Helper function to format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
   };
 
   // Helper function to get display name
   const getDisplayName = (child: any) => {
-    if (!child) return '';
+    if (!child) return "";
     return child.nickname || `${child.firstName} ${child.lastName}`.trim();
   };
 
@@ -640,26 +890,28 @@ export default function ChildProfileScreen() {
   const getAge = (birthdate: string) => {
     const birth = new Date(birthdate);
     const today = new Date();
-    
+
     let years = today.getFullYear() - birth.getFullYear();
     let months = today.getMonth() - birth.getMonth();
-    
+
     if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) {
       years--;
       months += 12;
     }
-    
+
     if (months < 0) {
       months = 0;
     }
-    
+
     if (years > 0) {
-      return `${years} year${years > 1 ? 's' : ''} old`;
+      return `${years} year${years > 1 ? "s" : ""} old`;
     } else if (months > 0) {
-      return `${months} month${months > 1 ? 's' : ''} old`;
+      return `${months} month${months > 1 ? "s" : ""} old`;
     } else {
-      const days = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
-      return `${days} day${days > 1 ? 's' : ''} old`;
+      const days = Math.floor(
+        (today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      return `${days} day${days > 1 ? "s" : ""} old`;
     }
   };
 
@@ -694,8 +946,8 @@ export default function ChildProfileScreen() {
           canGoBack={true}
           showLogoutButton={true}
         />
-        <ErrorView 
-          message={error} 
+        <ErrorView
+          message={error}
           onRetry={() => id && dispatch(fetchChild(id))}
         />
       </View>
@@ -715,8 +967,8 @@ export default function ChildProfileScreen() {
           canGoBack={true}
           showLogoutButton={true}
         />
-        <ErrorView 
-          message="Child not found" 
+        <ErrorView
+          message="Child not found"
           onRetry={() => id && dispatch(fetchChild(id))}
         />
       </View>
@@ -736,47 +988,61 @@ export default function ChildProfileScreen() {
     }
 
     // For memories tab, use collapsible header layout
-    if (activeTab === 'memories') {
+    if (activeTab === "memories") {
       return (
         <View style={styles.container}>
           {/* Fixed App Header */}
           <View style={styles.fixedAppHeader}>
-                    <AppHeader
-          title={currentChild ? `${getDisplayName(currentChild)}'s Profile` : 'Child Profile'}
-          onBack={handleBack}
-          onSearchChange={handleSearch}
-          searchPlaceholder={`Search for ${currentChild ? getDisplayName(currentChild) : 'child'}'s memories, milestones, health records...`}
-          showBackButton={true}
-          canGoBack={true}
-          showLogoutButton={true}
-        />
+            <AppHeader
+              title={
+                currentChild
+                  ? `${getDisplayName(currentChild)}'s Profile`
+                  : "Child Profile"
+              }
+              onBack={handleBack}
+              onSearchChange={handleSearch}
+              searchPlaceholder={`Search for ${
+                currentChild ? getDisplayName(currentChild) : "child"
+              }'s memories, milestones, health records...`}
+              showBackButton={true}
+              canGoBack={true}
+              showLogoutButton={true}
+            />
           </View>
 
           {/* Collapsible Header */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.collapsibleHeader,
               {
                 transform: [{ translateY: headerTranslateY }],
                 zIndex: 1000,
-              }
+              },
             ]}
           >
             {/* Child Header */}
             <View style={styles.childHeader}>
               <View style={styles.childInfo}>
                 {currentChild.avatarUrl ? (
-                  <Image source={{ uri: currentChild.avatarUrl }} style={styles.childAvatar} />
+                  <Image
+                    source={{ uri: currentChild.avatarUrl }}
+                    style={styles.childAvatar}
+                  />
                 ) : (
                   <View style={styles.childAvatarPlaceholder}>
                     <MaterialIcons name="person" size={60} color="#ccc" />
                   </View>
                 )}
                 <View style={styles.childDetails}>
-                  <Text style={styles.childName}>{getDisplayName(currentChild)}</Text>
-                  <Text style={styles.childAge}>{getAge(currentChild.birthdate)}</Text>
-                  <Text style={styles.childBirthdate}>Born {formatDate(currentChild.birthdate)}</Text>
-
+                  <Text style={styles.childName}>
+                    {getDisplayName(currentChild)}
+                  </Text>
+                  <Text style={styles.childAge}>
+                    {getAge(currentChild.birthdate)}
+                  </Text>
+                  <Text style={styles.childBirthdate}>
+                    Born {formatDate(currentChild.birthdate)}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -784,17 +1050,17 @@ export default function ChildProfileScreen() {
             {/* Tab Navigation */}
             <View style={styles.tabContainer}>
               {[
-                { key: 'timeline', label: 'Timeline', icon: 'timeline' },
-                { key: 'health', label: 'Health', icon: 'medical-services' },
-                { key: 'memories', label: 'Memories', icon: 'photo' },
-                { key: 'qa', label: 'Q&A', icon: 'help' },
-                { key: 'profile', label: 'Profile', icon: 'person' }
-              ].map(tab => (
+                { key: "timeline", label: "Timeline", icon: "timeline" },
+                { key: "health", label: "Health", icon: "medical-services" },
+                { key: "memories", label: "Memories", icon: "photo" },
+                { key: "qa", label: "Q&A", icon: "help" },
+                { key: "profile", label: "Profile", icon: "person" },
+              ].map((tab) => (
                 <TouchableOpacity
                   key={tab.key}
                   style={[
                     styles.tabButton,
-                    activeTab === tab.key && styles.activeTabButton
+                    activeTab === tab.key && styles.activeTabButton,
                   ]}
                   onPress={() => {
                     setActiveTab(tab.key as TabType);
@@ -805,12 +1071,14 @@ export default function ChildProfileScreen() {
                   <MaterialIcons
                     name={tab.icon as any}
                     size={20}
-                    color={activeTab === tab.key ? '#4f8cff' : '#666'}
+                    color={activeTab === tab.key ? "#4f8cff" : "#666"}
                   />
-                  <Text style={[
-                    styles.tabText,
-                    activeTab === tab.key && styles.activeTabText
-                  ]}>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === tab.key && styles.activeTabText,
+                    ]}
+                  >
                     {tab.label}
                   </Text>
                 </TouchableOpacity>
@@ -820,10 +1088,11 @@ export default function ChildProfileScreen() {
 
           {/* Scrollable Content */}
           <Animated.ScrollView
+            ref={scrollViewRef}
             style={styles.scrollableContent}
             contentContainerStyle={[
               styles.scrollableContentContainer,
-              { paddingTop: 80 + headerHeight + 20 } // AppHeader height + collapsible header height + padding
+              { paddingTop: 80 + headerHeight + 20 }, // AppHeader height + collapsible header height + padding
             ]}
             onScroll={Animated.event(
               [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -835,7 +1104,7 @@ export default function ChildProfileScreen() {
               <RefreshControl
                 refreshing={memoriesLoading && memories.length === 0}
                 onRefresh={retryLoadMemories}
-                colors={['#4f8cff']}
+                colors={["#4f8cff"]}
                 tintColor="#4f8cff"
               />
             }
@@ -849,33 +1118,47 @@ export default function ChildProfileScreen() {
 
     // For other tabs, use ScrollView
     return (
-      <ScrollView style={styles.container}>
+      <ScrollView ref={scrollViewRef} style={styles.container}>
         {/* App Header */}
         <AppHeader
-          title={currentChild ? `${getDisplayName(currentChild)}'s Profile` : 'Child Profile'}
+          title={
+            currentChild
+              ? `${getDisplayName(currentChild)}'s Profile`
+              : "Child Profile"
+          }
           onBack={handleBack}
           onSearchChange={handleSearch}
-          searchPlaceholder={`Search for ${currentChild ? getDisplayName(currentChild) : 'child'}'s memories, milestones, health records...`}
+          searchPlaceholder={`Search for ${
+            currentChild ? getDisplayName(currentChild) : "child"
+          }'s memories, milestones, health records...`}
           showBackButton={true}
           canGoBack={true}
           showLogoutButton={true}
         />
-        
+
         {/* Child Header */}
         <View style={styles.childHeader}>
           <View style={styles.childInfo}>
             {currentChild.avatarUrl ? (
-              <Image source={{ uri: currentChild.avatarUrl }} style={styles.childAvatar} />
+              <Image
+                source={{ uri: currentChild.avatarUrl }}
+                style={styles.childAvatar}
+              />
             ) : (
               <View style={styles.childAvatarPlaceholder}>
                 <MaterialIcons name="person" size={60} color="#ccc" />
               </View>
             )}
             <View style={styles.childDetails}>
-                              <Text style={styles.childName}>{getDisplayName(currentChild)}</Text>
-              <Text style={styles.childAge}>{getAge(currentChild.birthdate)}</Text>
-              <Text style={styles.childBirthdate}>Born {formatDate(currentChild.birthdate)}</Text>
-              
+              <Text style={styles.childName}>
+                {getDisplayName(currentChild)}
+              </Text>
+              <Text style={styles.childAge}>
+                {getAge(currentChild.birthdate)}
+              </Text>
+              <Text style={styles.childBirthdate}>
+                Born {formatDate(currentChild.birthdate)}
+              </Text>
             </View>
           </View>
         </View>
@@ -883,21 +1166,27 @@ export default function ChildProfileScreen() {
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
           {[
-            { key: 'timeline', label: 'Timeline', icon: 'timeline' },
-            { key: 'health', label: 'Health', icon: 'medical-services' },
-            { key: 'memories', label: 'Memories', icon: 'photo' },
-            { key: 'qa', label: 'Q&A', icon: 'help' },
-            { key: 'profile', label: 'Profile', icon: 'person' }
-          ].map(tab => (
+            { key: "timeline", label: "Timeline", icon: "timeline" },
+            { key: "health", label: "Health", icon: "medical-services" },
+            { key: "memories", label: "Memories", icon: "photo" },
+            { key: "qa", label: "Q&A", icon: "help" },
+            { key: "profile", label: "Profile", icon: "person" },
+          ].map((tab) => (
             <TouchableOpacity
               key={tab.key}
               style={[
                 styles.tabButton,
-                activeTab === tab.key && styles.activeTabButton
+                activeTab === tab.key && styles.activeTabButton,
               ]}
               onPress={() => {
                 // Using a predefined list of valid tab keys to prevent log injection
-                const validTabKeys = ['timeline', 'health', 'memories', 'qa', 'profile'];
+                const validTabKeys = [
+                  "timeline",
+                  "health",
+                  "memories",
+                  "qa",
+                  "profile",
+                ];
                 if (validTabKeys.includes(tab.key)) {
                   // console.log(`Tab pressed: ${tab.key}`); // Commented out - not related to health/growth
                   setActiveTab(tab.key as TabType);
@@ -909,12 +1198,14 @@ export default function ChildProfileScreen() {
               <MaterialIcons
                 name={tab.icon as any}
                 size={20}
-                color={activeTab === tab.key ? '#4f8cff' : '#666'}
+                color={activeTab === tab.key ? "#4f8cff" : "#666"}
               />
-              <Text style={[
-                styles.tabText,
-                activeTab === tab.key && styles.activeTabText
-              ]}>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab.key && styles.activeTabText,
+                ]}
+              >
                 {tab.label}
               </Text>
             </TouchableOpacity>
@@ -922,9 +1213,7 @@ export default function ChildProfileScreen() {
         </View>
 
         {/* Tab Content */}
-        <View style={styles.tabContent}>
-          {renderTabContent()}
-        </View>
+        <View style={styles.tabContent}>{renderTabContent()}</View>
       </ScrollView>
     );
   };
@@ -939,9 +1228,7 @@ export default function ChildProfileScreen() {
           childId={id}
         />
       )}
-      
 
-      
       {/* Edit Memory Modal */}
       <EditMemoryModal
         visible={showEditMemoryModal}
@@ -951,7 +1238,7 @@ export default function ChildProfileScreen() {
         }}
         memory={editingMemory}
       />
-      
+
       {/* Delete Confirmation Modal */}
       <ModalConfirm
         visible={showDeleteConfirm}
@@ -981,7 +1268,7 @@ export default function ChildProfileScreen() {
         onClose={handleChildEditClose}
         onSuccess={handleChildEditSuccess}
       />
-      
+
       {/* Delete Child Confirmation Modal */}
       <ModalConfirm
         visible={showDeleteChildConfirm}
@@ -998,13 +1285,13 @@ export default function ChildProfileScreen() {
   // Render tab content based on active tab
   function renderTabContent() {
     switch (activeTab) {
-      case 'timeline':
+      case "timeline":
         return renderTimelineContent();
-      case 'health':
+      case "health":
         return renderHealthContent();
-      case 'qa':
+      case "qa":
         return renderQAContent();
-      case 'profile':
+      case "profile":
         return renderProfileContent();
       default:
         return renderTimelineContent();
@@ -1015,7 +1302,7 @@ export default function ChildProfileScreen() {
   function renderTimelineContent() {
     // Check if data is still loading
     const isLoading = memoriesLoading || !id;
-    
+
     if (isLoading) {
       return (
         <View style={styles.contentContainer}>
@@ -1024,11 +1311,11 @@ export default function ChildProfileScreen() {
         </View>
       );
     }
-    
+
     return (
       <View style={styles.contentContainer}>
         <Text style={styles.contentTitle}>Timeline</Text>
-        
+
         {filteredTimelineItems.length === 0 ? (
           <View style={styles.emptyState}>
             <MaterialIcons name="timeline" size={48} color="#ccc" />
@@ -1041,194 +1328,233 @@ export default function ChildProfileScreen() {
           <View style={styles.timelineContainer}>
             {filteredTimelineItems.map((item: any, index: number) => {
               const uniqueKey = `${item.type}-${item.id}-${index}`;
-              
+
               switch (item.type) {
-                case 'memory':
+                case "memory":
                   return (
-                    <TimelineItem 
-                      key={uniqueKey} 
-                      item={item}
-                      onPress={() => handleMemoryPress(item)}
-                      onEdit={() => {
-                        // Find the original memory from memories array
-                        const originalMemory = memories.find(m => m.id === item.id);
-                        if (originalMemory) {
-                          handleMemoryEdit(originalMemory);
-                        } else {
-                          handleMemoryEdit(item);
+                    <View
+                      key={uniqueKey}
+                      onLayout={(event) => handleItemLayout(item.id, event)}
+                    >
+                      <TimelineItem
+                        item={item}
+                        highlight={
+                          item._id === focusPost || item.id === focusPost
                         }
-                      }}
-                      onDelete={() => handleMemoryDelete(item)}
-                      onLike={() => handleMemoryLike(item)}
-                      onComment={() => handleMemoryComment(item)}
-                      onVisibilityUpdate={handleVisibilityUpdate}
-                      isOwner={viewerIsOwner}
-                    />
-                  );
-                case 'qa':
-                  return (
-                    <TimelineItem 
-                      key={uniqueKey} 
-                      item={item}
-                      onEdit={() => handleQAEdit(item)}
-                      onDelete={async () => {
-                        if (!item?.id) {
-                          Alert.alert('Error', 'Cannot delete: No Q&A response ID available');
-                          return;
-                        }
-
-                        const confirmed = confirm(`Are you sure you want to delete this Q&A response?\n\n"${item.content}"`);
-                        
-                        if (!confirmed) return;
-
-                        try {
-                          await dispatch(deleteResponse(item.id)).unwrap();
-                          Alert.alert('Success', 'Q&A response deleted successfully');
-                        } catch (error: any) {
-                          let errorMessage = 'Failed to delete Q&A response';
-                          
-                          if (error?.status === 401) {
-                            errorMessage = 'Authentication failed. Please log in again.';
-                          } else if (error?.status === 403) {
-                            errorMessage = 'You do not have permission to delete this response.';
-                          } else if (error?.status === 404) {
-                            errorMessage = 'Q&A response not found. It may have already been deleted.';
-                          } else if (error?.message) {
-                            errorMessage = error.message;
+                        onPress={() => handleMemoryPress(item)}
+                        onEdit={() => {
+                          // Find the original memory from memories array
+                          const originalMemory = memories.find(
+                            (m) => m.id === item.id
+                          );
+                          if (originalMemory) {
+                            handleMemoryEdit(originalMemory);
+                          } else {
+                            handleMemoryEdit(item);
                           }
-                          
-                          Alert.alert('Error', errorMessage);
-                        }
-                      }}
-                      onVisibilityUpdate={handleVisibilityUpdate}
-                      isOwner={viewerIsOwner}
-                    />
+                        }}
+                        onDelete={() => handleMemoryDelete(item)}
+                        onLike={() => handleMemoryLike(item)}
+                        onComment={() => handleMemoryComment(item)}
+                        onVisibilityUpdate={handleVisibilityUpdate}
+                        isOwner={viewerIsOwner}
+                      />
+                    </View>
                   );
-                case 'health':
+                case "qa":
+                  return (
+                    <View
+                      key={uniqueKey}
+                      onLayout={(event) => handleItemLayout(item.id, event)}
+                    >
+                      <TimelineItem
+                        item={item}
+                        highlight={
+                          item._id === focusPost || item.id === focusPost
+                        }
+                        onEdit={() => handleQAEdit(item)}
+                        onDelete={() => handleQADelete(item)}
+                        onVisibilityUpdate={handleVisibilityUpdate}
+                        isOwner={viewerIsOwner}
+                      />
+                    </View>
+                  );
+                case "health":
                   // For health records, use TimelineItem for now
                   return (
-                    <TimelineItem 
-                      key={uniqueKey} 
-                      item={item}
-                      onEdit={() => {
-                        setEditingHealthItem(item);
-                        // Don't automatically switch to health tab - let user stay on timeline
-                      }}
-                      onDelete={async () => {
-                        if (!item?.id) {
-                          Alert.alert('Error', 'Cannot delete: No health record ID available');
-                          return;
+                    <View
+                      key={uniqueKey}
+                      onLayout={(event) => handleItemLayout(item.id, event)}
+                    >
+                      <TimelineItem
+                        item={item}
+                        highlight={
+                          item._id === focusPost || item.id === focusPost
                         }
+                        onEdit={() => {
+                          setEditingHealthItem(item);
+                          // Don't automatically switch to health tab - let user stay on timeline
+                        }}
+                        onDelete={async () => {
+                          if (!item?.id) {
+                            Alert.alert(
+                              "Error",
+                              "Cannot delete: No health record ID available"
+                            );
+                            return;
+                          }
 
-                        Alert.alert(
-                          'Delete Health Record',
-                          `Are you sure you want to delete this health record?\n\n"${item.title}"`,
-                          [
-                            { text: 'Cancel', style: 'cancel' },
-                            {
-                              text: 'Delete',
-                              style: 'destructive',
-                              onPress: async () => {
-                                try {
-                                  await dispatch(deleteHealthRecord(item.id)).unwrap();
-                                  Alert.alert('Success', 'Health record deleted successfully');
-                                } catch (error: any) {
-                                  let errorMessage = 'Failed to delete health record';
-                                  
-                                  if (error?.status === 401) {
-                                    errorMessage = 'Authentication failed. Please log in again.';
-                                  } else if (error?.status === 403) {
-                                    errorMessage = 'You do not have permission to delete this record.';
-                                  } else if (error?.status === 404) {
-                                    errorMessage = 'Health record not found. It may have already been deleted.';
-                                  } else if (error?.message) {
-                                    errorMessage = error.message;
+                          Alert.alert(
+                            "Delete Health Record",
+                            `Are you sure you want to delete this health record?\n\n"${item.title}"`,
+                            [
+                              { text: "Cancel", style: "cancel" },
+                              {
+                                text: "Delete",
+                                style: "destructive",
+                                onPress: async () => {
+                                  try {
+                                    await dispatch(
+                                      deleteHealthRecord(item.id)
+                                    ).unwrap();
+                                    Alert.alert(
+                                      "Success",
+                                      "Health record deleted successfully"
+                                    );
+                                  } catch (error: any) {
+                                    let errorMessage =
+                                      "Failed to delete health record";
+
+                                    if (error?.status === 401) {
+                                      errorMessage =
+                                        "Authentication failed. Please log in again.";
+                                    } else if (error?.status === 403) {
+                                      errorMessage =
+                                        "You do not have permission to delete this record.";
+                                    } else if (error?.status === 404) {
+                                      errorMessage =
+                                        "Health record not found. It may have already been deleted.";
+                                    } else if (error?.message) {
+                                      errorMessage = error.message;
+                                    }
+
+                                    Alert.alert("Error", errorMessage);
                                   }
-                                  
-                                  Alert.alert('Error', errorMessage);
-                                }
+                                },
                               },
-                            },
-                          ]
-                        );
-                      }}
-                      onVisibilityUpdate={handleVisibilityUpdate}
-                      isOwner={viewerIsOwner}
-                    />
+                            ]
+                          );
+                        }}
+                        onVisibilityUpdate={handleVisibilityUpdate}
+                        isOwner={viewerIsOwner}
+                      />
+                    </View>
                   );
-                case 'growth':
+                case "growth":
                   // For growth records, use TimelineItem for now
                   return (
-                    <TimelineItem 
-                      key={uniqueKey} 
-                      item={item}
-                      onEdit={async () => {
-                        // Fetch full record data before editing
-                        try {
-                          const fullRecord = await dispatch(fetchGrowthRecord(item.id)).unwrap();
-                          setEditingGrowthItem(fullRecord);
-                        } catch (error) {
-                          // Fallback to using the timeline item
-                          setEditingGrowthItem(item);
+                    <View
+                      key={uniqueKey}
+                      onLayout={(event) => handleItemLayout(item.id, event)}
+                    >
+                      <TimelineItem
+                        item={item}
+                        highlight={
+                          item._id === focusPost || item.id === focusPost
                         }
-                        // Don't automatically switch to health tab - let user stay on timeline
-                      }}
-                      onDelete={async () => {
-                        if (!item?.id) {
-                          Alert.alert('Error', 'Cannot delete: No growth record ID available');
-                          return;
-                        }
+                        onEdit={async () => {
+                          // Fetch full record data before editing
+                          try {
+                            const fullRecord = await dispatch(
+                              fetchGrowthRecord(item.id)
+                            ).unwrap();
+                            setEditingGrowthItem(fullRecord);
+                          } catch (error) {
+                            // Fallback to using the timeline item
+                            setEditingGrowthItem(item);
+                          }
+                          // Don't automatically switch to health tab - let user stay on timeline
+                        }}
+                        onDelete={async () => {
+                          if (!item?.id) {
+                            Alert.alert(
+                              "Error",
+                              "Cannot delete: No growth record ID available"
+                            );
+                            return;
+                          }
 
-                        Alert.alert(
-                          'Delete Growth Record',
-                          `Are you sure you want to delete this growth record?\n\n"${item.title}"`,
-                          [
-                            { text: 'Cancel', style: 'cancel' },
-                            {
-                              text: 'Delete',
-                              style: 'destructive',
-                              onPress: async () => {
-                                try {
-                                  await dispatch(deleteGrowthRecord(item.id)).unwrap();
-                                  Alert.alert('Success', 'Growth record deleted successfully');
-                                } catch (error: any) {
-                                  let errorMessage = 'Failed to delete growth record';
-                                  
-                                  if (error?.status === 401) {
-                                    errorMessage = 'Authentication failed. Please log in again.';
-                                  } else if (error?.status === 403) {
-                                    errorMessage = 'You do not have permission to delete this record.';
-                                  } else if (error?.status === 404) {
-                                    errorMessage = 'Growth record not found. It may have already been deleted.';
-                                  } else if (error?.message) {
-                                    errorMessage = error.message;
+                          Alert.alert(
+                            "Delete Growth Record",
+                            `Are you sure you want to delete this growth record?\n\n"${item.title}"`,
+                            [
+                              { text: "Cancel", style: "cancel" },
+                              {
+                                text: "Delete",
+                                style: "destructive",
+                                onPress: async () => {
+                                  try {
+                                    await dispatch(
+                                      deleteGrowthRecord(item.id)
+                                    ).unwrap();
+                                    Alert.alert(
+                                      "Success",
+                                      "Growth record deleted successfully"
+                                    );
+                                  } catch (error: any) {
+                                    let errorMessage =
+                                      "Failed to delete growth record";
+
+                                    if (error?.status === 401) {
+                                      errorMessage =
+                                        "Authentication failed. Please log in again.";
+                                    } else if (error?.status === 403) {
+                                      errorMessage =
+                                        "You do not have permission to delete this record.";
+                                    } else if (error?.status === 404) {
+                                      errorMessage =
+                                        "Growth record not found. It may have already been deleted.";
+                                    } else if (error?.message) {
+                                      errorMessage = error.message;
+                                    }
+
+                                    Alert.alert("Error", errorMessage);
                                   }
-                                  
-                                  Alert.alert('Error', errorMessage);
-                                }
+                                },
                               },
-                            },
-                          ]
-                        );
-                      }}
-                      onVisibilityUpdate={handleVisibilityUpdate}
-                      isOwner={viewerIsOwner}
-                    />
+                            ]
+                          );
+                        }}
+                        onVisibilityUpdate={handleVisibilityUpdate}
+                        isOwner={viewerIsOwner}
+                      />
+                    </View>
                   );
                 default:
                   return (
-                    <TimelineItem key={uniqueKey} item={item} isOwner={viewerIsOwner} />
+                    <View
+                      key={uniqueKey}
+                      onLayout={(event) => handleItemLayout(item.id, event)}
+                    >
+                      <TimelineItem
+                        item={item}
+                        highlight={
+                          item._id === focusPost || item.id === focusPost
+                        }
+                        isOwner={viewerIsOwner}
+                      />
+                    </View>
                   );
               }
             })}
           </View>
         )}
-        
+
         {/* Include HealthContent component for edit modals even when on timeline tab */}
-        <HealthContent 
-          childId={id!} 
-          editingHealthItem={editingHealthItem} 
-          editingGrowthItem={editingGrowthItem} 
+        <HealthContent
+          childId={id!}
+          editingHealthItem={editingHealthItem}
+          editingGrowthItem={editingGrowthItem}
           onEditComplete={handleHealthEditComplete}
           renderModalsOnly={true}
         />
@@ -1238,7 +1564,14 @@ export default function ChildProfileScreen() {
 
   // Health content
   function renderHealthContent() {
-    return <HealthContent childId={id!} editingHealthItem={editingHealthItem} editingGrowthItem={editingGrowthItem} onEditComplete={handleHealthEditComplete} />;
+    return (
+      <HealthContent
+        childId={id!}
+        editingHealthItem={editingHealthItem}
+        editingGrowthItem={editingGrowthItem}
+        onEditComplete={handleHealthEditComplete}
+      />
+    );
   }
 
   // Memories content
@@ -1256,10 +1589,7 @@ export default function ChildProfileScreen() {
       return (
         <View style={styles.contentContainer}>
           <Text style={styles.contentTitle}>Memories</Text>
-          <ErrorView 
-            message={memoriesError} 
-            onRetry={retryLoadMemories}
-          />
+          <ErrorView message={memoriesError} onRetry={retryLoadMemories} />
         </View>
       );
     }
@@ -1270,13 +1600,11 @@ export default function ChildProfileScreen() {
           <Text style={styles.contentTitle}>Memories</Text>
           <View style={styles.placeholderContainer}>
             <MaterialIcons name="photo" size={48} color="#ccc" />
-            <Text style={styles.placeholderText}>
-              No memories yet
-            </Text>
+            <Text style={styles.placeholderText}>No memories yet</Text>
             <Text style={styles.placeholderSubtext}>
               Start capturing precious moments with photos, videos, and notes.
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.addButton}
               onPress={() => setShowAddMemoryModal(true)}
             >
@@ -1292,7 +1620,7 @@ export default function ChildProfileScreen() {
       <View style={styles.memoriesContainer}>
         <View style={styles.memoriesHeader}>
           <Text style={styles.contentTitle}>Memories</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.addMemoryButton}
             onPress={() => setShowAddMemoryModal(true)}
           >
@@ -1300,24 +1628,24 @@ export default function ChildProfileScreen() {
             <Text style={styles.addMemoryButtonText}>Add</Text>
           </TouchableOpacity>
         </View>
-        
+
         {/* Render memories as regular views instead of FlatList */}
         {getUniqueMemories().map((memory, index) => {
           // Extract creator info from parentId (which can be string or object)
           let creator = undefined;
-          if (memory.parentId && typeof memory.parentId === 'object') {
+          if (memory.parentId && typeof memory.parentId === "object") {
             creator = {
               id: memory.parentId._id || memory.parentId.id,
               firstName: memory.parentId.firstName,
               lastName: memory.parentId.lastName,
               avatar: memory.parentId.avatar,
-              email: '', // Required by User type
-              role: '',
-              createdAt: '',
-              updatedAt: ''
+              email: "", // Required by User type
+              role: "",
+              createdAt: "",
+              updatedAt: "",
             };
           }
-          
+
           return (
             <MemoryItem
               key={keyExtractor(memory, index)}
@@ -1331,17 +1659,17 @@ export default function ChildProfileScreen() {
             />
           );
         })}
-        
+
         {/* Load more indicator */}
         {memoriesLoading && memories.length > 0 && (
           <View style={styles.loadingMore}>
             <LoadingSpinner message="Loading more memories..." />
           </View>
         )}
-        
+
         {/* Load more trigger */}
         {hasMore && !memoriesLoading && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.loadMoreButton}
             onPress={loadMoreMemories}
           >
@@ -1352,101 +1680,116 @@ export default function ChildProfileScreen() {
     );
   }
 
-       // Q&A content
+  // Q&A content
   function renderQAContent() {
-    return <QAContent childId={id!} useScrollView={true} editingItem={editingQAItem} />;
+    return (
+      <QAContent
+        childId={id!}
+        useScrollView={true}
+        editingItem={editingQAItem}
+      />
+    );
   }
 
-   // Profile content
-   function renderProfileContent() {
-     if (!currentChild) return null;
-     
-     return (
-       <View style={styles.contentContainer}>
-         <View style={styles.profileHeader}>
-           <Text style={styles.contentTitle}>Profile Details</Text>
-           <View style={styles.profileActions}>
-             <TouchableOpacity 
-               style={styles.editButton}
-               onPress={handleChildEdit}
-             >
-               <MaterialIcons name="edit" size={20} color="#4f8cff" />
-               <Text style={styles.editButtonText}>Edit</Text>
-             </TouchableOpacity>
-             <TouchableOpacity 
-               style={styles.deleteButton}
-               onPress={handleChildDelete}
-             >
-               <MaterialIcons name="delete" size={20} color="#e53935" />
-               <Text style={styles.deleteButtonText}>Delete</Text>
-             </TouchableOpacity>
-           </View>
-         </View>
-         
-         <View style={styles.profileDetails}>
-           <View style={styles.profileItem}>
-             <Text style={styles.profileLabel}>First Name:</Text>
-             <Text style={styles.profileValue}>{currentChild.firstName}</Text>
-           </View>
-           <View style={styles.profileItem}>
-             <Text style={styles.profileLabel}>Last Name:</Text>
-             <Text style={styles.profileValue}>{currentChild.lastName}</Text>
-           </View>
-           {currentChild.nickname && (
-             <View style={styles.profileItem}>
-               <Text style={styles.profileLabel}>Nickname:</Text>
-               <Text style={styles.profileValue}>{currentChild.nickname}</Text>
-             </View>
-           )}
-           <View style={styles.profileItem}>
-             <Text style={styles.profileLabel}>Birthdate:</Text>
-             <Text style={styles.profileValue}>{formatDate(currentChild.birthdate)}</Text>
-           </View>
-           <View style={styles.profileItem}>
-             <Text style={styles.profileLabel}>Age:</Text>
-             <Text style={styles.profileValue}>{getAge(currentChild.birthdate)}</Text>
-           </View>
-           {currentChild.gender && (
-             <View style={styles.profileItem}>
-               <Text style={styles.profileLabel}>Gender:</Text>
-               <Text style={styles.profileValue}>
-                 {currentChild.gender.charAt(0).toUpperCase() + currentChild.gender.slice(1)}
-               </Text>
-             </View>
-           )}
-           <View style={styles.profileItem}>
-             <Text style={styles.profileLabel}>Created:</Text>
-             <Text style={styles.profileValue}>{formatDate(currentChild.createdAt)}</Text>
-           </View>
-           <View style={styles.profileItem}>
-             <Text style={styles.profileLabel}>Last Updated:</Text>
-             <Text style={styles.profileValue}>{formatDate(currentChild.updatedAt)}</Text>
-           </View>
-         </View>
-       </View>
-     );
-   }
+  // Profile content
+  function renderProfileContent() {
+    if (!currentChild) return null;
+
+    return (
+      <View style={styles.contentContainer}>
+        <View style={styles.profileHeader}>
+          <Text style={styles.contentTitle}>Profile Details</Text>
+          <View style={styles.profileActions}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={handleChildEdit}
+            >
+              <MaterialIcons name="edit" size={20} color="#4f8cff" />
+              <Text style={styles.editButtonText}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleChildDelete}
+            >
+              <MaterialIcons name="delete" size={20} color="#e53935" />
+              <Text style={styles.deleteButtonText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.profileDetails}>
+          <View style={styles.profileItem}>
+            <Text style={styles.profileLabel}>First Name:</Text>
+            <Text style={styles.profileValue}>{currentChild.firstName}</Text>
+          </View>
+          <View style={styles.profileItem}>
+            <Text style={styles.profileLabel}>Last Name:</Text>
+            <Text style={styles.profileValue}>{currentChild.lastName}</Text>
+          </View>
+          {currentChild.nickname && (
+            <View style={styles.profileItem}>
+              <Text style={styles.profileLabel}>Nickname:</Text>
+              <Text style={styles.profileValue}>{currentChild.nickname}</Text>
+            </View>
+          )}
+          <View style={styles.profileItem}>
+            <Text style={styles.profileLabel}>Birthdate:</Text>
+            <Text style={styles.profileValue}>
+              {formatDate(currentChild.birthdate)}
+            </Text>
+          </View>
+          <View style={styles.profileItem}>
+            <Text style={styles.profileLabel}>Age:</Text>
+            <Text style={styles.profileValue}>
+              {getAge(currentChild.birthdate)}
+            </Text>
+          </View>
+          {currentChild.gender && (
+            <View style={styles.profileItem}>
+              <Text style={styles.profileLabel}>Gender:</Text>
+              <Text style={styles.profileValue}>
+                {currentChild.gender.charAt(0).toUpperCase() +
+                  currentChild.gender.slice(1)}
+              </Text>
+            </View>
+          )}
+          <View style={styles.profileItem}>
+            <Text style={styles.profileLabel}>Created:</Text>
+            <Text style={styles.profileValue}>
+              {formatDate(currentChild.createdAt)}
+            </Text>
+          </View>
+          <View style={styles.profileItem}>
+            <Text style={styles.profileLabel}>Last Updated:</Text>
+            <Text style={styles.profileValue}>
+              {formatDate(currentChild.updatedAt)}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   fixedAppHeader: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     zIndex: 1001,
   },
   collapsibleHeader: {
-    position: 'absolute',
+    position: "absolute",
     top: 80, // Position below the AppHeader
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     zIndex: 1000,
   },
   scrollableContent: {
@@ -1456,15 +1799,15 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   childHeader: {
-    backgroundColor: '#f8f9ff',
+    backgroundColor: "#f8f9ff",
     padding: 20,
     paddingTop: 50,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   childInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   childAvatar: {
     width: 80,
@@ -1476,9 +1819,9 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#f0f0f0",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 16,
   },
   childDetails: {
@@ -1486,52 +1829,52 @@ const styles = StyleSheet.create({
   },
   childName: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 4,
   },
   childAge: {
     fontSize: 18,
-    color: '#4f8cff',
-    fontWeight: '600',
+    color: "#4f8cff",
+    fontWeight: "600",
     marginBottom: 4,
   },
   childBirthdate: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginBottom: 8,
   },
   childBio: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     lineHeight: 20,
   },
   tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
     paddingHorizontal: 8,
   },
   tabButton: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 8,
   },
   activeTabButton: {
     borderBottomWidth: 2,
-    borderBottomColor: '#4f8cff',
+    borderBottomColor: "#4f8cff",
   },
   tabText: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
   activeTabText: {
-    color: '#4f8cff',
-    fontWeight: '600',
+    color: "#4f8cff",
+    fontWeight: "600",
   },
   tabContent: {
     flex: 1,
@@ -1541,74 +1884,74 @@ const styles = StyleSheet.create({
   },
   contentTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 16,
   },
   placeholderContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 60,
   },
   placeholderText: {
     fontSize: 18,
-    color: '#666',
+    color: "#666",
     marginTop: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   placeholderSubtext: {
     fontSize: 14,
-    color: '#999',
+    color: "#999",
     marginTop: 8,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 20,
     paddingHorizontal: 20,
   },
   profileDetails: {
-    backgroundColor: '#f8f9ff',
+    backgroundColor: "#f8f9ff",
     borderRadius: 12,
     padding: 16,
   },
   profileItem: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   profileLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
     width: 100,
   },
   profileValue: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     flex: 1,
   },
   memoriesContainer: {
     flex: 1,
   },
   memoriesHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
     paddingHorizontal: 20,
     paddingTop: 20,
   },
   addMemoryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f8ff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f8ff",
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
   addMemoryButtonText: {
-    color: '#4f8cff',
+    color: "#4f8cff",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 4,
   },
   memoriesList: {
@@ -1620,91 +1963,91 @@ const styles = StyleSheet.create({
   },
   addButton: {
     marginTop: 20,
-    backgroundColor: '#4f8cff',
+    backgroundColor: "#4f8cff",
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 20,
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
   },
   addButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 8,
   },
   loadMoreButton: {
-    backgroundColor: '#f0f8ff',
+    backgroundColor: "#f0f8ff",
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 20,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 20,
     marginBottom: 20,
   },
   loadMoreButtonText: {
-    color: '#4f8cff',
+    color: "#4f8cff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   timelineContainer: {
     gap: 16,
   },
   emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 60,
   },
   emptyStateText: {
     fontSize: 18,
-    color: '#666',
+    color: "#666",
     marginTop: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#999',
+    color: "#999",
     marginTop: 8,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 20,
     paddingHorizontal: 20,
   },
   profileHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   profileActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#e0f7fa',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e0f7fa",
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
   editButtonText: {
-    color: '#00796b',
+    color: "#00796b",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 4,
   },
   deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffebee',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffebee",
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
   deleteButtonText: {
-    color: '#c62828',
+    color: "#c62828",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 4,
   },
-}); 
+});

@@ -55,7 +55,7 @@ export async function getReactions(
     const reactions = data.reactions || {};
     const total = typeof data.total === 'number'
       ? data.total
-      : (Object.values(reactions) as Array<ReactionEntry[] | undefined>)
+      : (Object.values(reactions) as (ReactionEntry[] | undefined)[])
           .reduce((acc: number, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0);
     return { reactions, total } as GetReactionsResponse;
   } catch (error) {

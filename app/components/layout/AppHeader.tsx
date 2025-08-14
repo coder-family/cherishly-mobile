@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useAppDispatch } from '../../redux/hooks';
 import { logoutUser } from '../../redux/slices/authSlice';
+import { NotificationBadge } from '../notification/NotificationBadge';
 
 interface AppHeaderProps {
   title?: string;
@@ -24,6 +25,8 @@ interface AppHeaderProps {
   showForwardButton?: boolean;
   showTitle?: boolean;
   showLogoutButton?: boolean;
+  showNotificationBadge?: boolean;
+  rightComponent?: React.ReactNode;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({ 
@@ -38,7 +41,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   showBackButton = true,
   showForwardButton = false,
   showTitle = true,
-  showLogoutButton = false
+  showLogoutButton = false,
+  showNotificationBadge = false,
+  rightComponent
 }) => {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -150,22 +155,28 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             )}
           </View>
 
-          {/* Logout Button */}
-          {showLogoutButton && (
-            <TouchableOpacity 
-              onPress={handleLogout}
-              style={styles.logoutButton}
-              activeOpacity={0.7}
-              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-              testID="logout-button"
-            >
-              <Ionicons 
-                name="log-out-outline" 
-                size={24} 
-                color="#dc2626" 
-              />
-            </TouchableOpacity>
-          )}
+          {/* Right side components */}
+          <View style={styles.rightContainer}>
+            {showNotificationBadge && (
+              <NotificationBadge size="medium" />
+            )}
+            {rightComponent}
+            {showLogoutButton && (
+              <TouchableOpacity 
+                onPress={handleLogout}
+                style={styles.logoutButton}
+                activeOpacity={0.7}
+                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                testID="logout-button"
+              >
+                <Ionicons 
+                  name="log-out-outline" 
+                  size={24} 
+                  color="#dc2626" 
+                />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       )}
     </View>
@@ -197,6 +208,11 @@ const styles = StyleSheet.create({
   },
   navButtonDisabled: {
     opacity: 0.3,
+  },
+  rightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   logoutButton: {
     width: 40,

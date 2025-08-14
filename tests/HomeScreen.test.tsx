@@ -6,6 +6,7 @@ import { Provider } from 'react-redux';
 import authReducer from '../app/redux/slices/authSlice';
 import childReducer from '../app/redux/slices/childSlice';
 import familyReducer from '../app/redux/slices/familySlice';
+import notificationReducer from '../app/redux/slices/notificationSlice';
 import userReducer from '../app/redux/slices/userSlice';
 import HomeScreen from '../app/tabs/home';
 
@@ -96,6 +97,14 @@ jest.mock('../app/components/form/PasswordInput', () => 'PasswordInput');
 jest.mock('../app/components/media/AvatarUpload', () => 'AvatarUpload');
 jest.mock('../app/components/ui/LoadingSpinner', () => 'LoadingSpinner');
 jest.mock('../app/components/ui/ErrorView', () => 'ErrorView');
+jest.mock('../app/components/notification/NotificationBadge', () => ({
+  __esModule: true,
+  NotificationBadge: ({ size, showIcon, onPress }: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const React = require('react');
+    return React.createElement('Text', { testID: 'notification-badge' }, 'NotificationBadge');
+  }
+}));
 
 // Mock react-native-paper dropdown
 jest.mock('react-native-paper-dropdown', () => ({ Dropdown: 'Dropdown' }));
@@ -163,6 +172,7 @@ describe('HomeScreen', () => {
         user: userReducer,
         children: childReducer,
         family: familyReducer,
+        notifications: notificationReducer,
       },
     });
   });
