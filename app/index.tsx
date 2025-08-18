@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { useAppSelector } from "./redux/hooks";
+import ScreenWithFooter from '../components/layout/ScreenWithFooter';
 
 export default function Intro() {
   const router = useRouter();

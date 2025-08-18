@@ -20,6 +20,7 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { deleteFamilyGroup, fetchFamilyGroup, fetchFamilyGroups, updateFamilyGroup } from '../../redux/slices/familySlice';
 import { authService } from '../../services/authService';
+import ScreenWithFooter from '../../components/layout/ScreenWithFooter';
 
 // Use the same fallback as apiService
 const BASE_URL = API_BASE_URL || "https://growing-together-app.onrender.com/api";

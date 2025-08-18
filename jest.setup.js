@@ -218,6 +218,8 @@ jest.mock('react-native', () => ({
     addEventListener: jest.fn(),
     removeEventListener: jest.fn(),
   },
+  // Mock useColorScheme hook
+  useColorScheme: jest.fn(() => 'light'),
 }));
 
 // ===== THIRD-PARTY LIBRARY MOCKS =====

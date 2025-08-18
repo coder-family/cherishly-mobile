@@ -1,8 +1,11 @@
 import { API_BASE_URL } from '@env';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useDispatch } from 'react-redux';
 import { useMemberInfoModal } from '../../hooks/useMemberInfoModal';
+import { useThemeColor } from '../../hooks/useThemeColor';
+import { deleteNotification } from '../../redux/slices/notificationSlice';
 import { PopulatedNotification } from '../../services/notificationService';
 import MemberInfoModal from '../family/MemberInfoModal';
 import Avatar from '../ui/Avatar';
@@ -16,6 +19,8 @@ export default function MemberJoinedNotification({
   notification,
   onPress,
 }: MemberJoinedNotificationProps) {
+  const dispatch = useDispatch();
+  const primaryColor = useThemeColor({}, 'primary');
   const {
     isVisible,
     memberInfo,
@@ -47,10 +52,21 @@ export default function MemberJoinedNotification({
     }
   };
 
+  const handleDelete = () => {
+    dispatch(deleteNotification(notification._id) as any);
+  };
+
   return (
     <>
       <TouchableOpacity
-        style={styles.notificationItem}
+        style={[
+          styles.notificationItem,
+          !notification.isRead && {
+            backgroundColor: `${primaryColor}10`,
+            borderLeftColor: primaryColor,
+            borderLeftWidth: 3,
+          }
+        ]}
         onPress={handleNotificationPress}
         activeOpacity={0.7}
       >
@@ -71,17 +87,32 @@ export default function MemberJoinedNotification({
         <View style={styles.content}>
           <Text style={styles.title}>{notification.title}</Text>
           <Text style={styles.message}>{notification.message}</Text>
-          <Text style={styles.time}>
-            {new Date(notification.createdAt).toLocaleDateString('vi-VN')}
-          </Text>
+          <View style={styles.metaContainer}>
+            <Text style={styles.time}>
+              {new Date(notification.createdAt).toLocaleDateString('vi-VN')}
+            </Text>
+            {!notification.isRead && (
+              <View style={[styles.unreadDot, { backgroundColor: primaryColor }]} />
+            )}
+          </View>
         </View>
         
-        <View style={styles.arrowContainer}>
-          <MaterialIcons 
-            name="chevron-right" 
-            size={20} 
-            color="#ccc" 
-          />
+        <View style={styles.actionsContainer}>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="close-outline" size={20} color="#666" />
+          </TouchableOpacity>
+          
+          <View style={styles.arrowContainer}>
+            <MaterialIcons 
+              name="chevron-right" 
+              size={20} 
+              color="#ccc" 
+            />
+          </View>
         </View>
       </TouchableOpacity>
 
@@ -140,6 +171,24 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 12,
     color: '#999',
+  },
+  metaContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deleteButton: {
+    padding: 4,
+    marginRight: 8,
   },
   arrowContainer: {
     padding: 4,

@@ -4,7 +4,7 @@ import React, { useCallback, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import AppHeader from './components/layout/AppHeader';
-import ScreenWrapper from './components/layout/ScreenWrapper';
+import ScreenWithFooter from './components/layout/ScreenWithFooter';
 import NotificationList from './components/notification/NotificationList';
 import { useThemeColor } from './hooks/useThemeColor';
 import { fetchNotifications, fetchUnreadCount, markAllNotificationsAsRead, markNotificationAsRead } from './redux/slices/notificationSlice';
@@ -84,7 +84,7 @@ export default function NotificationsScreen() {
   );
 
   return (
-    <ScreenWrapper>
+    <ScreenWithFooter>
       <AppHeader
         title="Thông báo"
         showBackButton
@@ -105,7 +105,7 @@ export default function NotificationsScreen() {
           apiBaseUrl={API_BASE_URL || "https://growing-together-app.onrender.com/api"}
         />
       </View>
-    </ScreenWrapper>
+    </ScreenWithFooter>
   );
 }
 

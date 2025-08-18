@@ -23,6 +23,14 @@ jest.mock('../app/components/ui/Avatar', () => {
   };
 });
 
+// Mock notification service
+jest.mock('../app/services/notificationService', () => ({
+  notificationService: {
+    markAsRead: jest.fn(() => Promise.resolve({ success: true })),
+    deleteNotification: jest.fn(() => Promise.resolve({ success: true })),
+  },
+}));
+
 const createTestStore = () => {
   return configureStore({
     reducer: {
@@ -36,6 +44,14 @@ describe('NotificationItem', () => {
   const mockNotification = {
     _id: '1',
     userId: 'user1',
+    recipient: 'user1',
+    sender: {
+      _id: 'sender1',
+      firstName: 'John',
+      lastName: 'Doe',
+      avatar: undefined,
+    },
+    familyGroupId: 'group1',
     type: 'comment' as const,
     title: 'New comment',
     message: 'Someone commented on your post',
@@ -100,7 +116,7 @@ describe('NotificationItem', () => {
     expect(mockOnPress).toHaveBeenCalledWith(mockNotification);
   });
 
-  it('dispatches markAsRead when pressed and notification is unread', () => {
+  it('dispatches markAsRead when pressed and notification is unread', async () => {
     const store = createTestStore();
     const { getByText } = render(
       <Provider store={store}>
@@ -109,6 +125,9 @@ describe('NotificationItem', () => {
     );
 
     fireEvent.press(getByText('New comment'));
+    
+    // Wait for async operations to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
     
     // Check if the action was dispatched
     const actions = store.getState().notifications;

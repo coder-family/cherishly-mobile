@@ -11,7 +11,7 @@ import {
     View,
 } from 'react-native';
 import MyInvitationsSection from '../components/family/MyInvitationsSection';
-import ScreenWrapper from '../components/layout/ScreenWrapper';
+import ScreenWithFooter from '../components/layout/ScreenWithFooter';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
 import { getMyPendingInvitations } from '../redux/slices/familySlice';
 
@@ -58,7 +58,7 @@ export default function JoinGroupScreen() {
   };
 
   return (
-    <ScreenWrapper>
+    <ScreenWithFooter>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Join Family Group</Text>
@@ -141,7 +141,7 @@ export default function JoinGroupScreen() {
           <Text style={styles.backButtonText}>Back to Home</Text>
         </TouchableOpacity>
       </ScrollView>
-    </ScreenWrapper>
+    </ScreenWithFooter>
   );
 }
 

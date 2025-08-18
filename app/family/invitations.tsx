@@ -12,7 +12,7 @@ import {
 import InvitationQRModal from '../components/family/InvitationQRModal';
 import InvitationStats from '../components/family/InvitationStats';
 import PendingInvitationsModal from '../components/family/PendingInvitationsModal';
-import ScreenWrapper from '../components/layout/ScreenWrapper';
+import ScreenWithFooter from '../components/layout/ScreenWithFooter';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
 import * as familyService from '../services/familyService';
@@ -97,14 +97,14 @@ export default function InvitationsScreen() {
 
   if (loading) {
     return (
-      <ScreenWrapper>
+      <ScreenWithFooter>
         <LoadingSpinner message="Loading invitation statistics..." />
-      </ScreenWrapper>
+      </ScreenWithFooter>
     );
   }
 
   return (
-    <ScreenWrapper>
+    <ScreenWithFooter>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Invitation Management</Text>
@@ -211,7 +211,7 @@ export default function InvitationsScreen() {
           invitationData={invitationData}
         />
       )}
-    </ScreenWrapper>
+    </ScreenWithFooter>
   );
 }
 

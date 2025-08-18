@@ -13,7 +13,7 @@ import {
 import ErrorText from '../components/form/ErrorText';
 import FormWrapper from '../components/form/FormWrapper';
 import InputField from '../components/form/InputField';
-import ScreenWrapper from '../components/layout/ScreenWrapper';
+import ScreenWithFooter from '../components/layout/ScreenWithFooter';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useAppDispatch } from '../redux/hooks';
 import { joinGroupFromInvitation } from '../redux/slices/familySlice';
@@ -162,17 +162,17 @@ export default function JoinFromInvitationScreen() {
 
   if (isValidatingToken) {
     return (
-      <ScreenWrapper>
+      <ScreenWithFooter>
         <View style={styles.loadingContainer}>
           <LoadingSpinner message="Validating invitation..." />
         </View>
-      </ScreenWrapper>
+      </ScreenWithFooter>
     );
   }
 
   if (!tokenValid) {
     return (
-      <ScreenWrapper>
+      <ScreenWithFooter>
         <View style={styles.errorContainer}>
           <Text style={styles.errorTitle}>Invalid Invitation</Text>
           <Text style={styles.errorMessage}>
@@ -185,12 +185,12 @@ export default function JoinFromInvitationScreen() {
             <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
-      </ScreenWrapper>
+      </ScreenWithFooter>
     );
   }
 
   return (
-    <ScreenWrapper>
+    <ScreenWithFooter>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -308,7 +308,7 @@ export default function JoinFromInvitationScreen() {
           </FormWrapper>
         </ScrollView>
       </KeyboardAvoidingView>
-    </ScreenWrapper>
+    </ScreenWithFooter>
   );
 }
 
