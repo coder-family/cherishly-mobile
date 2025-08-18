@@ -13,6 +13,7 @@ import AddChildModal from "../components/child/AddChildModal";
 import ChildProfileCard from "../components/child/ChildProfileCard";
 import FamilyGroupCard from "../components/family/FamilyGroupCard";
 import AppHeader from "../components/layout/AppHeader";
+import ScreenWithFooter from "../components/layout/ScreenWithFooter";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import SearchResults from "../components/ui/SearchResults";
 import UserProfileCard from "../components/user/UserProfileCard";
@@ -94,6 +95,10 @@ export default function HomeScreen() {
     }
   };
 
+  const handleSettingsPress = () => {
+    router.push('/settings');
+  };
+
   // Handle children errors using the shared utility
   useEffect(() => {
     ChildUtils.handleChildrenError(childrenError, dispatch);
@@ -135,7 +140,7 @@ export default function HomeScreen() {
   // Show loading spinner while fetching user data
   if (userLoading && !currentUser) {
     return (
-      <View style={{ flex: 1 }}>
+      <ScreenWithFooter onSettingsPress={handleSettingsPress}>
         <AppHeader
           title="Home"
           onSearchChange={handleSearch}
@@ -145,7 +150,7 @@ export default function HomeScreen() {
           showTitle={false}
         />
         <LoadingSpinner message="Loading your profile..." />
-      </View>
+      </ScreenWithFooter>
     );
   }
 
@@ -441,37 +446,37 @@ export default function HomeScreen() {
   };
 
       return (
-      <View style={{ flex: 1 }}>
-      {/* Enhanced Header */}
-      <AppHeader
-        title="Home"
-        onSearchChange={handleSearch}
-        searchPlaceholder="Search memories"
-        showBackButton={false}
-        showForwardButton={false}
-        showTitle={false}
-        showLogoutButton={true}
-        showNotificationBadge={true}
-      />
+      <ScreenWithFooter onSettingsPress={handleSettingsPress}>
+        {/* Enhanced Header */}
+        <AppHeader
+          title="Home"
+          onSearchChange={handleSearch}
+          searchPlaceholder="Search memories"
+          showBackButton={false}
+          showForwardButton={false}
+          showTitle={false}
+          showLogoutButton={true}
+          showNotificationBadge={true}
+        />
 
-      {/* Main Content */}
-      {renderMainContent()}
+        {/* Main Content */}
+        {renderMainContent()}
 
-      {/* Modals */}
-      <UserProfileEditModal
-        visible={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        user={user as any}
-        currentUser={currentUser || undefined}
-        loading={userLoading}
-        error={userError}
-      />
+        {/* Modals */}
+        <UserProfileEditModal
+          visible={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          user={user as any}
+          currentUser={currentUser || undefined}
+          loading={userLoading}
+          error={userError}
+        />
 
-      <AddChildModal
-        visible={showAddChildModal}
-        onClose={() => setShowAddChildModal(false)}
-              />
-      </View>
+        <AddChildModal
+          visible={showAddChildModal}
+          onClose={() => setShowAddChildModal(false)}
+        />
+      </ScreenWithFooter>
   );
 }
 

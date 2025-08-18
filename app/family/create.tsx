@@ -15,7 +15,7 @@ import FormWrapper from '../components/form/FormWrapper';
 import InputField from '../components/form/InputField';
 // Note: PrimaryButton is empty, using TouchableOpacity directly
 import { API_BASE_URL } from '@env';
-import ScreenWrapper from '../components/layout/ScreenWrapper';
+import ScreenWithFooter from '../components/layout/ScreenWithFooter';
 import AvatarUpload from '../components/media/AvatarUpload';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
@@ -192,7 +192,7 @@ export default function CreateFamilyGroupScreen() {
   }
 
   return (
-    <ScreenWrapper>
+    <ScreenWithFooter>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -284,7 +284,7 @@ export default function CreateFamilyGroupScreen() {
           </FormWrapper>
         </ScrollView>
       </KeyboardAvoidingView>
-    </ScreenWrapper>
+    </ScreenWithFooter>
   );
 }
 

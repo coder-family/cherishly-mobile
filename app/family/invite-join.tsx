@@ -13,7 +13,7 @@ import {
 import ErrorText from '../components/form/ErrorText';
 import FormWrapper from '../components/form/FormWrapper';
 import InputField from '../components/form/InputField';
-import ScreenWrapper from '../components/layout/ScreenWrapper';
+import ScreenWithFooter from '../components/layout/ScreenWithFooter';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
 import { acceptInvitation } from '../redux/slices/familySlice';
@@ -91,7 +91,7 @@ export default function InviteJoinScreen() {
   }
 
   return (
-    <ScreenWrapper>
+    <ScreenWithFooter>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -265,7 +265,7 @@ export default function InviteJoinScreen() {
           </FormWrapper>
         </ScrollView>
       </KeyboardAvoidingView>
-    </ScreenWrapper>
+    </ScreenWithFooter>
   );
 }
 

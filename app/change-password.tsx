@@ -4,6 +4,7 @@ import { Alert, Button, StyleSheet, Text, View } from "react-native";
 import PasswordInput from "./components/form/PasswordInput";
 import { changePassword } from "./services/authService";
 import { sanitizeError } from "./utils/logUtils";
+import ScreenWithFooter from '../components/layout/ScreenWithFooter';
 
 export default function ChangePasswordScreen() {
   const [currentPassword, setCurrentPassword] = useState("");

@@ -11,6 +11,7 @@ import {
     View,
 } from "react-native";
 import authService from "../services/authService";
+import ScreenWithFooter from '../components/layout/ScreenWithFooter';
 
 export default function ResetPassword() {
   const router = useRouter();

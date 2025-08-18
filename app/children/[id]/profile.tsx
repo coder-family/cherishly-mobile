@@ -24,6 +24,7 @@ import EditMemoryModal from "../../components/child/EditMemoryModal";
 import HealthContent from "../../components/child/HealthContent";
 import MemoryItem from "../../components/child/MemoryItem";
 import AppHeader from "../../components/layout/AppHeader";
+import ScreenWithFooter from "../../components/layout/ScreenWithFooter";
 import { QAContent } from "../../components/qa";
 import EditResponseModal from "../../components/qa/EditResponseModal";
 import TimelineItem from "../../components/timeline/TimelineItem";
@@ -918,7 +919,7 @@ export default function ChildProfileScreen() {
   // Loading state
   if (loading) {
     return (
-      <View style={{ flex: 1 }}>
+      <ScreenWithFooter>
         <AppHeader
           title="Child Profile"
           onBack={handleBack}
@@ -929,14 +930,14 @@ export default function ChildProfileScreen() {
           showLogoutButton={true}
         />
         <LoadingSpinner message="Loading child profile..." />
-      </View>
+      </ScreenWithFooter>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <View style={{ flex: 1 }}>
+      <ScreenWithFooter>
         <AppHeader
           title="Child Profile"
           onBack={handleBack}
@@ -950,14 +951,14 @@ export default function ChildProfileScreen() {
           message={error}
           onRetry={() => id && dispatch(fetchChild(id))}
         />
-      </View>
+      </ScreenWithFooter>
     );
   }
 
   // No child found
   if (!currentChild) {
     return (
-      <View style={{ flex: 1 }}>
+      <ScreenWithFooter>
         <AppHeader
           title="Child Profile"
           onBack={handleBack}
@@ -971,7 +972,7 @@ export default function ChildProfileScreen() {
           message="Child not found"
           onRetry={() => id && dispatch(fetchChild(id))}
         />
-      </View>
+      </ScreenWithFooter>
     );
   }
 
@@ -1219,7 +1220,7 @@ export default function ChildProfileScreen() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <ScreenWithFooter>
       {renderMainContent()}
       {id && (
         <AddMemoryModal
@@ -1279,7 +1280,7 @@ export default function ChildProfileScreen() {
         onConfirm={confirmDeleteChild}
         onCancel={() => setShowDeleteChildConfirm(false)}
       />
-    </View>
+    </ScreenWithFooter>
   );
 
   // Render tab content based on active tab

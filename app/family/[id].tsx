@@ -13,6 +13,7 @@ import RemoveMemberModal from '../components/family/RemoveMemberModal';
 import TimelinePost from '../components/family/TimelinePost';
 
 import AppHeader from '../components/layout/AppHeader';
+import ScreenWithFooter from '../components/layout/ScreenWithFooter';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useGroupRefresh } from '../hooks/useGroupRefresh';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
@@ -613,7 +614,7 @@ export default function FamilyGroupDetailScreen() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <ScreenWithFooter>
       <AppHeader
         title={currentGroup.name || "Family Group"}
         onSearchChange={handleSearch}
@@ -775,7 +776,7 @@ export default function FamilyGroupDetailScreen() {
         userRole={user?.id || ''}
         isOwner={currentGroup?.ownerId === user?.id}
       />
-    </View>
+    </ScreenWithFooter>
   );
 }
 

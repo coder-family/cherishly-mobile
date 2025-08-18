@@ -2,6 +2,7 @@
 // import React, { useState } from 'react';
 // import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 // import authService from '../services/authService';
+import ScreenWithFooter from '../components/layout/ScreenWithFooter';
 
 // export default function ResetPasswordWeb() {
 //   const router = useRouter();
