@@ -40,7 +40,7 @@ export default function FamilyGroupDetailScreen() {
       // Fetch children without showing loading
       await fetchGroupChildren(false);
     } catch (error) {
-      console.error('Silent refresh error:', error);
+      // Silent refresh error handled silently
     }
   };
   
@@ -90,7 +90,7 @@ export default function FamilyGroupDetailScreen() {
       const children = response.children || response;
       setGroupChildren(children);
     } catch (error) {
-      console.error("Error fetching group children:", error);
+      // Fetch group children error handled silently
       setGroupChildren([]);
     } finally {
       if (showLoading) {
@@ -112,7 +112,7 @@ export default function FamilyGroupDetailScreen() {
       }
       setHasMoreTimeline(response.pagination?.hasMore || false);
     } catch (error) {
-      console.error("Error fetching timeline posts:", error);
+      // Fetch timeline posts error handled silently
       setTimelinePosts([]);
     } finally {
       setLoadingTimeline(false);
@@ -155,7 +155,7 @@ export default function FamilyGroupDetailScreen() {
 
   // Handle reaction press
   const handleReactionPress = (reactionType: string) => {
-    console.log('Reaction pressed:', reactionType);
+    // Reaction pressed handled silently
     // TODO: Call API to add reaction
   };
 
@@ -606,7 +606,7 @@ export default function FamilyGroupDetailScreen() {
       // Search within family group - placeholder for now
       setSearchResults([]);
     } catch (error) {
-      console.error('Search error:', error);
+      // Search error handled silently
       setSearchResults([]);
     } finally {
       setSearchLoading(false);

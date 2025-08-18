@@ -35,7 +35,7 @@ export default function NotificationsScreen() {
         const accessToken = await authService.getAccessToken();
         setToken(accessToken || '');
       } catch (error) {
-        console.error('Error loading token:', error);
+        // Token loading error handled silently
         setToken('');
       }
     };
@@ -58,7 +58,7 @@ export default function NotificationsScreen() {
         const notificationService = new NotificationNavigationService(API_BASE_URL || "https://growing-together-app.onrender.com/api");
         await notificationService.handleNotificationClick(notification, router, token || '');
       } catch (error) {
-        console.error('🔍 [NotificationPress] Error navigating:', error);
+        // Navigation error handled silently
         // Fallback: điều hướng về Home
         router.push('/tabs/home');
       }

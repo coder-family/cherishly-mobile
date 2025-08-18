@@ -41,7 +41,7 @@ export async function getFileSize(uri: string): Promise<number> {
     const blob = await response.blob();
     return blob.size;
   } catch (error) {
-    console.error('Error getting file size:', error);
+    // File size error handled silently
     return 0;
   }
 }

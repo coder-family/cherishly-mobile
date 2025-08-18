@@ -88,7 +88,7 @@ export default function Register() {
     } catch (error) {
       // Error is already handled by Redux slice and displayed in the UI
       // We can add additional error handling here if needed
-      console.error("Registration error:", error);
+      // Registration error handled silently
     }
   };
 

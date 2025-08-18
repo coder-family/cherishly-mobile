@@ -88,7 +88,7 @@ export default function HomeScreen() {
       const results = await searchService.search(query);
       setSearchResults(results);
     } catch (error) {
-      console.error('Search error:', error);
+      // Search error handled silently
       setSearchResults([]);
     } finally {
       setSearchLoading(false);

@@ -1,11 +1,18 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import AppHeader from './components/layout/AppHeader';
-import ScreenWithFooter from './components/layout/ScreenWithFooter';
-import { useThemeColor } from './hooks/useThemeColor';
-import { useAppSelector } from './redux/hooks';
+import { MaterialIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import AppHeader from "./components/layout/AppHeader";
+import ScreenWithFooter from "./components/layout/ScreenWithFooter";
+import { useThemeColor } from "./hooks/useThemeColor";
+import { useAppSelector } from "./redux/hooks";
 
 interface SettingsItemProps {
   icon: string;
@@ -24,8 +31,8 @@ const SettingsItem: React.FC<SettingsItemProps> = ({
   showArrow = true,
   isDestructive = false,
 }) => {
-  const textColor = useThemeColor({}, 'text');
-  const borderColor = useThemeColor({}, 'card');
+  const textColor = useThemeColor({}, "text");
+  const borderColor = useThemeColor({}, "card");
 
   return (
     <TouchableOpacity
@@ -34,15 +41,26 @@ const SettingsItem: React.FC<SettingsItemProps> = ({
       activeOpacity={0.7}
     >
       <View style={styles.settingsItemLeft}>
-        <View style={[styles.iconContainer, isDestructive && styles.destructiveIcon]}>
-          <MaterialIcons 
-            name={icon as any} 
-            size={20} 
-            color={isDestructive ? '#ff4757' : '#4f8cff'} 
+        <View
+          style={[
+            styles.iconContainer,
+            isDestructive && styles.destructiveIcon,
+          ]}
+        >
+          <MaterialIcons
+            name={icon as any}
+            size={20}
+            color={isDestructive ? "#ff4757" : "#4f8cff"}
           />
         </View>
         <View style={styles.settingsItemContent}>
-          <Text style={[styles.settingsItemTitle, { color: textColor }, isDestructive && styles.destructiveText]}>
+          <Text
+            style={[
+              styles.settingsItemTitle,
+              { color: textColor },
+              isDestructive && styles.destructiveText,
+            ]}
+          >
             {title}
           </Text>
           {subtitle && (
@@ -53,11 +71,7 @@ const SettingsItem: React.FC<SettingsItemProps> = ({
         </View>
       </View>
       {showArrow && (
-        <MaterialIcons 
-          name="chevron-right" 
-          size={20} 
-          color="#ccc" 
-        />
+        <MaterialIcons name="chevron-right" size={20} color="#ccc" />
       )}
     </TouchableOpacity>
   );
@@ -68,29 +82,30 @@ interface SettingsSectionProps {
   children: React.ReactNode;
 }
 
-const SettingsSection: React.FC<SettingsSectionProps> = ({ title, children }) => {
-  const textColor = useThemeColor({}, 'text');
-  
+const SettingsSection: React.FC<SettingsSectionProps> = ({
+  title,
+  children,
+}) => {
+  const textColor = useThemeColor({}, "text");
+
   return (
     <View style={styles.settingsSection}>
-      <Text style={[styles.sectionTitle, { color: textColor }]}>
-        {title}
-      </Text>
-      <View style={styles.sectionContent}>
-        {children}
-      </View>
+      <Text style={[styles.sectionTitle, { color: textColor }]}>{title}</Text>
+      <View style={styles.sectionContent}>{children}</View>
     </View>
   );
 };
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
+  const backgroundColor = useThemeColor({}, "background");
+  const textColor = useThemeColor({}, "text");
   const { currentUser } = useAppSelector((state) => state.user);
-  
-  const [language, setLanguage] = useState<'vi' | 'en'>('vi');
-  const [defaultPrivacy, setDefaultPrivacy] = useState<'public' | 'private'>('public');
+
+  const [language, setLanguage] = useState<"vi" | "en">("vi");
+  const [defaultPrivacy, setDefaultPrivacy] = useState<"public" | "private">(
+    "public"
+  );
   const [commentNotifications, setCommentNotifications] = useState(true);
   const [memberNotifications, setMemberNotifications] = useState(true);
 
@@ -100,59 +115,69 @@ export default function SettingsScreen() {
 
   const handleSettingsPress = () => {
     // This will be handled by the footer bar
-    console.log('Settings pressed from settings screen');
+    // Settings pressed handled silently
   };
 
   const handlePersonalInfo = () => {
-    Alert.alert('Thông tin cá nhân', 'Tính năng này sẽ được phát triển sau!');
+    Alert.alert("Thông tin cá nhân", "Tính năng này sẽ được phát triển sau!");
   };
 
   const handleChangeAvatar = () => {
-    Alert.alert('Thay đổi avatar', 'Tính năng này sẽ được phát triển sau!');
+    Alert.alert("Thay đổi avatar", "Tính năng này sẽ được phát triển sau!");
   };
 
   const handleChangePassword = () => {
-    router.push('/change-password');
+    router.push("/change-password");
   };
 
   const handleCommentNotifications = () => {
     setCommentNotifications(!commentNotifications);
-    Alert.alert('Thông báo bình luận', `Đã ${!commentNotifications ? 'bật' : 'tắt'} thông báo bình luận`);
+    Alert.alert(
+      "Thông báo bình luận",
+      `Đã ${!commentNotifications ? "bật" : "tắt"} thông báo bình luận`
+    );
   };
 
   const handleMemberNotifications = () => {
     setMemberNotifications(!memberNotifications);
-    Alert.alert('Thông báo thành viên mới', `Đã ${!memberNotifications ? 'bật' : 'tắt'} thông báo thành viên mới`);
+    Alert.alert(
+      "Thông báo thành viên mới",
+      `Đã ${!memberNotifications ? "bật" : "tắt"} thông báo thành viên mới`
+    );
   };
 
   const handleDefaultPrivacy = () => {
-    const newPrivacy = defaultPrivacy === 'public' ? 'private' : 'public';
+    const newPrivacy = defaultPrivacy === "public" ? "private" : "public";
     setDefaultPrivacy(newPrivacy);
-    Alert.alert('Quyền riêng tư', `Đã đặt mặc định thành ${newPrivacy === 'public' ? 'công khai' : 'riêng tư'}`);
+    Alert.alert(
+      "Quyền riêng tư",
+      `Đã đặt mặc định thành ${
+        newPrivacy === "public" ? "công khai" : "riêng tư"
+      }`
+    );
   };
 
   const handleLanguageChange = () => {
-    const newLanguage = language === 'vi' ? 'en' : 'vi';
+    const newLanguage = language === "vi" ? "en" : "vi";
     setLanguage(newLanguage);
-    Alert.alert('Ngôn ngữ', `Đã chuyển sang ${newLanguage === 'vi' ? 'Tiếng Việt' : 'English'}`);
+    Alert.alert(
+      "Ngôn ngữ",
+      `Đã chuyển sang ${newLanguage === "vi" ? "Tiếng Việt" : "English"}`
+    );
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Đăng xuất',
-      'Bạn có chắc chắn muốn đăng xuất?',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        { 
-          text: 'Đăng xuất', 
-          style: 'destructive',
-          onPress: () => {
-            // TODO: Implement logout logic
-            router.push('/login');
-          }
+    Alert.alert("Đăng xuất", "Bạn có chắc chắn muốn đăng xuất?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Đăng xuất",
+        style: "destructive",
+        onPress: () => {
+          // TODO: Implement logout logic
+          router.push("/login");
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -163,9 +188,9 @@ export default function SettingsScreen() {
         showBackButton={true}
         canGoBack={true}
       />
-      
+
       <View style={[styles.container, { backgroundColor }]}>
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={true}
@@ -176,7 +201,11 @@ export default function SettingsScreen() {
             <SettingsItem
               icon="person"
               title="Thông tin cá nhân"
-              subtitle={currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Chưa cập nhật'}
+              subtitle={
+                currentUser
+                  ? `${currentUser.firstName} ${currentUser.lastName}`
+                  : "Chưa cập nhật"
+              }
               onPress={handlePersonalInfo}
             />
             <SettingsItem
@@ -198,14 +227,14 @@ export default function SettingsScreen() {
             <SettingsItem
               icon="chat-bubble"
               title="Bình luận"
-              subtitle={commentNotifications ? 'Đã bật' : 'Đã tắt'}
+              subtitle={commentNotifications ? "Đã bật" : "Đã tắt"}
               onPress={handleCommentNotifications}
               showArrow={false}
             />
             <SettingsItem
               icon="person-add"
               title="Thành viên mới"
-              subtitle={memberNotifications ? 'Đã bật' : 'Đã tắt'}
+              subtitle={memberNotifications ? "Đã bật" : "Đã tắt"}
               onPress={handleMemberNotifications}
               showArrow={false}
             />
@@ -216,7 +245,7 @@ export default function SettingsScreen() {
             <SettingsItem
               icon="public"
               title="Mặc định public/private"
-              subtitle={defaultPrivacy === 'public' ? 'Công khai' : 'Riêng tư'}
+              subtitle={defaultPrivacy === "public" ? "Công khai" : "Riêng tư"}
               onPress={handleDefaultPrivacy}
               showArrow={false}
             />
@@ -226,8 +255,8 @@ export default function SettingsScreen() {
           <SettingsSection title="🌐 Ngôn ngữ">
             <SettingsItem
               icon="language"
-              title={language === 'vi' ? 'Tiếng Việt' : 'English'}
-              subtitle={language === 'vi' ? 'Đang sử dụng' : 'Currently using'}
+              title={language === "vi" ? "Tiếng Việt" : "English"}
+              subtitle={language === "vi" ? "Đang sử dụng" : "Currently using"}
               onPress={handleLanguageChange}
               showArrow={false}
             />
@@ -266,49 +295,49 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 12,
     paddingHorizontal: 20,
   },
   sectionContent: {
-    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+    backgroundColor: "rgba(0, 0, 0, 0.02)",
     borderRadius: 12,
     marginHorizontal: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   settingsItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     // marginHorizontal: 10,
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+    borderBottomColor: "rgba(0, 0, 0, 0.05)",
   },
   settingsItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(79, 140, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(79, 140, 255, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 16,
   },
   destructiveIcon: {
-    backgroundColor: 'rgba(255, 71, 87, 0.1)',
+    backgroundColor: "rgba(255, 71, 87, 0.1)",
   },
   settingsItemContent: {
     flex: 1,
   },
   settingsItemTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 2,
   },
   settingsItemSubtitle: {
@@ -316,6 +345,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   destructiveText: {
-    color: '#ff4757',
+    color: "#ff4757",
   },
 });

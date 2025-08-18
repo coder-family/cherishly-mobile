@@ -134,9 +134,7 @@ export async function getPrompts(
       limit: data.limit || 10,
     };
   } catch (error: any) {
-    console.error('promptService: Error getting prompts:', error);
-    console.error('promptService: Error response:', error.response);
-    console.error('promptService: Error data:', error.response?.data);
+    // API error handled silently
     throw error;
   }
 }
@@ -147,9 +145,7 @@ export async function getPrompt(promptId: string): Promise<Prompt> {
     const data = response.data || response;
     return mapPromptFromApi(data);
   } catch (error: any) {
-    console.error('promptService: Error getting prompt:', error);
-    console.error('promptService: Error response:', error.response);
-    console.error('promptService: Error data:', error.response?.data);
+    // API error handled silently
     throw error;
   }
 }
@@ -172,9 +168,7 @@ export async function createPrompt(data: CreatePromptData): Promise<Prompt> {
     const responseData = response.data || response;
     return mapPromptFromApi(responseData);
   } catch (error: any) {
-    console.error('promptService: Error creating prompt:', error);
-    console.error('promptService: Error response:', error.response);
-    console.error('promptService: Error data:', error.response?.data);
+    // API error handled silently
     throw error;
   }
 }
@@ -188,9 +182,7 @@ export async function updatePrompt(
     const responseData = response.data || response;
     return mapPromptFromApi(responseData);
   } catch (error: any) {
-    console.error('promptService: Error updating prompt:', error);
-    console.error('promptService: Error response:', error.response);
-    console.error('promptService: Error data:', error.response?.data);
+    // API error handled silently
     throw error;
   }
 }
@@ -199,9 +191,7 @@ export async function deletePrompt(promptId: string): Promise<void> {
   try {
     await apiService.delete(`/prompts/${promptId}`);
   } catch (error: any) {
-    console.error('promptService: Error deleting prompt:', error);
-    console.error('promptService: Error response:', error.response);
-    console.error('promptService: Error data:', error.response?.data);
+    // API error handled silently
     throw error;
   }
 }
@@ -226,9 +216,7 @@ export async function getPromptResponses(
     );
     return response.data || response;
   } catch (error: any) {
-    console.error('promptService: Error getting prompt responses:', error);
-    console.error('promptService: Error response:', error.response);
-    console.error('promptService: Error data:', error.response?.data);
+    // API error handled silently
     throw error;
   }
 }
