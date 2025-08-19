@@ -111,35 +111,49 @@ function mapPromptFromApi(apiPrompt: any): Prompt {
 export async function getPrompts(
   params: GetPromptsParams = {}
 ): Promise<{ prompts: Prompt[]; total: number; page: number; limit: number }> {
-  const queryParams = new URLSearchParams();
+  try {
+    const queryParams = new URLSearchParams();
 
-  if (params.page) queryParams.append("page", params.page.toString());
-  if (params.limit) queryParams.append("limit", params.limit.toString());
-  if (params.category) queryParams.append("category", params.category);
-  if (params.tags) queryParams.append("tags", params.tags.join(","));
-  if (params.isActive !== undefined)
-    queryParams.append("isActive", params.isActive.toString());
-  if (params.search) queryParams.append("search", params.search);
+    if (params.page) queryParams.append("page", params.page.toString());
+    if (params.limit) queryParams.append("limit", params.limit.toString());
+    if (params.category) queryParams.append("category", params.category);
+    if (params.tags) queryParams.append("tags", params.tags.join(","));
+    if (params.isActive !== undefined)
+      queryParams.append("isActive", params.isActive.toString());
+    if (params.search) queryParams.append("search", params.search);
 
-  const response = await apiService.get(`/prompts?${queryParams.toString()}`);
-  const data = response.data || response;
+    const response = await apiService.get(`/prompts?${queryParams.toString()}`);
+    const data = response.data || response;
 
-  // Map the prompts to ensure they have the correct structure
-  const mappedPrompts = (data.prompts || []).map(mapPromptFromApi);
+    // Map the prompts to ensure they have the correct structure
+    const mappedPrompts = (data.prompts || []).map(mapPromptFromApi);
 
-  return {
-    prompts: mappedPrompts,
-    total: data.total || 0,
-    page: data.currentPage || 1,
-    limit: data.limit || 10,
-  };
+    return {
+      prompts: mappedPrompts,
+      total: data.total || 0,
+      page: data.currentPage || 1,
+      limit: data.limit || 10,
+    };
+  } catch (error: any) {
+    // Log the error for debugging and monitoring
+    console.error('Error fetching prompts:', error);
+    // Wrap the error with additional context
+    throw new Error(`Failed to fetch prompts: ${error.message}`);
+  }
 }
 
 export async function getPrompt(promptId: string): Promise<Prompt> {
-  const sanitizedId = sanitizeObjectId(promptId);
-  const response = await apiService.get(`/prompts/${sanitizedId}`);
-  const data = response.data || response;
-  return mapPromptFromApi(data);
+  try {
+    const sanitizedId = sanitizeObjectId(promptId);
+    const response = await apiService.get(`/prompts/${sanitizedId}`);
+    const data = response.data || response;
+    return mapPromptFromApi(data);
+  } catch (error: any) {
+    // Log the error for debugging and monitoring
+    console.error(`Error fetching prompt ${promptId}:`, error);
+    // Wrap the error with additional context
+    throw new Error(`Failed to fetch prompt ${promptId}: ${error.message}`);
+  }
 }
 
 export async function createPrompt(data: CreatePromptData): Promise<Prompt> {
@@ -160,8 +174,10 @@ export async function createPrompt(data: CreatePromptData): Promise<Prompt> {
     const responseData = response.data || response;
     return mapPromptFromApi(responseData);
   } catch (error: any) {
-    console.error("Error creating prompt:", error);
-    throw error;
+    // Log the error for debugging and monitoring
+    console.error('Error creating prompt:', error);
+    // Wrap the error with additional context
+    throw new Error(`Failed to create prompt: ${error.message}`);
   }
 }
 
@@ -169,15 +185,29 @@ export async function updatePrompt(
   promptId: string,
   data: UpdatePromptData
 ): Promise<Prompt> {
-  const sanitizedId = sanitizeObjectId(promptId);
-  const response = await apiService.put(`/prompts/${sanitizedId}`, data);
-  const responseData = response.data || response;
-  return mapPromptFromApi(responseData);
+  try {
+    const sanitizedId = sanitizeObjectId(promptId);
+    const response = await apiService.put(`/prompts/${sanitizedId}`, data);
+    const responseData = response.data || response;
+    return mapPromptFromApi(responseData);
+  } catch (error: any) {
+    // Log the error for debugging and monitoring
+    console.error(`Error updating prompt ${promptId}:`, error);
+    // Wrap the error with additional context
+    throw new Error(`Failed to update prompt ${promptId}: ${error.message}`);
+  }
 }
 
 export async function deletePrompt(promptId: string): Promise<void> {
-  const sanitizedId = sanitizeObjectId(promptId);
-  await apiService.delete(`/prompts/${sanitizedId}`);
+  try {
+    const sanitizedId = sanitizeObjectId(promptId);
+    await apiService.delete(`/prompts/${sanitizedId}`);
+  } catch (error: any) {
+    // Log the error for debugging and monitoring
+    console.error(`Error deleting prompt ${promptId}:`, error);
+    // Wrap the error with additional context
+    throw new Error(`Failed to delete prompt ${promptId}: ${error.message}`);
+  }
 }
 
 export async function getPromptResponses(
@@ -189,13 +219,20 @@ export async function getPromptResponses(
   page: number;
   limit: number;
 }> {
-  const queryParams = new URLSearchParams();
+  try {
+    const queryParams = new URLSearchParams();
 
-  if (params.page) queryParams.append("page", params.page.toString());
-  if (params.limit) queryParams.append("limit", params.limit.toString());
+    if (params.page) queryParams.append("page", params.page.toString());
+    if (params.limit) queryParams.append("limit", params.limit.toString());
 
-  const response = await apiService.get(
-    `/prompts/${promptId}/responses?${queryParams.toString()}`
-  );
-  return response.data || response;
+    const response = await apiService.get(
+      `/prompts/${promptId}/responses?${queryParams.toString()}`
+    );
+    return response.data || response;
+  } catch (error: any) {
+    // Log the error for debugging and monitoring
+    console.error(`Error fetching prompt responses for prompt ${promptId}:`, error);
+    // Wrap the error with additional context
+    throw new Error(`Failed to fetch prompt responses for prompt ${promptId}: ${error.message}`);
+  }
 }
