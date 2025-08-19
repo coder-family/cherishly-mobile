@@ -26,7 +26,13 @@ export default function JoinGroupScreen() {
     try {
       await dispatch(getMyPendingInvitations()).unwrap();
     } catch (error) {
-      // Fetch invitations error handled silently
+      // Show user-friendly error message
+      Alert.alert(
+        'Error',
+        'Failed to load invitations. Please check your connection and try again.',
+        [{ text: 'OK' }]
+      );
+      console.error('Failed to fetch invitations:', error);
     }
   }, [dispatch]);
 
