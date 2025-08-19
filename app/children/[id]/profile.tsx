@@ -420,6 +420,7 @@ export default function ChildProfileScreen() {
     responses,
     healthRecords,
     growthRecords,
+    // hasScrolledToFocusPost
   ]);
 
   // Handle edit completion from HealthContent
