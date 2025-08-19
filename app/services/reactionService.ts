@@ -69,6 +69,11 @@ export async function setReaction(
   targetId: string,
   type: ReactionType
 ): Promise<void> {
+  // Validate targetId before making API call
+  if (!validateObjectId(targetId)) {
+    throw new Error('Invalid targetId: must be a valid MongoDB ObjectId');
+  }
+
   try {
     const requestBody = { targetType, targetId, type };
     
@@ -83,6 +88,11 @@ export async function deleteReaction(
   targetType: TargetType,
   targetId: string
 ): Promise<void> {
+  // Validate targetId before making API call
+  if (!validateObjectId(targetId)) {
+    throw new Error('Invalid targetId: must be a valid MongoDB ObjectId');
+  }
+
   try {
     const params = { targetType, targetId };
     
