@@ -90,8 +90,9 @@ export default function FamilyGroupDetailScreen() {
       const children = response.children || response;
       setGroupChildren(children);
     } catch (error) {
-      // Fetch group children error handled silently
+      console.error('Error fetching group children:', error);
       setGroupChildren([]);
+      Alert.alert('Error', 'Failed to fetch group children. Please try again.');
     } finally {
       if (showLoading) {
         setLoadingChildren(false);
@@ -112,8 +113,9 @@ export default function FamilyGroupDetailScreen() {
       }
       setHasMoreTimeline(response.pagination?.hasMore || false);
     } catch (error) {
-      // Fetch timeline posts error handled silently
+      console.error('Error fetching timeline posts:', error);
       setTimelinePosts([]);
+      Alert.alert('Error', 'Failed to fetch timeline posts. Please try again.');
     } finally {
       setLoadingTimeline(false);
     }
