@@ -146,8 +146,24 @@ class NotificationService {
         `/notifications?page=${page}&limit=${limit}`
       );
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       // API error handled silently
+      
+      // If user is not authenticated, return empty data with default pagination
+      if (error.status === 401 || error.message?.includes("Not authorized")) {
+        return {
+          success: true,
+          message: "User not authenticated",
+          data: [],
+          pagination: {
+            total: 0,
+            page: 1,
+            pages: 1,
+            limit: limit
+          }
+        };
+      }
+      
       throw error;
     }
   }
