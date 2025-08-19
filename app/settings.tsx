@@ -14,8 +14,20 @@ import ScreenWithFooter from "./components/layout/ScreenWithFooter";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { useAppSelector } from "./redux/hooks";
 
+// Define valid MaterialIcons names used in this component
+type ValidIconName = 
+  | "person"
+  | "photo-camera"
+  | "lock"
+  | "chat-bubble"
+  | "person-add"
+  | "public"
+  | "language"
+  | "logout"
+  | "chevron-right";
+
 interface SettingsItemProps {
-  icon: string;
+  icon: ValidIconName;
   title: string;
   subtitle?: string;
   onPress: () => void;
@@ -48,7 +60,7 @@ const SettingsItem: React.FC<SettingsItemProps> = ({
           ]}
         >
           <MaterialIcons
-            name={icon as any}
+            name={icon}
             size={20}
             color={isDestructive ? "#ff4757" : "#4f8cff"}
           />
