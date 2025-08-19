@@ -117,7 +117,7 @@ describe('NotificationService', () => {
       const mockResponse = {
         success: true,
         data: {
-          _id: '1',
+          _id: '507f1f77bcf86cd799439011',
           isRead: true,
           updatedAt: '2024-01-01T00:00:00.000Z',
         },
@@ -126,9 +126,9 @@ describe('NotificationService', () => {
       const apiService = require('../app/services/apiService').default;
       apiService.post.mockResolvedValue({ data: mockResponse });
 
-      const result = await notificationService.markAsRead('1');
+      const result = await notificationService.markAsRead('507f1f77bcf86cd799439011');
 
-      expect(apiService.post).toHaveBeenCalledWith('/notifications/1/mark-read');
+      expect(apiService.post).toHaveBeenCalledWith('/notifications/507f1f77bcf86cd799439011/mark-read');
       expect(result).toEqual(mockResponse);
     });
   });
@@ -159,7 +159,7 @@ describe('NotificationService', () => {
         success: true,
         message: 'Đã xóa thông báo',
         data: {
-          _id: '1',
+          _id: '507f1f77bcf86cd799439011',
           isDeleted: true,
         },
       };
@@ -167,9 +167,9 @@ describe('NotificationService', () => {
       const apiService = require('../app/services/apiService').default;
       apiService.delete.mockResolvedValue({ data: mockResponse });
 
-      const result = await notificationService.deleteNotification('1');
+      const result = await notificationService.deleteNotification('507f1f77bcf86cd799439011');
 
-      expect(apiService.delete).toHaveBeenCalledWith('/notifications/1');
+      expect(apiService.delete).toHaveBeenCalledWith('/notifications/507f1f77bcf86cd799439011');
       expect(result).toEqual(mockResponse);
     });
   });
@@ -179,7 +179,7 @@ describe('NotificationService', () => {
       const mockResponse = {
         success: true,
         data: {
-          _id: '1',
+          _id: '507f1f77bcf86cd799439011',
           title: 'Test notification',
           message: 'Test message',
           type: 'comment',
@@ -204,9 +204,9 @@ describe('NotificationService', () => {
       const apiService = require('../app/services/apiService').default;
       apiService.get.mockResolvedValue({ data: mockResponse });
 
-      const result = await notificationService.getNotificationById('1');
+      const result = await notificationService.getNotificationById('507f1f77bcf86cd799439011');
 
-      expect(apiService.get).toHaveBeenCalledWith('/notifications/1');
+      expect(apiService.get).toHaveBeenCalledWith('/notifications/507f1f77bcf86cd799439011');
       expect(result).toEqual(mockResponse);
     });
   });

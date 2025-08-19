@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '@env';
+import { sanitizeObjectId } from '../utils/validation';
 import apiService from './apiService';
 import authService from './authService';
 
@@ -57,12 +58,14 @@ export async function getCurrentUser(): Promise<User> {
 }
 
 export async function getCurrentUserById(userId: string): Promise<User> {
-  const response = await apiService.get(`/users/${userId}`);
+  const sanitizedId = sanitizeObjectId(userId);
+  const response = await apiService.get(`/users/${sanitizedId}`);
   return response.data || response;
 }
 
 export async function getUser(userId: string): Promise<User> {
-  const response = await apiService.get(`/users/${userId}`);
+  const sanitizedId = sanitizeObjectId(userId);
+  const response = await apiService.get(`/users/${sanitizedId}`);
   return response.data || response;
 }
 
@@ -77,7 +80,8 @@ export async function getUsersInGroup(): Promise<User[]> {
 }
 
 export async function updateUser(userId: string, data: UpdateUserData): Promise<User> {
-  const response = await apiService.put(`/users/${userId}`, data);
+  const sanitizedId = sanitizeObjectId(userId);
+  const response = await apiService.put(`/users/${sanitizedId}`, data);
   return response.data || response;
 }
 
@@ -86,11 +90,13 @@ export async function changePassword(data: ChangePasswordData): Promise<void> {
 }
 
 export async function deleteUser(userId: string): Promise<void> {
-  await apiService.delete(`/users/${userId}`);
+  const sanitizedId = sanitizeObjectId(userId);
+  await apiService.delete(`/users/${sanitizedId}`);
 }
 
 export async function restoreUser(userId: string): Promise<User> {
-  const response = await apiService.patch(`/users/${userId}/restore`);
+  const sanitizedId = sanitizeObjectId(userId);
+  const response = await apiService.patch(`/users/${sanitizedId}/restore`);
   return response.data || response;
 }
 
@@ -124,12 +130,12 @@ export async function uploadAvatar(userId: string, imageUri: string): Promise<{ 
   // Use a separate axios instance for file uploads to avoid JSON content-type issues
   const token = await authService.getAccessToken();
   
-  const response = await fetch(`${BASE_URL}/users/${userId}/avatar`, {
+  const sanitizedId = sanitizeObjectId(userId);
+  const response = await fetch(`${BASE_URL}/users/${sanitizedId}/avatar`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'multipart/form-data',
-    },
+          headers: {
+        'Authorization': `Bearer ${token}`,
+      },
     body: formData,
   });
 

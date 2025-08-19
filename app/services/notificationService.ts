@@ -1,3 +1,4 @@
+import { sanitizeObjectId } from "../utils/validation";
 import apiService from "./apiService";
 
 export interface Notification {
@@ -181,8 +182,9 @@ class NotificationService {
    */
   async markAsRead(notificationId: string): Promise<MarkReadResponse> {
     try {
+      const sanitizedId = sanitizeObjectId(notificationId);
       const response = await apiService.post(
-        `/notifications/${notificationId}/mark-read`
+        `/notifications/${sanitizedId}/mark-read`
       );
       return response.data;
     } catch (error) {
@@ -211,8 +213,9 @@ class NotificationService {
     notificationId: string
   ): Promise<DeleteNotificationResponse> {
     try {
+      const sanitizedId = sanitizeObjectId(notificationId);
       const response = await apiService.delete(
-        `/notifications/${notificationId}`
+        `/notifications/${sanitizedId}`
       );
       return response.data;
     } catch (error) {
@@ -228,7 +231,8 @@ class NotificationService {
     notificationId: string
   ): Promise<{ success: boolean; data: Notification }> {
     try {
-      const response = await apiService.get(`/notifications/${notificationId}`);
+      const sanitizedId = sanitizeObjectId(notificationId);
+      const response = await apiService.get(`/notifications/${sanitizedId}`);
       return response.data;
     } catch (error) {
       // API error handled silently

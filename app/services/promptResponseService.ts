@@ -233,7 +233,6 @@ export async function createResponse(data: CreatePromptResponseData): Promise<Pr
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'multipart/form-data',
     },
     body: formData,
   });
@@ -294,7 +293,6 @@ export async function updateResponse(responseId: string, data: UpdatePromptRespo
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'multipart/form-data',
     },
     body: formData,
   });
@@ -451,7 +449,6 @@ export async function addAttachments(responseId: string, files: File[]): Promise
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'multipart/form-data',
     },
     body: formData,
   });
@@ -608,7 +605,6 @@ export async function replaceAttachments(responseId: string, files: File[]): Pro
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'multipart/form-data',
     },
     body: formData,
   });

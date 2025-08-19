@@ -1,3 +1,4 @@
+import { sanitizeObjectId } from '../utils/validation';
 import apiService from "./apiService";
 
 // Type definitions
@@ -141,7 +142,8 @@ export async function getPrompts(
 
 export async function getPrompt(promptId: string): Promise<Prompt> {
   try {
-    const response = await apiService.get(`/prompts/${promptId}`);
+    const sanitizedId = sanitizeObjectId(promptId);
+    const response = await apiService.get(`/prompts/${sanitizedId}`);
     const data = response.data || response;
     return mapPromptFromApi(data);
   } catch (error: any) {
@@ -178,7 +180,8 @@ export async function updatePrompt(
   data: UpdatePromptData
 ): Promise<Prompt> {
   try {
-    const response = await apiService.put(`/prompts/${promptId}`, data);
+    const sanitizedId = sanitizeObjectId(promptId);
+    const response = await apiService.put(`/prompts/${sanitizedId}`, data);
     const responseData = response.data || response;
     return mapPromptFromApi(responseData);
   } catch (error: any) {
@@ -189,7 +192,8 @@ export async function updatePrompt(
 
 export async function deletePrompt(promptId: string): Promise<void> {
   try {
-    await apiService.delete(`/prompts/${promptId}`);
+    const sanitizedId = sanitizeObjectId(promptId);
+    await apiService.delete(`/prompts/${sanitizedId}`);
   } catch (error: any) {
     // API error handled silently
     throw error;

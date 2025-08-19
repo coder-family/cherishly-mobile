@@ -1,3 +1,4 @@
+import { sanitizeObjectId } from '../utils/validation';
 import apiService, { ApiResponse } from './apiService';
 
 // Types
@@ -115,7 +116,8 @@ class CommentService {
 
   async updateComment(commentId: string, data: UpdateCommentData): Promise<Comment> {
     try {
-      const response = await apiService.put(`/comments/${commentId}`, data) as any;
+      const sanitizedId = sanitizeObjectId(commentId);
+      const response = await apiService.put(`/comments/${sanitizedId}`, data) as any;
       
       // Handle both response formats
       if (response.success) {
@@ -134,7 +136,8 @@ class CommentService {
 
   async deleteComment(commentId: string): Promise<void> {
     try {
-      const response = await apiService.delete(`/comments/${commentId}`) as ApiResponse;
+      const sanitizedId = sanitizeObjectId(commentId);
+      const response = await apiService.delete(`/comments/${sanitizedId}`) as ApiResponse;
       if (!response.success) {
         throw new Error(response.message || 'Failed to delete comment');
       }
@@ -146,7 +149,8 @@ class CommentService {
 
   async getComment(commentId: string): Promise<Comment> {
     try {
-      const response = await apiService.get(`/comments/${commentId}`) as CommentResponse;
+      const sanitizedId = sanitizeObjectId(commentId);
+      const response = await apiService.get(`/comments/${sanitizedId}`) as CommentResponse;
       if (response.success) {
         return response.data;
       } else {

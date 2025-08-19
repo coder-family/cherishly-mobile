@@ -28,11 +28,7 @@ export async function uploadFile(fileUri: string, type: 'avatar' | 'image' | 'vi
     formData.append('type', type);
     
     // Upload to server
-    const response = await apiService.post('/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await apiService.post('/upload', formData);
     
     return response.data || response;
   } catch (error: any) {
