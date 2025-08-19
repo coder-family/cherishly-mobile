@@ -299,7 +299,7 @@ export default function ChildProfileScreen() {
     healthRecords,
     growthRecords,
     prompts,
-    // currentUser,
+    currentUser,
   ]);
 
   // Filter timeline items based on user permissions
