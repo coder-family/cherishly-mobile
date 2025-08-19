@@ -111,45 +111,35 @@ function mapPromptFromApi(apiPrompt: any): Prompt {
 export async function getPrompts(
   params: GetPromptsParams = {}
 ): Promise<{ prompts: Prompt[]; total: number; page: number; limit: number }> {
-  try {
-    const queryParams = new URLSearchParams();
+  const queryParams = new URLSearchParams();
 
-    if (params.page) queryParams.append("page", params.page.toString());
-    if (params.limit) queryParams.append("limit", params.limit.toString());
-    if (params.category) queryParams.append("category", params.category);
-    if (params.tags) queryParams.append("tags", params.tags.join(","));
-    if (params.isActive !== undefined)
-      queryParams.append("isActive", params.isActive.toString());
-    if (params.search) queryParams.append("search", params.search);
+  if (params.page) queryParams.append("page", params.page.toString());
+  if (params.limit) queryParams.append("limit", params.limit.toString());
+  if (params.category) queryParams.append("category", params.category);
+  if (params.tags) queryParams.append("tags", params.tags.join(","));
+  if (params.isActive !== undefined)
+    queryParams.append("isActive", params.isActive.toString());
+  if (params.search) queryParams.append("search", params.search);
 
-    const response = await apiService.get(`/prompts?${queryParams.toString()}`);
-    const data = response.data || response;
+  const response = await apiService.get(`/prompts?${queryParams.toString()}`);
+  const data = response.data || response;
 
-    // Map the prompts to ensure they have the correct structure
-    const mappedPrompts = (data.prompts || []).map(mapPromptFromApi);
+  // Map the prompts to ensure they have the correct structure
+  const mappedPrompts = (data.prompts || []).map(mapPromptFromApi);
 
-    return {
-      prompts: mappedPrompts,
-      total: data.total || 0,
-      page: data.currentPage || 1,
-      limit: data.limit || 10,
-    };
-  } catch (error: any) {
-    // API error handled silently
-    throw error;
-  }
+  return {
+    prompts: mappedPrompts,
+    total: data.total || 0,
+    page: data.currentPage || 1,
+    limit: data.limit || 10,
+  };
 }
 
 export async function getPrompt(promptId: string): Promise<Prompt> {
-  try {
-    const sanitizedId = sanitizeObjectId(promptId);
-    const response = await apiService.get(`/prompts/${sanitizedId}`);
-    const data = response.data || response;
-    return mapPromptFromApi(data);
-  } catch (error: any) {
-    // API error handled silently
-    throw error;
-  }
+  const sanitizedId = sanitizeObjectId(promptId);
+  const response = await apiService.get(`/prompts/${sanitizedId}`);
+  const data = response.data || response;
+  return mapPromptFromApi(data);
 }
 
 export async function createPrompt(data: CreatePromptData): Promise<Prompt> {
@@ -170,7 +160,7 @@ export async function createPrompt(data: CreatePromptData): Promise<Prompt> {
     const responseData = response.data || response;
     return mapPromptFromApi(responseData);
   } catch (error: any) {
-    // API error handled silently
+    console.error("Error creating prompt:", error);
     throw error;
   }
 }
@@ -179,25 +169,15 @@ export async function updatePrompt(
   promptId: string,
   data: UpdatePromptData
 ): Promise<Prompt> {
-  try {
-    const sanitizedId = sanitizeObjectId(promptId);
-    const response = await apiService.put(`/prompts/${sanitizedId}`, data);
-    const responseData = response.data || response;
-    return mapPromptFromApi(responseData);
-  } catch (error: any) {
-    // API error handled silently
-    throw error;
-  }
+  const sanitizedId = sanitizeObjectId(promptId);
+  const response = await apiService.put(`/prompts/${sanitizedId}`, data);
+  const responseData = response.data || response;
+  return mapPromptFromApi(responseData);
 }
 
 export async function deletePrompt(promptId: string): Promise<void> {
-  try {
-    const sanitizedId = sanitizeObjectId(promptId);
-    await apiService.delete(`/prompts/${sanitizedId}`);
-  } catch (error: any) {
-    // API error handled silently
-    throw error;
-  }
+  const sanitizedId = sanitizeObjectId(promptId);
+  await apiService.delete(`/prompts/${sanitizedId}`);
 }
 
 export async function getPromptResponses(
@@ -209,18 +189,13 @@ export async function getPromptResponses(
   page: number;
   limit: number;
 }> {
-  try {
-    const queryParams = new URLSearchParams();
+  const queryParams = new URLSearchParams();
 
-    if (params.page) queryParams.append("page", params.page.toString());
-    if (params.limit) queryParams.append("limit", params.limit.toString());
+  if (params.page) queryParams.append("page", params.page.toString());
+  if (params.limit) queryParams.append("limit", params.limit.toString());
 
-    const response = await apiService.get(
-      `/prompts/${promptId}/responses?${queryParams.toString()}`
-    );
-    return response.data || response;
-  } catch (error: any) {
-    // API error handled silently
-    throw error;
-  }
+  const response = await apiService.get(
+    `/prompts/${promptId}/responses?${queryParams.toString()}`
+  );
+  return response.data || response;
 }
