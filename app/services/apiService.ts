@@ -15,9 +15,25 @@ interface ApiResponse<T = any> {
   success?: boolean;
 }
 
+// Determine the correct API URL based on environment
+const getApiBaseUrl = () => {
+  // Check if we're in a web environment (Netlify)
+  const isWeb = typeof window !== 'undefined';
+  
+  // If API_BASE_URL is set, use it
+  if (API_BASE_URL) {
+    conditionalLog.api('Using API_BASE_URL from env:', API_BASE_URL);
+    return API_BASE_URL;
+  }
+  
+  // Fallback to production URL
+  const fallbackUrl = "https://growing-together-app.onrender.com/api";
+  conditionalLog.api('Using fallback API URL:', fallbackUrl);
+  return fallbackUrl;
+};
+
 const apiService = axios.create({
-    // baseURL: "https://growing-together-app.onrender.com/api",
-    baseURL: API_BASE_URL || "https://growing-together-app.onrender.com/api",
+    baseURL: getApiBaseUrl(),
     timeout: 30000, 
     headers: {
       "Content-Type": "application/json",
@@ -26,7 +42,7 @@ const apiService = axios.create({
 });
 
 // Export the base URL for use in other parts of the app
-export const API_BASE_URL_EXPORT = API_BASE_URL;
+export const API_BASE_URL_EXPORT = getApiBaseUrl();
 
 // Request interceptor for authentication
 apiService.interceptors.request.use(
