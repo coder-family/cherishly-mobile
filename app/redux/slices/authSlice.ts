@@ -115,10 +115,22 @@ const authSlice = createSlice({
         state.error = action.error.message || 'Registration failed';
       })
       // Logout
+      .addCase(logoutUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(logoutUser.fulfilled, (state) => {
         state.isAuthenticated = false;
         state.user = null;
+        state.loading = false;
         state.error = null;
+      })
+      .addCase(logoutUser.rejected, (state, action) => {
+        // Even if logout fails, we should still clear the auth state
+        state.isAuthenticated = false;
+        state.user = null;
+        state.loading = false;
+        state.error = action.error.message || 'Logout failed';
       });
   },
 });
