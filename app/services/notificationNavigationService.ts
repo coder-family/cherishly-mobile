@@ -104,25 +104,20 @@ class NotificationNavigationService {
     notificationId: string,
     token: string
   ): Promise<NotificationNavigationResponse> {
-    try {
-      const response = await fetch(`${this.apiBaseUrl}/api/notifications/${notificationId}/navigation`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+    const response = await fetch(`${this.apiBaseUrl}/api/notifications/${notificationId}/navigation`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      // Navigation info error handled silently
-      throw error;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const data = await response.json();
+    return data;
   }
 
   /**
