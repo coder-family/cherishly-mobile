@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "@env";
 import { conditionalLog } from "../utils/logUtils";
+import { sanitizeObjectId } from '../utils/validation';
 import apiService from "./apiService";
 import authService from "./authService";
 
@@ -135,7 +136,8 @@ export async function getMyOwnChildren(): Promise<Child[]> {
 }
 
 export async function getChild(childId: string): Promise<Child> {
-  const response = await apiService.get(`/children/${childId}`);
+  const sanitizedId = sanitizeObjectId(childId);
+  const response = await apiService.get(`/children/${sanitizedId}`);
   const apiChild: ApiChild = response.data || response;
   return transformChild(apiChild);
 }
@@ -186,11 +188,11 @@ export async function updateChild(
 
       // Use fetch for FormData upload
       const token = await authService.getAccessToken();
-      const response = await fetch(`${BASE_URL}/children/${childId}`, {
+      const sanitizedId = sanitizeObjectId(childId);
+      const response = await fetch(`${BASE_URL}/children/${sanitizedId}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
         },
         body: formData,
       });
@@ -252,7 +254,8 @@ export async function updateChild(
 }
 
 export async function deleteChild(childId: string): Promise<void> {
-  await apiService.delete(`/children/${childId}`);
+  const sanitizedId = sanitizeObjectId(childId);
+  await apiService.delete(`/children/${sanitizedId}`);
 }
 
 export async function uploadAvatar(
@@ -275,11 +278,11 @@ export async function uploadAvatar(
   // Use a separate axios instance for file uploads to avoid JSON content-type issues
   const token = await authService.getAccessToken();
 
-  const response = await fetch(`${BASE_URL}/children/${childId}/avatar`, {
+  const sanitizedId = sanitizeObjectId(childId);
+  const response = await fetch(`${BASE_URL}/children/${sanitizedId}/avatar`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "multipart/form-data",
     },
     body: formData,
   });

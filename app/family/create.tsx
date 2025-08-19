@@ -79,7 +79,7 @@ export default function CreateFamilyGroupScreen() {
       // Refresh family groups to show updated avatar
       dispatch(fetchFamilyGroups());
     } catch (avatarError) {
-      console.warn('Avatar upload failed, but group was created:', avatarError);
+      // Avatar upload failed, but group was created
       // Don't fail the entire operation if avatar upload fails
     }
   };
@@ -103,7 +103,7 @@ export default function CreateFamilyGroupScreen() {
 
   // Handle submission errors
   const handleSubmissionError = (err: unknown) => {
-    console.error('Error creating family group:', err);
+    // Create family group error handled silently
     let errorMessage = 'Failed to create family group. Please try again.';
     if (err instanceof Error) {
       errorMessage = err.message || errorMessage;
@@ -161,7 +161,6 @@ export default function CreateFamilyGroupScreen() {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
       },
       body: formData,
     });

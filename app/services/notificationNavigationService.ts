@@ -86,7 +86,7 @@ class NotificationNavigationService {
       // Fallback: điều hướng về Home
       this.navigateToHome(navigation);
     } catch (error) {
-      console.error('🔍 [NotificationNavigation] Error handling notification click:', error);
+      // Navigation error handled silently
       
       // Fallback: điều hướng về Home
       Alert.alert(
@@ -104,25 +104,20 @@ class NotificationNavigationService {
     notificationId: string,
     token: string
   ): Promise<NotificationNavigationResponse> {
-    try {
-      const response = await fetch(`${this.apiBaseUrl}/api/notifications/${notificationId}/navigation`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+    const response = await fetch(`${this.apiBaseUrl}/api/notifications/${notificationId}/navigation`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('🔍 [NotificationNavigation] Error fetching navigation info:', error);
-      throw error;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const data = await response.json();
+    return data;
   }
 
   /**
@@ -144,7 +139,7 @@ class NotificationNavigationService {
       // Fallback: sử dụng navigation trực tiếp
       await this.navigateByTargetType(targetType, targetId, childId || targetId, navigation);
     } catch (error) {
-      console.error('🔍 [NotificationNavigation] Error navigating to content:', error);
+      // Content navigation error handled silently
       throw error;
     }
   }
@@ -177,7 +172,7 @@ class NotificationNavigationService {
         // Không cần điều hướng gì cả
         break;
       default:
-        console.warn('🔍 [NotificationNavigation] Unknown target type:', targetType);
+        // Unknown target type handled silently
         this.navigateToHome(navigation);
     }
   }
@@ -200,7 +195,7 @@ class NotificationNavigationService {
       // Điều hướng đến child profile với focusPost
       router.push(`/children/${childId}/profile?focusPost=${targetId}&postType=${postType}`);
     } catch (error) {
-      console.error('🔍 [NotificationNavigation] Error navigating to child profile:', error);
+      // Child profile navigation error handled silently
       this.navigateToHome(navigation);
     }
   }
@@ -212,7 +207,7 @@ class NotificationNavigationService {
     try {
       router.push(`/family/${groupId}`);
     } catch (error) {
-      console.error('🔍 [NotificationNavigation] Error navigating to family group:', error);
+      // Family group navigation error handled silently
       this.navigateToHome(navigation);
     }
   }
@@ -224,7 +219,7 @@ class NotificationNavigationService {
     try {
       router.push('/tabs/home');
     } catch (error) {
-      console.error('🔍 [NotificationNavigation] Error navigating to home:', error);
+      // Home navigation error handled silently
       // Final fallback - do nothing
     }
   }

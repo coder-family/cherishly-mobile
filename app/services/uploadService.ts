@@ -28,15 +28,11 @@ export async function uploadFile(fileUri: string, type: 'avatar' | 'image' | 'vi
     formData.append('type', type);
     
     // Upload to server
-    const response = await apiService.post('/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await apiService.post('/upload', formData);
     
     return response.data || response;
   } catch (error: any) {
-    console.error('Upload error:', error);
+    // Upload error handled silently
     throw new Error(error.message || 'Failed to upload file');
   }
 }
@@ -46,7 +42,7 @@ export async function uploadAvatar(fileUri: string): Promise<string> {
     const result = await uploadFile(fileUri, 'avatar');
     return result.url;
   } catch (error: any) {
-    console.error('Avatar upload error:', error);
+    // Avatar upload error handled silently
     throw new Error('Failed to upload avatar');
   }
 }

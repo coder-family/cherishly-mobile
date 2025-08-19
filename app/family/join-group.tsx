@@ -2,13 +2,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import MyInvitationsSection from '../components/family/MyInvitationsSection';
 import ScreenWithFooter from '../components/layout/ScreenWithFooter';
@@ -26,7 +26,13 @@ export default function JoinGroupScreen() {
     try {
       await dispatch(getMyPendingInvitations()).unwrap();
     } catch (error) {
-      console.error('Error fetching invitations:', error);
+      // Show user-friendly error message
+      Alert.alert(
+        'Error',
+        'Failed to load invitations. Please check your connection and try again.',
+        [{ text: 'OK' }]
+      );
+      console.error('Failed to fetch invitations:', error);
     }
   }, [dispatch]);
 

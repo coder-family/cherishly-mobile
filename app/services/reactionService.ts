@@ -58,10 +58,10 @@ export async function getReactions(
       : (Object.values(reactions) as (ReactionEntry[] | undefined)[])
           .reduce((acc: number, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0);
     return { reactions, total } as GetReactionsResponse;
-  } catch (error) {
-    console.error('❌ Error getting reactions:', error);
-    throw error;
-  }
+      } catch (error) {
+      // API error handled silently
+      throw error;
+    }
 }
 
 export async function setReaction(
@@ -69,28 +69,38 @@ export async function setReaction(
   targetId: string,
   type: ReactionType
 ): Promise<void> {
+  // Validate targetId before making API call
+  if (!validateObjectId(targetId)) {
+    throw new Error('Invalid targetId: must be a valid MongoDB ObjectId');
+  }
+
   try {
     const requestBody = { targetType, targetId, type };
     
     await apiService.post(`/reactions`, requestBody);
-  } catch (error) {
-    console.error('❌ Error setting reaction:', error);
-    throw error;
-  }
+      } catch (error) {
+      // API error handled silently
+      throw error;
+    }
 }
 
 export async function deleteReaction(
   targetType: TargetType,
   targetId: string
 ): Promise<void> {
+  // Validate targetId before making API call
+  if (!validateObjectId(targetId)) {
+    throw new Error('Invalid targetId: must be a valid MongoDB ObjectId');
+  }
+
   try {
     const params = { targetType, targetId };
     
     await apiService.delete(`/reactions`, { params });
-  } catch (error) {
-    console.error('❌ Error deleting reaction:', error);
-    throw error;
-  }
+      } catch (error) {
+      // API error handled silently
+      throw error;
+    }
 }
 
 export function getReactionUsers(reactions: ReactionEntry[], type: string): ReactionUser[] {

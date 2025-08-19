@@ -1,3 +1,4 @@
+import { sanitizeObjectId } from '../utils/validation';
 import apiService from "./apiService";
 
 // Type definitions
@@ -134,23 +135,24 @@ export async function getPrompts(
       limit: data.limit || 10,
     };
   } catch (error: any) {
-    console.error('promptService: Error getting prompts:', error);
-    console.error('promptService: Error response:', error.response);
-    console.error('promptService: Error data:', error.response?.data);
-    throw error;
+    // Log the error for debugging and monitoring
+    console.error('Error fetching prompts:', error);
+    // Wrap the error with additional context
+    throw new Error(`Failed to fetch prompts: ${error.message}`);
   }
 }
 
 export async function getPrompt(promptId: string): Promise<Prompt> {
   try {
-    const response = await apiService.get(`/prompts/${promptId}`);
+    const sanitizedId = sanitizeObjectId(promptId);
+    const response = await apiService.get(`/prompts/${sanitizedId}`);
     const data = response.data || response;
     return mapPromptFromApi(data);
   } catch (error: any) {
-    console.error('promptService: Error getting prompt:', error);
-    console.error('promptService: Error response:', error.response);
-    console.error('promptService: Error data:', error.response?.data);
-    throw error;
+    // Log the error for debugging and monitoring
+    console.error(`Error fetching prompt ${promptId}:`, error);
+    // Wrap the error with additional context
+    throw new Error(`Failed to fetch prompt ${promptId}: ${error.message}`);
   }
 }
 
@@ -172,10 +174,10 @@ export async function createPrompt(data: CreatePromptData): Promise<Prompt> {
     const responseData = response.data || response;
     return mapPromptFromApi(responseData);
   } catch (error: any) {
-    console.error('promptService: Error creating prompt:', error);
-    console.error('promptService: Error response:', error.response);
-    console.error('promptService: Error data:', error.response?.data);
-    throw error;
+    // Log the error for debugging and monitoring
+    console.error('Error creating prompt:', error);
+    // Wrap the error with additional context
+    throw new Error(`Failed to create prompt: ${error.message}`);
   }
 }
 
@@ -184,25 +186,27 @@ export async function updatePrompt(
   data: UpdatePromptData
 ): Promise<Prompt> {
   try {
-    const response = await apiService.put(`/prompts/${promptId}`, data);
+    const sanitizedId = sanitizeObjectId(promptId);
+    const response = await apiService.put(`/prompts/${sanitizedId}`, data);
     const responseData = response.data || response;
     return mapPromptFromApi(responseData);
   } catch (error: any) {
-    console.error('promptService: Error updating prompt:', error);
-    console.error('promptService: Error response:', error.response);
-    console.error('promptService: Error data:', error.response?.data);
-    throw error;
+    // Log the error for debugging and monitoring
+    console.error(`Error updating prompt ${promptId}:`, error);
+    // Wrap the error with additional context
+    throw new Error(`Failed to update prompt ${promptId}: ${error.message}`);
   }
 }
 
 export async function deletePrompt(promptId: string): Promise<void> {
   try {
-    await apiService.delete(`/prompts/${promptId}`);
+    const sanitizedId = sanitizeObjectId(promptId);
+    await apiService.delete(`/prompts/${sanitizedId}`);
   } catch (error: any) {
-    console.error('promptService: Error deleting prompt:', error);
-    console.error('promptService: Error response:', error.response);
-    console.error('promptService: Error data:', error.response?.data);
-    throw error;
+    // Log the error for debugging and monitoring
+    console.error(`Error deleting prompt ${promptId}:`, error);
+    // Wrap the error with additional context
+    throw new Error(`Failed to delete prompt ${promptId}: ${error.message}`);
   }
 }
 
@@ -226,9 +230,9 @@ export async function getPromptResponses(
     );
     return response.data || response;
   } catch (error: any) {
-    console.error('promptService: Error getting prompt responses:', error);
-    console.error('promptService: Error response:', error.response);
-    console.error('promptService: Error data:', error.response?.data);
-    throw error;
+    // Log the error for debugging and monitoring
+    console.error(`Error fetching prompt responses for prompt ${promptId}:`, error);
+    // Wrap the error with additional context
+    throw new Error(`Failed to fetch prompt responses for prompt ${promptId}: ${error.message}`);
   }
 }

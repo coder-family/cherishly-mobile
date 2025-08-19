@@ -3,8 +3,6 @@ import React, { useState } from "react";
 import { Alert, Button, StyleSheet, Text, View } from "react-native";
 import PasswordInput from "./components/form/PasswordInput";
 import { changePassword } from "./services/authService";
-import { sanitizeError } from "./utils/logUtils";
-import ScreenWithFooter from '../components/layout/ScreenWithFooter';
 
 export default function ChangePasswordScreen() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -29,7 +27,7 @@ export default function ChangePasswordScreen() {
       router.back();
     } catch (err: any) {
       Alert.alert("Error", err?.message || "Failed to change password");
-      console.error("Change password error:", sanitizeError(err));
+      // Password change error handled silently
     } finally {
       setLoading(false);
     }

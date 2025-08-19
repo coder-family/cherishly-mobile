@@ -141,7 +141,7 @@ export default function JoinFromInvitationScreen() {
         ]
       );
     } catch (err: any) {
-      console.error('Error joining group from invitation:', err);
+      // Join group error handled silently
       Alert.alert(
         'Error',
         err.message || 'Failed to create account and join group. Please try again.'
