@@ -1118,6 +1118,499 @@ export default function ChildProfileScreen() {
       );
     }
 
+    // For Q&A tab, use collapsible header layout
+    if (activeTab === "qa") {
+      return (
+        <View style={styles.container}>
+          {/* Fixed App Header */}
+          <View style={styles.fixedAppHeader}>
+            <AppHeader
+              title={
+                currentChild
+                  ? `${getDisplayName(currentChild)}'s Profile`
+                  : "Child Profile"
+              }
+              onBack={handleBack}
+              onSearchChange={handleSearch}
+              searchPlaceholder={`Search for ${
+                currentChild ? getDisplayName(currentChild) : "child"
+              }'s memories, milestones, health records...`}
+              showBackButton={true}
+              canGoBack={true}
+              showLogoutButton={true}
+            />
+          </View>
+
+          {/* Collapsible Header */}
+          <Animated.View
+            style={[
+              styles.collapsibleHeader,
+              {
+                transform: [{ translateY: headerTranslateY }],
+                zIndex: 1000,
+              },
+            ]}
+          >
+            {/* Child Header */}
+            <View style={styles.childHeader}>
+              <View style={styles.childInfo}>
+                {currentChild.avatarUrl ? (
+                  <Image
+                    source={{ uri: currentChild.avatarUrl }}
+                    style={styles.childAvatar}
+                  />
+                ) : (
+                  <View style={styles.childAvatarPlaceholder}>
+                    <MaterialIcons name="person" size={60} color="#ccc" />
+                  </View>
+                )}
+                <View style={styles.childDetails}>
+                  <Text style={styles.childName}>
+                    {getDisplayName(currentChild)}
+                  </Text>
+                  <Text style={styles.childAge}>
+                    {getAge(currentChild.birthdate)}
+                  </Text>
+                  <Text style={styles.childBirthdate}>
+                    Born {formatDate(currentChild.birthdate)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Tab Navigation */}
+            <View style={styles.tabContainer}>
+              {[
+                { key: "timeline", label: "Timeline", icon: "timeline" },
+                { key: "health", label: "Health", icon: "medical-services" },
+                { key: "memories", label: "Memories", icon: "photo" },
+                { key: "qa", label: "Q&A", icon: "help" },
+                { key: "profile", label: "Profile", icon: "person" },
+              ].map((tab) => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tabButton,
+                    activeTab === tab.key && styles.activeTabButton,
+                  ]}
+                  onPress={() => {
+                    setActiveTab(tab.key as TabType);
+                  }}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                >
+                  <MaterialIcons
+                    name={tab.icon as any}
+                    size={20}
+                    color={activeTab === tab.key ? "#4f8cff" : "#666"}
+                  />
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === tab.key && styles.activeTabText,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
+
+          {/* Scrollable Content */}
+          <Animated.ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollableContent}
+            contentContainerStyle={[
+              styles.scrollableContentContainer,
+              { paddingTop: 80 + headerHeight + 20 }, // AppHeader height + collapsible header height + padding
+            ]}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Q&A Content */}
+            <QAContent
+              childId={id!}
+              useScrollView={true}
+              editingItem={editingQAItem}
+            />
+          </Animated.ScrollView>
+        </View>
+      );
+    }
+
+    // For Health tab, use collapsible header layout
+    if (activeTab === "health") {
+      return (
+        <View style={styles.container}>
+          {/* Fixed App Header */}
+          <View style={styles.fixedAppHeader}>
+            <AppHeader
+              title={
+                currentChild
+                  ? `${getDisplayName(currentChild)}'s Profile`
+                  : "Child Profile"
+              }
+              onBack={handleBack}
+              onSearchChange={handleSearch}
+              searchPlaceholder={`Search for ${
+                currentChild ? getDisplayName(currentChild) : "child"
+              }'s memories, milestones, health records...`}
+              showBackButton={true}
+              canGoBack={true}
+              showLogoutButton={true}
+            />
+          </View>
+
+          {/* Collapsible Header */}
+          <Animated.View
+            style={[
+              styles.collapsibleHeader,
+              {
+                transform: [{ translateY: headerTranslateY }],
+                zIndex: 1000,
+              },
+            ]}
+          >
+            {/* Child Header */}
+            <View style={styles.childHeader}>
+              <View style={styles.childInfo}>
+                {currentChild.avatarUrl ? (
+                  <Image
+                    source={{ uri: currentChild.avatarUrl }}
+                    style={styles.childAvatar}
+                  />
+                ) : (
+                  <View style={styles.childAvatarPlaceholder}>
+                    <MaterialIcons name="person" size={60} color="#ccc" />
+                  </View>
+                )}
+                <View style={styles.childDetails}>
+                  <Text style={styles.childName}>
+                    {getDisplayName(currentChild)}
+                  </Text>
+                  <Text style={styles.childAge}>
+                    {getAge(currentChild.birthdate)}
+                  </Text>
+                  <Text style={styles.childBirthdate}>
+                    Born {formatDate(currentChild.birthdate)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Tab Navigation */}
+            <View style={styles.tabContainer}>
+              {[
+                { key: "timeline", label: "Timeline", icon: "timeline" },
+                { key: "health", label: "Health", icon: "medical-services" },
+                { key: "memories", label: "Memories", icon: "photo" },
+                { key: "qa", label: "Q&A", icon: "help" },
+                { key: "profile", label: "Profile", icon: "person" },
+              ].map((tab) => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tabButton,
+                    activeTab === tab.key && styles.activeTabButton,
+                  ]}
+                  onPress={() => {
+                    setActiveTab(tab.key as TabType);
+                  }}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                >
+                  <MaterialIcons
+                    name={tab.icon as any}
+                    size={20}
+                    color={activeTab === tab.key ? "#4f8cff" : "#666"}
+                  />
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === tab.key && styles.activeTabText,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
+
+          {/* Scrollable Content */}
+          <Animated.ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollableContent}
+            contentContainerStyle={[
+              styles.scrollableContentContainer,
+              { paddingTop: 80 + headerHeight + 20 }, // AppHeader height + collapsible header height + padding
+            ]}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Health Content */}
+            <HealthContent
+              childId={id!}
+              editingHealthItem={editingHealthItem}
+              editingGrowthItem={editingGrowthItem}
+              onEditComplete={handleHealthEditComplete}
+            />
+          </Animated.ScrollView>
+        </View>
+      );
+    }
+
+    // For Profile tab, use collapsible header layout
+    if (activeTab === "profile") {
+      return (
+        <View style={styles.container}>
+          {/* Fixed App Header */}
+          <View style={styles.fixedAppHeader}>
+            <AppHeader
+              title={
+                currentChild
+                  ? `${getDisplayName(currentChild)}'s Profile`
+                  : "Child Profile"
+              }
+              onBack={handleBack}
+              onSearchChange={handleSearch}
+              searchPlaceholder={`Search for ${
+                currentChild ? getDisplayName(currentChild) : "child"
+              }'s memories, milestones, health records...`}
+              showBackButton={true}
+              canGoBack={true}
+              showLogoutButton={true}
+            />
+          </View>
+
+          {/* Collapsible Header */}
+          <Animated.View
+            style={[
+              styles.collapsibleHeader,
+              {
+                transform: [{ translateY: headerTranslateY }],
+                zIndex: 1000,
+              },
+            ]}
+          >
+            {/* Child Header */}
+            <View style={styles.childHeader}>
+              <View style={styles.childInfo}>
+                {currentChild.avatarUrl ? (
+                  <Image
+                    source={{ uri: currentChild.avatarUrl }}
+                    style={styles.childAvatar}
+                  />
+                ) : (
+                  <View style={styles.childAvatarPlaceholder}>
+                    <MaterialIcons name="person" size={60} color="#ccc" />
+                  </View>
+                )}
+                <View style={styles.childDetails}>
+                  <Text style={styles.childName}>
+                    {getDisplayName(currentChild)}
+                  </Text>
+                  <Text style={styles.childAge}>
+                    {getAge(currentChild.birthdate)}
+                  </Text>
+                  <Text style={styles.childBirthdate}>
+                    Born {formatDate(currentChild.birthdate)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Tab Navigation */}
+            <View style={styles.tabContainer}>
+              {[
+                { key: "timeline", label: "Timeline", icon: "timeline" },
+                { key: "health", label: "Health", icon: "medical-services" },
+                { key: "memories", label: "Memories", icon: "photo" },
+                { key: "qa", label: "Q&A", icon: "help" },
+                { key: "profile", label: "Profile", icon: "person" },
+              ].map((tab) => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tabButton,
+                    activeTab === tab.key && styles.activeTabButton,
+                  ]}
+                  onPress={() => {
+                    setActiveTab(tab.key as TabType);
+                  }}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                >
+                  <MaterialIcons
+                    name={tab.icon as any}
+                    size={20}
+                    color={activeTab === tab.key ? "#4f8cff" : "#666"}
+                  />
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === tab.key && styles.activeTabText,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
+
+          {/* Scrollable Content */}
+          <Animated.ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollableContent}
+            contentContainerStyle={[
+              styles.scrollableContentContainer,
+              { paddingTop: 80 + headerHeight + 20 }, // AppHeader height + collapsible header height + padding
+            ]}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Profile Content */}
+            {renderProfileContent()}
+          </Animated.ScrollView>
+        </View>
+      );
+    }
+
+    // For Timeline tab, use collapsible header layout
+    if (activeTab === "timeline") {
+      return (
+        <View style={styles.container}>
+          {/* Fixed App Header */}
+          <View style={styles.fixedAppHeader}>
+            <AppHeader
+              title={
+                currentChild
+                  ? `${getDisplayName(currentChild)}'s Profile`
+                  : "Child Profile"
+              }
+              onBack={handleBack}
+              onSearchChange={handleSearch}
+              searchPlaceholder={`Search for ${
+                currentChild ? getDisplayName(currentChild) : "child"
+              }'s memories, milestones, health records...`}
+              showBackButton={true}
+              canGoBack={true}
+              showLogoutButton={true}
+            />
+          </View>
+
+          {/* Collapsible Header */}
+          <Animated.View
+            style={[
+              styles.collapsibleHeader,
+              {
+                transform: [{ translateY: headerTranslateY }],
+                zIndex: 1000,
+              },
+            ]}
+          >
+            {/* Child Header */}
+            <View style={styles.childHeader}>
+              <View style={styles.childInfo}>
+                {currentChild.avatarUrl ? (
+                  <Image
+                    source={{ uri: currentChild.avatarUrl }}
+                    style={styles.childAvatar}
+                  />
+                ) : (
+                  <View style={styles.childAvatarPlaceholder}>
+                    <MaterialIcons name="person" size={60} color="#ccc" />
+                  </View>
+                )}
+                <View style={styles.childDetails}>
+                  <Text style={styles.childName}>
+                    {getDisplayName(currentChild)}
+                  </Text>
+                  <Text style={styles.childAge}>
+                    {getAge(currentChild.birthdate)}
+                  </Text>
+                  <Text style={styles.childBirthdate}>
+                    Born {formatDate(currentChild.birthdate)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Tab Navigation */}
+            <View style={styles.tabContainer}>
+              {[
+                { key: "timeline", label: "Timeline", icon: "timeline" },
+                { key: "health", label: "Health", icon: "medical-services" },
+                { key: "memories", label: "Memories", icon: "photo" },
+                { key: "qa", label: "Q&A", icon: "help" },
+                { key: "profile", label: "Profile", icon: "person" },
+              ].map((tab) => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tabButton,
+                    activeTab === tab.key && styles.activeTabButton,
+                  ]}
+                  onPress={() => {
+                    setActiveTab(tab.key as TabType);
+                  }}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                >
+                  <MaterialIcons
+                    name={tab.icon as any}
+                    size={20}
+                    color={activeTab === tab.key ? "#4f8cff" : "#666"}
+                  />
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === tab.key && styles.activeTabText,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
+
+          {/* Scrollable Content */}
+          <Animated.ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollableContent}
+            contentContainerStyle={[
+              styles.scrollableContentContainer,
+              { paddingTop: 80 + headerHeight + 20 }, // AppHeader height + collapsible header height + padding
+            ]}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Timeline Content */}
+            {renderTimelineContent()}
+          </Animated.ScrollView>
+        </View>
+      );
+    }
+
     // For other tabs, use ScrollView
     return (
       <ScrollView ref={scrollViewRef} style={styles.container}>

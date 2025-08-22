@@ -2,6 +2,9 @@
   "expo": {
     "name": "Growing Together",
     "slug": "growing-together",
+    "extra": {
+      "apiUrl": "https://growing-together-app.onrender.com/api"
+    },
     "version": "1.0.0",
     "orientation": "default",
     "userInterfaceStyle": "light",

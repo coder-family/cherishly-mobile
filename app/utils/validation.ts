@@ -72,17 +72,22 @@ export const loginSchema = yup.object().shape({
 export const registerSchema = yup.object().shape({
   firstName: yup.string().required("First name is required"),
   lastName: yup.string().required("Last name is required"),
-  dateOfBirth: yup.string().required("Date of birth is required"),
+  dateOfBirth: yup
+    .string()
+    .matches(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+    .required("Date of birth is required"),
   email: yup.string().email("Email is invalid").required("Email is required"),
   password: yup
     .string()
-    .min(6, "Password must be at least 6 characters")
+    .min(8, "Password must be at least 8 characters")
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, 
+      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character")
     .required("Password is required"),
   confirmPassword: yup
     .string()
     .oneOf([yup.ref("password")], "Passwords do not match")
     .required("Confirm password is required"),
-  role: yup.string().oneOf(['parent', 'admin', 'member'], "Role must be parent, admin, or member").required("Role is required"),
+  role: yup.string().oneOf(['parent', 'admin', 'child'], "Role must be parent, admin, or child").required("Role is required"),
 });
 
 export const resetPasswordSchema = yup.object().shape({

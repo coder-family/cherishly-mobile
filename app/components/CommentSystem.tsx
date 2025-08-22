@@ -1,23 +1,23 @@
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
-import { useSelector } from 'react-redux';
-import { Colors } from '../constants/Colors';
-import { useThemeColor } from '../hooks/useThemeColor';
-import { RootState } from '../redux/store';
-import { commentService } from '../services/commentService';
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSelector } from "react-redux";
+import { Colors } from "../constants/Colors";
+import { useThemeColor } from "../hooks/useThemeColor";
+import { RootState } from "../redux/store";
+import { commentService } from "../services/commentService";
 
 // Types
 interface User {
@@ -30,7 +30,12 @@ interface User {
 interface Comment {
   _id: string;
   content: string;
-  targetType: 'promptResponse' | 'memory' | 'healthRecord' | 'growthRecord' | 'comment';
+  targetType:
+    | "promptResponse"
+    | "memory"
+    | "healthRecord"
+    | "growthRecord"
+    | "comment";
   targetId: string;
   user: User;
   parentComment?: string | null;
@@ -40,7 +45,12 @@ interface Comment {
 }
 
 interface CommentSystemProps {
-  targetType: 'promptResponse' | 'memory' | 'healthRecord' | 'growthRecord' | 'comment';
+  targetType:
+    | "promptResponse"
+    | "memory"
+    | "healthRecord"
+    | "growthRecord"
+    | "comment";
   targetId: string;
   useScrollView?: boolean; // Add this prop to handle nesting issues
   onCommentAdded?: (comment: Comment) => void;
@@ -56,12 +66,19 @@ const CommentInput: React.FC<{
   onCommentAdded: (comment: Comment) => void;
   onCancel?: () => void;
   placeholder?: string;
-}> = ({ targetType, targetId, parentCommentId = null, onCommentAdded, onCancel, placeholder }) => {
-  const [content, setContent] = useState('');
+}> = ({
+  targetType,
+  targetId,
+  parentCommentId = null,
+  onCommentAdded,
+  onCancel,
+  placeholder,
+}) => {
+  const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
-  const borderColor = '#e0e0e0';
+  const backgroundColor = useThemeColor({}, "background");
+  const textColor = useThemeColor({}, "text");
+  const borderColor = "#e0e0e0";
 
   const handleSubmit = async () => {
     if (!content.trim() || loading) return;
@@ -75,12 +92,12 @@ const CommentInput: React.FC<{
         parentCommentId,
       });
 
-      setContent('');
+      setContent("");
       onCommentAdded(newComment);
       onCancel?.();
     } catch (error) {
-      console.error('Error creating comment:', error);
-      Alert.alert('Lỗi', 'Không thể tạo bình luận. Vui lòng thử lại.');
+      console.error("Error creating comment:", error);
+      Alert.alert("Lỗi", "Không thể tạo bình luận. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -92,33 +109,36 @@ const CommentInput: React.FC<{
         style={styles.input}
         value={content}
         onChangeText={setContent}
-        placeholder={placeholder || (parentCommentId ? 'Viết reply...' : 'Viết bình luận...')}
+        placeholder={
+          placeholder ||
+          (parentCommentId ? "Viết reply..." : "Viết bình luận...")
+        }
         placeholderTextColor="#999"
         multiline
         maxLength={1000}
         editable={true}
       />
-              <View style={styles.inputActions}>
-          {onCancel && (
-            <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-              <Text style={styles.cancelButtonText}>Hủy</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              (!content.trim() || loading) && styles.submitButtonDisabled
-            ]}
-            onPress={handleSubmit}
-            disabled={!content.trim() || loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.submitButtonText}>Gửi</Text>
-            )}
+      <View style={styles.inputActions}>
+        {onCancel && (
+          <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+            <Text style={styles.cancelButtonText}>Hủy</Text>
           </TouchableOpacity>
-        </View>
+        )}
+        <TouchableOpacity
+          style={[
+            styles.submitButton,
+            (!content.trim() || loading) && styles.submitButtonDisabled,
+          ]}
+          onPress={handleSubmit}
+          disabled={!content.trim() || loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.submitButtonText}>Gửi</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -135,9 +155,9 @@ const CommentItem: React.FC<{
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const [loading, setLoading] = useState(false);
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
-  const borderColor = '#e0e0e0';
+  const backgroundColor = useThemeColor({}, "background");
+  const textColor = useThemeColor({}, "text");
+  const borderColor = "#e0e0e0";
 
   const handleReply = () => {
     onReply(comment._id);
@@ -148,41 +168,37 @@ const CommentItem: React.FC<{
 
     setLoading(true);
     try {
-              const updatedComment = await commentService.updateComment(comment._id, {
-          content: editContent.trim(),
-        });
+      const updatedComment = await commentService.updateComment(comment._id, {
+        content: editContent.trim(),
+      });
 
       onEdit(updatedComment);
       setIsEditing(false);
     } catch (error) {
-      console.error('Error updating comment:', error);
-      Alert.alert('Lỗi', 'Không thể cập nhật bình luận. Vui lòng thử lại.');
+      console.error("Error updating comment:", error);
+      Alert.alert("Lỗi", "Không thể cập nhật bình luận. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      'Xóa bình luận',
-      'Bạn có chắc chắn muốn xóa bình luận này?',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Xóa',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await commentService.deleteComment(comment._id);
-              onDelete(comment._id);
-            } catch (error) {
-              console.error('Error deleting comment:', error);
-              Alert.alert('Lỗi', 'Không thể xóa bình luận. Vui lòng thử lại.');
-            }
-          },
+    Alert.alert("Xóa bình luận", "Bạn có chắc chắn muốn xóa bình luận này?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await commentService.deleteComment(comment._id);
+            onDelete(comment._id);
+          } catch (error) {
+            console.error("Error deleting comment:", error);
+            Alert.alert("Lỗi", "Không thể xóa bình luận. Vui lòng thử lại.");
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const formatDate = (dateString: string) => {
@@ -200,7 +216,7 @@ const CommentItem: React.FC<{
     } else if (diffInMinutes > 0) {
       return `${diffInMinutes} phút trước`;
     } else {
-      return 'Vừa xong';
+      return "Vừa xong";
     }
   };
 
@@ -248,12 +264,14 @@ const CommentItem: React.FC<{
                 setEditContent(comment.content);
               }}
             >
-              <Text style={[styles.cancelButtonText, { color: textColor }]}>Hủy</Text>
+              <Text style={[styles.cancelButtonText, { color: textColor }]}>
+                Hủy
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.submitButton,
-                (!editContent.trim() || loading) && styles.submitButtonDisabled
+                (!editContent.trim() || loading) && styles.submitButtonDisabled,
               ]}
               onPress={handleEdit}
               disabled={!editContent.trim() || loading}
@@ -279,13 +297,19 @@ const CommentItem: React.FC<{
         </TouchableOpacity>
         {isOwner && (
           <>
-            <TouchableOpacity style={styles.actionButton} onPress={() => setIsEditing(true)}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => setIsEditing(true)}
+            >
               <Ionicons name="pencil" size={16} color="#666" />
               <Text style={styles.actionText}>Sửa</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={handleDelete}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleDelete}
+            >
               <Ionicons name="trash" size={16} color="#e53935" />
-              <Text style={[styles.actionText, { color: '#e53935' }]}>Xóa</Text>
+              <Text style={[styles.actionText, { color: "#e53935" }]}>Xóa</Text>
             </TouchableOpacity>
           </>
         )}
@@ -320,7 +344,7 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
   onCommentEdited,
 }) => {
   const [comments, setComments] = useState<Comment[]>([]);
-  
+
   // Ensure comments is always an array
   const safeComments = comments || [];
   const [loading, setLoading] = useState(false);
@@ -331,21 +355,28 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
   const [showReplyInput, setShowReplyInput] = useState(false);
 
   const currentUser = useSelector((state: RootState) => state.auth.user);
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
+  const backgroundColor = useThemeColor({}, "background");
+  const textColor = useThemeColor({}, "text");
 
   const fetchComments = async (pageNum = 1, refresh = false) => {
     if (loading) return;
 
     setLoading(true);
     try {
-      const response = await commentService.getComments(targetType, targetId, pageNum, 10);
+      const response = await commentService.getComments(
+        targetType,
+        targetId,
+        pageNum,
+        10
+      );
       // Handle nested response format from backend
       let newComments: Comment[] = [];
       const responseData = response as any;
       if (responseData?.data?.data) {
         // Backend returns: { data: { data: [...], pagination: {...} } }
-        newComments = Array.isArray(responseData.data.data) ? responseData.data.data : [];
+        newComments = Array.isArray(responseData.data.data)
+          ? responseData.data.data
+          : [];
       } else if (responseData?.data && Array.isArray(responseData.data)) {
         // Direct array format
         newComments = responseData.data;
@@ -353,17 +384,17 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
         // Fallback
         newComments = responseData;
       }
-      
+
       if (refresh) {
         setComments(newComments);
       } else {
-        setComments(prev => [...prev, ...newComments]);
+        setComments((prev) => [...prev, ...newComments]);
       }
-      
+
       setHasMore(newComments.length === 10);
       setPage(pageNum);
     } catch (error) {
-      console.error('Error fetching comments:', error);
+      console.error("Error fetching comments:", error);
       // Set empty array on error to prevent undefined issues
       if (refresh) {
         setComments([]);
@@ -390,19 +421,23 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
   };
 
   const handleCommentAdded = (newComment: Comment) => {
-    setComments(prev => [newComment, ...(prev || [])]);
+    setComments((prev) => [newComment, ...(prev || [])]);
     onCommentAdded?.(newComment);
   };
 
   const handleCommentDeleted = (commentId: string) => {
-    setComments(prev => (prev || []).filter(comment => comment._id !== commentId));
+    setComments((prev) =>
+      (prev || []).filter((comment) => comment._id !== commentId)
+    );
     onCommentDeleted?.(commentId);
   };
 
   const handleCommentEdited = (editedComment: Comment) => {
-    setComments(prev => (prev || []).map(comment => 
-      comment._id === editedComment._id ? editedComment : comment
-    ));
+    setComments((prev) =>
+      (prev || []).map((comment) =>
+        comment._id === editedComment._id ? editedComment : comment
+      )
+    );
     onCommentEdited?.(editedComment);
   };
 
@@ -414,7 +449,7 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
   const renderComment = ({ item }: { item: Comment }) => (
     <CommentItem
       comment={item}
-      currentUserId={currentUser?.id || ''}
+      currentUserId={currentUser?.id || ""}
       onReply={handleReply}
       onEdit={handleCommentEdited}
       onDelete={handleCommentDeleted}
@@ -448,20 +483,28 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
           <ScrollView
             showsVerticalScrollIndicator={false}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+              />
             }
             onScroll={({ nativeEvent }: any) => {
-              const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+              const { layoutMeasurement, contentOffset, contentSize } =
+                nativeEvent;
               const paddingToBottom = 20;
-              if (layoutMeasurement.height + contentOffset.y >= 
-                  contentSize.height - paddingToBottom) {
+              if (
+                layoutMeasurement.height + contentOffset.y >=
+                contentSize.height - paddingToBottom
+              ) {
                 handleLoadMore();
               }
             }}
             scrollEventThrottle={400}
             style={{ flex: 1 }}
           >
-            {safeComments.length === 0 ? renderEmptyState() : (
+            {safeComments.length === 0 ? (
+              renderEmptyState()
+            ) : (
               <>
                 {safeComments.map((comment) => (
                   <View key={comment._id}>
@@ -478,7 +521,10 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
             renderItem={renderComment}
             keyExtractor={(item) => item._id}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+              />
             }
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.1}
@@ -520,32 +566,32 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   commentsList: {
     maxHeight: 300,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
   },
   inputContainer: {
     padding: 15,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    backgroundColor: '#fff',
+    borderTopColor: "#e0e0e0",
+    backgroundColor: "#fff",
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
     padding: 12,
     marginBottom: 10,
     minHeight: 40,
     maxHeight: 100,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     fontSize: 14,
   },
   inputActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 10,
   },
   cancelButton: {
@@ -554,7 +600,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   submitButton: {
     backgroundColor: Colors.light.tint,
@@ -563,21 +609,21 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   submitButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: "#ccc",
   },
   submitButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
     fontSize: 14,
   },
   commentContainer: {
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   commentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 8,
   },
   avatarContainer: {
@@ -593,12 +639,12 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     backgroundColor: Colors.light.tint,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   defaultAvatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
     fontSize: 14,
   },
   commentInfo: {
@@ -606,11 +652,11 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   timestamp: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   commentContent: {
     fontSize: 14,
@@ -618,17 +664,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   commentActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 16,
   },
   actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   actionText: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   editContainer: {
     marginBottom: 8,
@@ -642,8 +688,8 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   editActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 10,
   },
   repliesContainer: {
@@ -651,24 +697,24 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     padding: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   emptyStateText: {
     fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
   },
   loadingContainer: {
     padding: 20,
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 8,
   },
   loadingText: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginTop: 8,
   },
 });
 
-export default CommentSystem; 
+export default CommentSystem;
