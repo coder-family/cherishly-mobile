@@ -39,6 +39,7 @@ import {
   fetchChild,
 } from "../../redux/slices/childSlice";
 import {
+  clearHealthData,
   deleteGrowthRecord,
   deleteHealthRecord,
   fetchGrowthRecord,
@@ -54,11 +55,12 @@ import {
   updateMemory,
 } from "../../redux/slices/memorySlice";
 import {
+  clearResponses,
   deleteResponse,
   fetchChildResponses,
   updateResponse,
 } from "../../redux/slices/promptResponseSlice";
-import { fetchPrompts } from "../../redux/slices/promptSlice";
+import { clearPrompts, fetchPrompts } from "../../redux/slices/promptSlice";
 import { Memory } from "../../services/memoryService";
 import { SearchResult, searchService } from "../../services/searchService";
 import { useFilteredContent } from "../../utils/contentPermissionUtils";
@@ -147,10 +149,16 @@ export default function ChildProfileScreen() {
 
   // State for storing creator information
   const [creators, setCreators] = useState<Record<string, any>>({});
+  
+
+
+
 
   // Create timeline items and filter them based on permissions
   const timelineItems = React.useMemo(() => {
     if (!id) return [];
+
+
 
     const items: any[] = [];
 
@@ -193,53 +201,67 @@ export default function ChildProfileScreen() {
 
     // Add Q&A responses
     const processedResponseIds = new Set();
-    responses
-      .filter((response) => response.childId === id)
-      .forEach((response) => {
-        if (!processedResponseIds.has(response.id)) {
-          processedResponseIds.add(response.id);
+    const filteredResponses = responses.filter((response) => response.childId === id);
+    
+        filteredResponses.forEach(async (response) => {
+      if (!processedResponseIds.has(response.id)) {
+        processedResponseIds.add(response.id);
 
-          let questionText = "Question not available";
-          if (typeof response.promptId === "object" && response.promptId) {
+        let questionText = "Question not available";
+        
+        if (typeof response.promptId === "object" && response.promptId) {
+          questionText =
+            (response.promptId as any).question ||
+            (response.promptId as any).title ||
+            "Question not available";
+        } else if (typeof response.promptId === "string") {
+          // First try to find in prompts array
+          const matchingPrompt = prompts.find(
+            (p: any) => p.id === response.promptId
+          );
+          
+                    if (matchingPrompt) {
             questionText =
-              (response.promptId as any).question ||
-              (response.promptId as any).title ||
+              matchingPrompt.content ||
+              matchingPrompt.title ||
               "Question not available";
-          } else if (typeof response.promptId === "string") {
-            const matchingPrompt = prompts.find(
-              (p: any) => p.id === response.promptId
-            );
-            if (matchingPrompt) {
-              questionText =
-                matchingPrompt.content ||
-                matchingPrompt.title ||
-                "Question not available";
-            }
+          } else {
+            // Fallback: show promptId if prompt not found
+            questionText = `Question ID: ${response.promptId}`;
           }
-
-          items.push({
-            id: response.id,
-            type: "qa",
-            title: "Q&A Response",
-            content: response.content,
-            date: new Date(response.createdAt).toISOString().split("T")[0],
-            createdAt: response.createdAt,
-            media: response.attachments,
-            visibility: response.visibility,
-            metadata: {
-              promptId: response.promptId,
-              feedback: response.feedback,
-              question: questionText,
-            },
-          });
         }
-      });
+
+        const qaItem = {
+          id: response.id,
+          type: "qa",
+          title: questionText.length > 50 ? questionText.substring(0, 50) + "..." : questionText,
+          content: response.content,
+          date: new Date(response.createdAt).toISOString().split("T")[0],
+          createdAt: response.createdAt,
+          media: response.attachments,
+          visibility: response.visibility,
+          creator: {
+            id: response.parentId || currentUser?.id,
+            firstName: currentUser?.firstName,
+            lastName: currentUser?.lastName,
+          },
+          parentId: response.parentId || currentUser?.id,
+          metadata: {
+            promptId: response.promptId,
+            feedback: response.feedback,
+            question: questionText,
+          },
+        };
+        
+        items.push(qaItem);
+      }
+    });
 
     // Add health records
     const processedHealthIds = new Set();
-    healthRecords
-      .filter((record) => record.childId === id)
-      .forEach((record) => {
+    const filteredHealthRecords = healthRecords.filter((record) => record.childId === id);
+    
+    filteredHealthRecords.forEach((record) => {
         if (!processedHealthIds.has(record.id)) {
           processedHealthIds.add(record.id);
           items.push({
@@ -263,9 +285,9 @@ export default function ChildProfileScreen() {
 
     // Add growth records
     const processedGrowthIds = new Set();
-    growthRecords
-      .filter((record) => record.childId === id)
-      .forEach((record) => {
+    const filteredGrowthRecords = growthRecords.filter((record) => record.childId === id);
+    
+    filteredGrowthRecords.forEach((record) => {
         if (!processedGrowthIds.has(record.id)) {
           processedGrowthIds.add(record.id);
           items.push({
@@ -288,10 +310,14 @@ export default function ChildProfileScreen() {
       });
 
     // Sort by date (newest first)
-    return items.sort(
+    const sortedItems = items.sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
+    
+
+    
+    return sortedItems;
   }, [
     id,
     memories,
@@ -304,7 +330,7 @@ export default function ChildProfileScreen() {
 
   // Filter timeline items based on user permissions
   const filteredTimelineItems = useFilteredContent(timelineItems);
-
+  
   // Handle focus post from notification - only when there's actually a focusPost
   useEffect(() => {
     if (focusPost && postType && !hasProcessedFocusPost) {
@@ -470,11 +496,12 @@ export default function ChildProfileScreen() {
       setHasProcessedFocusPost(false);
       setHasScrolledToFocusPost(false);
     }
-    setHasLoadedTimelineData(false);
+
     itemPositionsRef.current.clear(); // Reset item positions
     setScrollRetryCount(0); // Reset retry count
 
     if (id) {
+
       dispatch(fetchChild(id));
       // Fetch memories for this child, newest first - increased limit to show more memories
       dispatch(
@@ -484,7 +511,12 @@ export default function ChildProfileScreen() {
           limit: 50, // Increased from 10 to 50 to show more memories initially
         })
       );
-      // Health data is fetched by HealthContent component
+      // Load Q&A responses for this child
+      dispatch(fetchChildResponses({ childId: id, page: 1, limit: 50 }));
+      // Load health and growth records for this child
+      dispatch(fetchHealthRecords({ childId: id }));
+      dispatch(fetchGrowthRecords({ childId: id }));
+      dispatch(fetchPrompts({ isActive: true, limit: 50 })); // Load prompts with reasonable limit
     }
 
     // Cleanup when component unmounts
@@ -494,6 +526,10 @@ export default function ChildProfileScreen() {
       }
       dispatch(clearCurrentChild());
       dispatch(clearMemories());
+      // Clear other data when component unmounts
+      dispatch(clearResponses());
+      dispatch(clearPrompts());
+      dispatch(clearHealthData());
     };
   }, [id, dispatch, focusPost]);
 
@@ -507,21 +543,7 @@ export default function ChildProfileScreen() {
     }
   }, [focusPost]);
 
-  // Load Q&A and health data when timeline tab is active (only once)
-  const [hasLoadedTimelineData, setHasLoadedTimelineData] = useState(false);
 
-  useEffect(() => {
-    if (id && activeTab === "timeline" && !hasLoadedTimelineData) {
-      // Load Q&A responses for this child
-      dispatch(fetchChildResponses({ childId: id, page: 1, limit: 50 }));
-      // Load health and growth records for this child
-      dispatch(fetchHealthRecords({ childId: id }));
-      dispatch(fetchGrowthRecords({ childId: id }));
-      dispatch(fetchPrompts({ isActive: true, limit: 50 })); // Load all active prompts
-
-      setHasLoadedTimelineData(true);
-    }
-  }, [id, activeTab, dispatch, hasLoadedTimelineData]);
 
   // Refresh memories when add memory modal closes
   useEffect(() => {
