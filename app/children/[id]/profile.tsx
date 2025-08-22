@@ -89,7 +89,7 @@ export default function ChildProfileScreen() {
     (state) => state.health
   );
   const { currentUser } = useAppSelector((state) => state.user);
-  const [activeTab, setActiveTab] = useState<TabType>("timeline");
+  const [activeTab, setActiveTab] = useState<TabType>("memories");
   const [hasProcessedFocusPost, setHasProcessedFocusPost] = useState(false);
   const [hasScrolledToFocusPost, setHasScrolledToFocusPost] = useState(false);
 
@@ -305,33 +305,18 @@ export default function ChildProfileScreen() {
   // Filter timeline items based on user permissions
   const filteredTimelineItems = useFilteredContent(timelineItems);
 
-  // Handle focus post from notification
+  // Handle focus post from notification - only when there's actually a focusPost
   useEffect(() => {
     if (focusPost && postType && !hasProcessedFocusPost) {
-      // Set active tab based on post type (only once when focusPost changes)
-      switch (postType) {
-        case "memory":
-          setActiveTab("timeline"); // Memory posts are shown in timeline
-          break;
-        case "prompt_response":
-          setActiveTab("timeline"); // Q&A responses are shown in timeline
-          break;
-        case "health_record":
-        case "growth_record":
-          setActiveTab("timeline"); // Health records are shown in timeline
-          break;
-        default:
-          setActiveTab("timeline");
-      }
-
+      // Active tab is already set to timeline in the focusPost change effect
       setHasProcessedFocusPost(true);
     }
-  }, [focusPost, postType, hasProcessedFocusPost]); // Added hasProcessedFocusPost dependency
+  }, [focusPost, postType, hasProcessedFocusPost]);
 
-  // Separate useEffect for scrolling when timeline items are loaded
+  // Separate useEffect for scrolling when timeline items are loaded - only when there's focusPost
   useEffect(() => {
     if (
-      focusPost &&
+      focusPost && // Only run when there's actually a focusPost
       filteredTimelineItems.length > 0 &&
       activeTab === "timeline" &&
       !hasScrolledToFocusPost
@@ -408,7 +393,6 @@ export default function ChildProfileScreen() {
 
         // Use setTimeout to ensure layout is complete
         setTimeout(attemptScroll, 100);
-      } else {
       }
     }
   }, [
@@ -420,7 +404,7 @@ export default function ChildProfileScreen() {
     responses,
     healthRecords,
     growthRecords,
-    // hasScrolledToFocusPost
+    hasScrolledToFocusPost
   ]);
 
   // Handle edit completion from HealthContent
@@ -481,8 +465,11 @@ export default function ChildProfileScreen() {
   // Fetch child data when component mounts
   useEffect(() => {
     // Reset focus post processing state when component mounts or id changes
-    setHasProcessedFocusPost(false);
-    setHasScrolledToFocusPost(false);
+    // Only reset if there's no focusPost or if focusPost has changed
+    if (!focusPost) {
+      setHasProcessedFocusPost(false);
+      setHasScrolledToFocusPost(false);
+    }
     setHasLoadedTimelineData(false);
     itemPositionsRef.current.clear(); // Reset item positions
     setScrollRetryCount(0); // Reset retry count
@@ -508,7 +495,17 @@ export default function ChildProfileScreen() {
       dispatch(clearCurrentChild());
       dispatch(clearMemories());
     };
-  }, [id, dispatch]);
+  }, [id, dispatch, focusPost]);
+
+  // Reset focus state when focusPost changes
+  useEffect(() => {
+    if (focusPost) {
+      setHasProcessedFocusPost(false);
+      setHasScrolledToFocusPost(false);
+      // Set active tab to timeline when there's a focusPost
+      setActiveTab("timeline");
+    }
+  }, [focusPost]);
 
   // Load Q&A and health data when timeline tab is active (only once)
   const [hasLoadedTimelineData, setHasLoadedTimelineData] = useState(false);
@@ -1834,7 +1831,7 @@ export default function ChildProfileScreen() {
                       <TimelineItem
                         item={item}
                         highlight={
-                          item._id === focusPost || item.id === focusPost
+                          !!focusPost && (item._id === focusPost || item.id === focusPost)
                         }
                         onPress={() => handleMemoryPress(item)}
                         onEdit={() => {
@@ -1865,7 +1862,7 @@ export default function ChildProfileScreen() {
                       <TimelineItem
                         item={item}
                         highlight={
-                          item._id === focusPost || item.id === focusPost
+                          !!focusPost && (item._id === focusPost || item.id === focusPost)
                         }
                         onEdit={() => handleQAEdit(item)}
                         onDelete={() => handleQADelete(item)}
@@ -1884,7 +1881,7 @@ export default function ChildProfileScreen() {
                       <TimelineItem
                         item={item}
                         highlight={
-                          item._id === focusPost || item.id === focusPost
+                          !!focusPost && (item._id === focusPost || item.id === focusPost)
                         }
                         onEdit={() => {
                           setEditingHealthItem(item);
@@ -1955,7 +1952,7 @@ export default function ChildProfileScreen() {
                       <TimelineItem
                         item={item}
                         highlight={
-                          item._id === focusPost || item.id === focusPost
+                          !!focusPost && (item._id === focusPost || item.id === focusPost)
                         }
                         onEdit={async () => {
                           // Fetch full record data before editing
@@ -2034,7 +2031,7 @@ export default function ChildProfileScreen() {
                       <TimelineItem
                         item={item}
                         highlight={
-                          item._id === focusPost || item.id === focusPost
+                          !!focusPost && (item._id === focusPost || item.id === focusPost)
                         }
                         isOwner={viewerIsOwner}
                       />
