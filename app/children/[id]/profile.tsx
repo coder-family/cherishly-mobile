@@ -2123,9 +2123,22 @@ export default function ChildProfileScreen() {
 
         {/* Render memories as regular views instead of FlatList */}
         {getUniqueMemories().map((memory, index) => {
-          // Extract creator info from parentId (which can be string or object)
+          // Use creator info from memory object if available, otherwise extract from parentId
           let creator = undefined;
-          if (memory.parentId && typeof memory.parentId === "object") {
+          if (memory.creator) {
+            // Use creator info from memory object (preferred)
+            creator = {
+              id: memory.creator.id,
+              firstName: memory.creator.firstName,
+              lastName: memory.creator.lastName,
+              avatar: memory.creator.avatar,
+              email: "", // Required by User type
+              role: "",
+              createdAt: "",
+              updatedAt: "",
+            };
+          } else if (memory.parentId && typeof memory.parentId === "object") {
+            // Fallback: extract from parentId (legacy)
             creator = {
               id: memory.parentId._id || memory.parentId.id,
               firstName: memory.parentId.firstName,
