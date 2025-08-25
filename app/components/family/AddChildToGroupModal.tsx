@@ -10,8 +10,7 @@ import {
   View,
 } from "react-native";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
-import { fetchChildren } from "../../redux/slices/childSlice";
-import { addChildToFamilyGroup } from "../../redux/slices/familySlice";
+import { addChildToFamilyGroup, fetchChildren } from "../../redux/slices/childSlice";
 import LoadingSpinner from "../ui/LoadingSpinner";
 
 interface AddChildToGroupModalProps {
@@ -58,9 +57,22 @@ export default function AddChildToGroupModal({
 
   // Function to check if a child is already in the group
   const isChildInGroup = (childId: string) => {
-    return existingChildren.some(existingChild => 
+    const isInGroup = existingChildren.some(existingChild => 
       existingChild.id === childId || existingChild._id === childId
     );
+    
+    // Debug log
+    if (isInGroup) {
+      console.log('Child already in group:', {
+        childId,
+        existingChildren: existingChildren.map((child: any) => ({
+          id: child.id || child._id,
+          name: child.name || child.firstName + ' ' + child.lastName
+        }))
+      });
+    }
+    
+    return isInGroup;
   };
 
 
@@ -92,8 +104,11 @@ export default function AddChildToGroupModal({
       // Add all selected children to the group
       const promises = selectedChildIds.map(childId => 
         dispatch(addChildToFamilyGroup({
-          groupId: familyGroupId,
           childId: childId,
+          data: {
+            familyGroupId: familyGroupId,
+            role: 'secondary' // Default to secondary role
+          }
         })).unwrap()
       );
       
@@ -119,13 +134,16 @@ export default function AddChildToGroupModal({
       });
 
       let errorMessage = "Failed to add children to group";
-      if (error.message) {
+      
+      // Handle specific error types
+      if (error.name === 'AlreadyMemberError' || error.message?.includes('Child is already a member of this family group')) {
+        errorMessage = "Some children are already members of this family group";
+      } else if (error.message) {
         errorMessage = error.message;
       } else if (error.status === 404) {
         errorMessage = "Family group or child not found";
       } else if (error.status === 403) {
-        errorMessage =
-          "You do not have permission to add children to this group";
+        errorMessage = "You do not have permission to add children to this group";
       } else if (error.status === 409) {
         errorMessage = "Some children are already members of this family group";
       }
@@ -147,138 +165,140 @@ export default function AddChildToGroupModal({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Add Children to Group</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <MaterialIcons name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
+          <View style={styles.header}>
+            <Text style={styles.title}>Add Children to Group</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <MaterialIcons name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
 
-            <Text style={styles.subtitle}>
-              Select children to add to &quot;{familyGroupName}&quot;
-            </Text>
+          <Text style={styles.subtitle}>
+            Select children to add to &quot;{familyGroupName}&quot;
+          </Text>
 
-            {loading ? (
-              <LoadingSpinner message="Loading children..." />
-            ) : (
-              <>
-                {!children || children.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <MaterialIcons name="child-care" size={48} color="#ccc" />
-                    <Text style={styles.emptyStateText}>
-                      No children found. Please add a child first.
-                    </Text>
-                  </View>
-                ) : allChildren.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <MaterialIcons name="child-care" size={48} color="#ccc" />
-                    <Text style={styles.emptyStateText}>
-                      No children found. Please add a child first.
-                    </Text>
-                  </View>
-                ) : (
-                  <>
+          {loading ? (
+            <LoadingSpinner message="Loading children..." />
+          ) : (
+            <>
+              {!children || children.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <MaterialIcons name="child-care" size={48} color="#ccc" />
+                  <Text style={styles.emptyStateText}>
+                    No children found. Please add a child first.
+                  </Text>
+                </View>
+              ) : allChildren.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <MaterialIcons name="child-care" size={48} color="#ccc" />
+                  <Text style={styles.emptyStateText}>
+                    No children found. Please add a child first.
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <Text style={styles.debugText}>
+                    Found {allChildren.length} children to display
+                  </Text>
+                  
+                  <Text style={styles.debugText}>
+                    Selected: {selectedChildIds.length} child{selectedChildIds.length !== 1 ? 'ren' : ''}
+                  </Text>
+                  
+                  {selectedChildIds.length > 0 && (
                     <Text style={styles.debugText}>
-                      Found {allChildren.length} children to display
+                      Selected IDs: {selectedChildIds.join(', ')}
                     </Text>
-                    
+                  )}
+
+                  {/* Select/Deselect All Button */}
+                  <TouchableOpacity
+                    style={styles.selectAllButton}
+                    onPress={() => {
+                      const availableChildIds = allChildren
+                        .filter(child => !isChildInGroup(child.id))
+                        .map(child => child.id);
+                      
+                      if (selectedChildIds.length === availableChildIds.length) {
+                        // Deselect all
+                        setSelectedChildIds([]);
+                      } else {
+                        // Select all available
+                        setSelectedChildIds(availableChildIds);
+                      }
+                    }}
+                  >
+                    <Text style={styles.selectAllButtonText}>
+                      {selectedChildIds.length === allChildren.filter(child => !isChildInGroup(child.id)).length
+                        ? 'Deselect All'
+                        : 'Select All Available'
+                      }
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Debug: Show first child info */}
+                  {allChildren.length > 0 && (
                     <Text style={styles.debugText}>
-                      Selected: {selectedChildIds.length} child{selectedChildIds.length !== 1 ? 'ren' : ''}
+                      First child: {allChildren[0].name} -{" "}
+                      {allChildren[0].birthdate}
                     </Text>
-                    
-                    {selectedChildIds.length > 0 && (
-                      <Text style={styles.debugText}>
-                        Selected IDs: {selectedChildIds.join(', ')}
-                      </Text>
-                    )}
+                  )}
 
-                    {/* Select/Deselect All Button */}
-                    <TouchableOpacity
-                      style={styles.selectAllButton}
-                      onPress={() => {
-                        const availableChildIds = allChildren
-                          .filter(child => !isChildInGroup(child.id))
-                          .map(child => child.id);
-                        
-                        if (selectedChildIds.length === availableChildIds.length) {
-                          // Deselect all
-                          setSelectedChildIds([]);
-                        } else {
-                          // Select all available
-                          setSelectedChildIds(availableChildIds);
-                        }
-                      }}
-                    >
-                      <Text style={styles.selectAllButtonText}>
-                        {selectedChildIds.length === allChildren.filter(child => !isChildInGroup(child.id)).length
-                          ? 'Deselect All'
-                          : 'Select All Available'
-                        }
-                      </Text>
-                    </TouchableOpacity>
-
-                    {/* Debug: Show first child info */}
-                    {allChildren.length > 0 && (
-                      <Text style={styles.debugText}>
-                        First child: {allChildren[0].name} -{" "}
-                        {allChildren[0].birthdate}
-                      </Text>
-                    )}
-
-                    {/* Simple list for debugging */}
-                    <View style={styles.childrenList}>
-                      {allChildren.map((child: any, index: number) => {
-                        const isSelected = selectedChildIds.includes(child.id);
-                        const isInGroup = isChildInGroup(child.id);
-                        
-                        return (
-                          <View key={child.id} style={styles.simpleChildItem}>
-                            <Text style={styles.simpleChildText}>
-                              {index + 1}. {child.name} ({child.gender})
+                  {/* Simple list for debugging */}
+                  <ScrollView 
+                    style={styles.childrenList}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                  >
+                    {allChildren.map((child: any, index: number) => {
+                      const isSelected = selectedChildIds.includes(child.id);
+                      const isInGroup = isChildInGroup(child.id);
+                      
+                      return (
+                        <View key={child.id} style={styles.simpleChildItem}>
+                          <Text style={styles.simpleChildText}>
+                            {index + 1}. {child.name} ({child.gender})
+                          </Text>
+                          <TouchableOpacity
+                            style={[
+                              styles.simpleSelectButton,
+                              isSelected && styles.selectedButton,
+                              isInGroup && styles.alreadyInGroupButton
+                            ]}
+                            onPress={() => {
+                              if (!isInGroup) {
+                            
+                                if (isSelected) {
+                                  // Remove from selection
+                                  setSelectedChildIds(prev => prev.filter(id => id !== child.id));
+                                } else {
+                                  // Add to selection
+                                  setSelectedChildIds(prev => [...prev, child.id]);
+                                }
+                              }
+                            }}
+                            disabled={isInGroup}
+                          >
+                            <Text style={[
+                              styles.simpleSelectText,
+                              isSelected && styles.selectedButtonText,
+                              isInGroup && styles.alreadyInGroupText
+                            ]}>
+                              {isInGroup 
+                                ? "✓ Already in Group" 
+                                : isSelected 
+                                  ? "✓ Selected"
+                                  : "Select"
+                              }
                             </Text>
-                            <TouchableOpacity
-                              style={[
-                                styles.simpleSelectButton,
-                                isSelected && styles.selectedButton,
-                                isInGroup && styles.alreadyInGroupButton
-                              ]}
-                              onPress={() => {
-                                if (!isInGroup) {
-                              
-                                  if (isSelected) {
-                                    // Remove from selection
-                                    setSelectedChildIds(prev => prev.filter(id => id !== child.id));
-                                  } else {
-                                    // Add to selection
-                                    setSelectedChildIds(prev => [...prev, child.id]);
-                                  }
-                                }
-                              }}
-                              disabled={isInGroup}
-                            >
-                              <Text style={[
-                                styles.simpleSelectText,
-                                isSelected && styles.selectedButtonText,
-                                isInGroup && styles.alreadyInGroupText
-                              ]}>
-                                {isInGroup 
-                                  ? "✓ Already in Group" 
-                                  : isSelected 
-                                    ? "✓ Selected"
-                                    : "Select"
-                                }
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                        );
-                      })}
-                    </View>
-                  </>
-                )}
-              </>
-            )}
-          </ScrollView>
+                          </TouchableOpacity>
+                        </View>
+                      );
+                    })}
+                  </ScrollView>
+                </>
+              )}
+            </>
+          )}
 
           <View style={styles.footer}>
             <TouchableOpacity
@@ -324,7 +344,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     margin: 20,
-    maxHeight: "80%",
+    maxHeight: "85%",
     width: "90%",
     flexDirection: "column",
   },
@@ -349,10 +369,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   childrenList: {
-    flex: 1,
     marginBottom: 20,
-    maxHeight: 200,
-    minHeight: 100,
+    maxHeight: 300,
+    minHeight: 150,
   },
   childItem: {
     flexDirection: "row",
@@ -395,8 +414,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 12,
-    marginTop: "auto",
+    marginTop: 15,
     paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
   },
   cancelButton: {
     flex: 1,

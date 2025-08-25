@@ -537,8 +537,17 @@ export async function removeChildFromFamilyGroup(groupId: string, childId: strin
 
 export async function getFamilyGroupChildren(groupId: string): Promise<any[]> {
   try {
+    console.log('Fetching children for group:', groupId);
     const response = await apiService.get(`/family-groups/${groupId}/children`);
-    return response.data || response;
+    const result = response.data || response;
+    console.log('API response for group children:', {
+      groupId,
+      responseType: typeof result,
+      isArray: Array.isArray(result),
+      childrenCount: Array.isArray(result) ? result.length : 'not array',
+      rawResponse: result
+    });
+    return result;
   } catch (error: any) {
     conditionalLog.family('Error getting family group children:', error);
     if (error.response) {

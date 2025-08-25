@@ -122,8 +122,8 @@ describe("Validation Utils", () => {
         lastName: "Doe",
         dateOfBirth: "1990-01-01",
         email: "john@example.com",
-        password: "password123",
-        confirmPassword: "password123",
+        password: "Password123!",
+        confirmPassword: "Password123!",
         role: "parent",
       };
 
@@ -156,7 +156,7 @@ describe("Validation Utils", () => {
         role: "parent",
       };
 
-      await expect(registerSchema.validate(invalidData)).rejects.toThrow("Password must be at least 6 characters");
+      await expect(registerSchema.validate(invalidData)).rejects.toThrow("Password must be at least 8 characters");
     });
   });
 
