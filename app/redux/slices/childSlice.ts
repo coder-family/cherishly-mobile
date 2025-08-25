@@ -1,5 +1,11 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import type { Child, CreateChildData, UpdateChildData } from '../../services/childService';
+import type {
+  AddChildToFamilyGroupData,
+  Child,
+  ChildFamilyGroup,
+  CreateChildData,
+  UpdateChildData
+} from '../../services/childService';
 import * as childService from '../../services/childService';
 
 // Async thunks
@@ -53,10 +59,41 @@ export const uploadChildAvatar = createAsyncThunk(
   }
 );
 
+// New async thunks for child family groups
+export const addChildToFamilyGroup = createAsyncThunk(
+  'children/addToFamilyGroup',
+  async ({ childId, data }: { childId: string; data: AddChildToFamilyGroupData }) => {
+    return await childService.addChildToFamilyGroup(childId, data);
+  }
+);
+
+export const removeChildFromFamilyGroup = createAsyncThunk(
+  'children/removeFromFamilyGroup',
+  async ({ childId, familyGroupId }: { childId: string; familyGroupId: string }) => {
+    await childService.removeChildFromFamilyGroup(childId, familyGroupId);
+    return { childId, familyGroupId };
+  }
+);
+
+export const fetchChildFamilyGroups = createAsyncThunk(
+  'children/fetchFamilyGroups',
+  async (childId: string) => {
+    return await childService.getChildFamilyGroups(childId);
+  }
+);
+
+export const setPrimaryFamilyGroup = createAsyncThunk(
+  'children/setPrimaryFamilyGroup',
+  async ({ childId, familyGroupId }: { childId: string; familyGroupId: string }) => {
+    return await childService.setPrimaryFamilyGroup(childId, familyGroupId);
+  }
+);
+
 // Slice
 interface ChildState {
   children: Child[];
   currentChild: Child | null;
+  childFamilyGroups: ChildFamilyGroup[];
   loading: boolean;
   error: string | null;
 }
@@ -64,6 +101,7 @@ interface ChildState {
 const initialState: ChildState = {
   children: [],
   currentChild: null,
+  childFamilyGroups: [],
   loading: false,
   error: null,
 };
@@ -80,6 +118,9 @@ const childSlice = createSlice({
     },
     clearCurrentChild: (state) => {
       state.currentChild = null;
+    },
+    clearChildFamilyGroups: (state) => {
+      state.childFamilyGroups = [];
     },
   },
   extraReducers: (builder) => {
@@ -182,9 +223,74 @@ const childSlice = createSlice({
       .addCase(uploadChildAvatar.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to upload avatar';
+      })
+      // Add child to family group
+      .addCase(addChildToFamilyGroup.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(addChildToFamilyGroup.fulfilled, (state, action) => {
+        // Add to child family groups if not already present
+        const existingIndex = state.childFamilyGroups.findIndex(
+          group => group._id === action.payload._id
+        );
+        if (existingIndex === -1) {
+          state.childFamilyGroups.push(action.payload);
+        }
+        state.loading = false;
+      })
+      .addCase(addChildToFamilyGroup.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to add child to family group';
+      })
+      // Remove child from family group
+      .addCase(removeChildFromFamilyGroup.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(removeChildFromFamilyGroup.fulfilled, (state, action) => {
+        // Remove from child family groups
+        state.childFamilyGroups = state.childFamilyGroups.filter(
+          group => !(group.childId === action.payload.childId && group.familyGroupId._id === action.payload.familyGroupId)
+        );
+        state.loading = false;
+      })
+      .addCase(removeChildFromFamilyGroup.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to remove child from family group';
+      })
+      // Fetch child family groups
+      .addCase(fetchChildFamilyGroups.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchChildFamilyGroups.fulfilled, (state, action) => {
+        state.childFamilyGroups = action.payload;
+        state.loading = false;
+      })
+      .addCase(fetchChildFamilyGroups.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to fetch child family groups';
+      })
+      // Set primary family group
+      .addCase(setPrimaryFamilyGroup.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(setPrimaryFamilyGroup.fulfilled, (state, action) => {
+        // Update the role of the family group to primary and set others to secondary
+        state.childFamilyGroups = state.childFamilyGroups.map(group => ({
+          ...group,
+          role: group._id === action.payload._id ? 'primary' : 'secondary'
+        }));
+        state.loading = false;
+      })
+      .addCase(setPrimaryFamilyGroup.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to set primary family group';
       });
   },
 });
 
-export const { clearError, setCurrentChild, clearCurrentChild } = childSlice.actions;
+export const { clearError, setCurrentChild, clearCurrentChild, clearChildFamilyGroups } = childSlice.actions;
 export default childSlice.reducer; 

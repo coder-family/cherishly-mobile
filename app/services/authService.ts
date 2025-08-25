@@ -128,19 +128,24 @@ class AuthService {
     try {
       const response = await apiService.post("/users/login", credentials);
 
-
       // Handle different possible response structures
       let user: User;
       let accessToken: string;
       let refreshToken: string;
       let expiresIn: number;
 
-      // Check if response has data property (common API pattern)
-      if (response.data) {
+      // Check if response has success and data properties (backend pattern)
+      if ((response as any).success && (response as any).data) {
+        user = (response as any).data.user;
+        accessToken = (response as any).data.token || (response as any).data.accessToken;
+        refreshToken = (response as any).data.refreshToken;
+        expiresIn = (response as any).data.expiresIn || (response as any).data.expires_in || 3600; // Default to 1 hour
+      } else if (response.data) {
+        // Legacy API pattern
         user = response.data.user;
         accessToken = response.data.accessToken || response.data.token;
         refreshToken = response.data.refreshToken;
-        expiresIn = response.data.expiresIn || response.data.expires_in || 3600; // Default to 1 hour
+        expiresIn = response.data.expiresIn || response.data.expires_in || 3600;
       } else {
         // Direct response structure
         user = (response as any).user;
@@ -252,12 +257,18 @@ class AuthService {
       let refreshToken: string;
       let expiresIn: number;
 
-      // Check if response has data property (common API pattern)
-      if (response.data) {
+      // Check if response has success and data properties (backend pattern)
+      if ((response as any).success && (response as any).data) {
+        user = (response as any).data.user;
+        accessToken = (response as any).data.accessToken || (response as any).data.token;
+        refreshToken = (response as any).data.refreshToken;
+        expiresIn = (response as any).data.expiresIn || (response as any).data.expires_in || 3600; // Default to 1 hour
+      } else if (response.data) {
+        // Legacy API pattern
         user = response.data.user;
         accessToken = response.data.accessToken || response.data.token;
         refreshToken = response.data.refreshToken;
-        expiresIn = response.data.expiresIn || response.data.expires_in || 3600; // Default to 1 hour
+        expiresIn = response.data.expiresIn || response.data.expires_in || 3600;
       } else {
         // Direct response structure
         user = (response as any).user;

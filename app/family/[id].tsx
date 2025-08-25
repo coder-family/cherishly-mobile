@@ -88,6 +88,16 @@ export default function FamilyGroupDetailScreen() {
     try {
       const response: any = await familyService.getFamilyGroupChildren(currentGroup.id);
       const children = response.children || response;
+      console.log('Fetched group children:', {
+        groupId: currentGroup.id,
+        groupName: currentGroup.name,
+        childrenCount: children.length,
+        children: children.map((child: any) => ({
+          id: child.id || child._id,
+          name: child.name || child.firstName + ' ' + child.lastName,
+          familyGroupId: child.familyGroupId
+        }))
+      });
       setGroupChildren(children);
     } catch (error) {
       console.error('Error fetching group children:', error);
@@ -227,14 +237,27 @@ export default function FamilyGroupDetailScreen() {
 
     if (!groupChildren || groupChildren.length === 0) {
       return (
-        <View style={styles.sectionPlaceholder}>
-          <MaterialIcons name="child-care" size={48} color="#ccc" />
-          <Text style={styles.placeholderText}>
-            No children in this group yet
-          </Text>
-          <Text style={styles.placeholderSubtext}>
-            Add children to see them here
-          </Text>
+        <View style={styles.childrenContainer}>
+          <View style={styles.sectionPlaceholder}>
+            <MaterialIcons name="child-care" size={48} color="#ccc" />
+            <Text style={styles.placeholderText}>
+              No children in this group yet
+            </Text>
+            <Text style={styles.placeholderSubtext}>
+              Add children to see them here
+            </Text>
+          </View>
+          
+          {/* Owner-only: Add Child Button */}
+          {currentGroup?.ownerId === user?.id && (
+            <TouchableOpacity
+              style={styles.addChildButton}
+              onPress={() => setShowAddChildModal(true)}
+            >
+              <MaterialIcons name="add" size={24} color="#fff" />
+              <Text style={styles.addChildButtonText}>Add Child to Group</Text>
+            </TouchableOpacity>
+          )}
         </View>
       );
     }
@@ -710,8 +733,9 @@ export default function FamilyGroupDetailScreen() {
         familyGroupName={currentGroup.name}
         existingChildren={groupChildren}
         onGroupUpdated={async () => {
-          // Silent refresh to avoid loading states
-          await silentRefresh();
+          console.log('Group updated, refreshing children list...');
+          // Force refresh children list
+          await fetchGroupChildren(false);
         }}
       />
 

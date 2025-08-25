@@ -295,3 +295,144 @@ export async function uploadAvatar(
   const data = await response.json();
   return data;
 }
+
+// New interfaces for child family groups feature
+export interface ChildFamilyGroup {
+  _id: string;
+  childId: string;
+  familyGroupId: {
+    _id: string;
+    name: string;
+    avatar?: string;
+    description?: string;
+  };
+  addedBy: string;
+  role: 'primary' | 'secondary';
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AddChildToFamilyGroupData {
+  familyGroupId: string;
+  role?: 'primary' | 'secondary';
+}
+
+// New API functions for child multiple family groups
+export async function addChildToFamilyGroup(
+  childId: string,
+  data: AddChildToFamilyGroupData
+): Promise<ChildFamilyGroup> {
+  try {
+    const sanitizedId = sanitizeObjectId(childId);
+    const response = await apiService.post(`/children/${sanitizedId}/family-groups`, data);
+    return response.data || response;
+  } catch (error: any) {
+    conditionalLog.child('Error adding child to family group:', error);
+    
+    // Check if the error message contains the specific text
+    if (error.message && error.message.includes('Child is already a member of this family group')) {
+      // Don't re-throw, just return the error message
+      const customError = new Error('Child is already a member of this family group');
+      customError.name = 'AlreadyMemberError';
+      throw customError;
+    }
+    
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Child or family group not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to add this child to the family group');
+      } else if (error.response.status === 409) {
+        throw new Error('Child is already a member of this family group');
+      } else if (error.response.status === 400) {
+        throw new Error('Invalid request: ' + (error.response.data?.message || 'Bad request'));
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to add child to family group');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to add child to family group');
+    } else {
+      throw new Error('Failed to add child to family group: ' + (error.message || 'Unknown error'));
+    }
+  }
+}
+
+export async function removeChildFromFamilyGroup(
+  childId: string,
+  familyGroupId: string
+): Promise<void> {
+  try {
+    const sanitizedChildId = sanitizeObjectId(childId);
+    const sanitizedGroupId = sanitizeObjectId(familyGroupId);
+    await apiService.delete(`/children/${sanitizedChildId}/family-groups/${sanitizedGroupId}`);
+  } catch (error: any) {
+    conditionalLog.child('Error removing child from family group:', error);
+    
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Child or family group not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to remove this child from the family group');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to remove child from family group');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to remove child from family group');
+    } else {
+      throw new Error('Failed to remove child from family group: ' + (error.message || 'Unknown error'));
+    }
+  }
+}
+
+export async function getChildFamilyGroups(childId: string): Promise<ChildFamilyGroup[]> {
+  try {
+    const sanitizedId = sanitizeObjectId(childId);
+    const response = await apiService.get(`/children/${sanitizedId}/family-groups`);
+    return response.data || response;
+  } catch (error: any) {
+    conditionalLog.child('Error getting child family groups:', error);
+    
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Child not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to view this child\'s family groups');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to get child family groups');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to get child family groups');
+    } else {
+      throw new Error('Failed to get child family groups: ' + (error.message || 'Unknown error'));
+    }
+  }
+}
+
+export async function setPrimaryFamilyGroup(
+  childId: string,
+  familyGroupId: string
+): Promise<ChildFamilyGroup> {
+  try {
+    const sanitizedChildId = sanitizeObjectId(childId);
+    const sanitizedGroupId = sanitizeObjectId(familyGroupId);
+    const response = await apiService.patch(`/children/${sanitizedChildId}/family-groups/${sanitizedGroupId}/primary`);
+    return response.data || response;
+  } catch (error: any) {
+    conditionalLog.child('Error setting primary family group:', error);
+    
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Child or family group not found');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to set primary family group for this child');
+      } else {
+        throw new Error(error.response.data?.message || 'Failed to set primary family group');
+      }
+    } else if (error.request) {
+      throw new Error('Network error: Unable to set primary family group');
+    } else {
+      throw new Error('Failed to set primary family group: ' + (error.message || 'Unknown error'));
+    }
+  }
+}
