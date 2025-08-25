@@ -299,7 +299,7 @@ export async function getMemories(params: GetMemoriesParams): Promise<{ memories
     });
 
     // Extract creator info from parentId object
-    let creator = null;
+    let creator: { id: string; firstName: string; lastName?: string; avatar?: string } | undefined = undefined;
     if (memory.parentId && typeof memory.parentId === 'object' && memory.parentId._id) {
       creator = {
         id: memory.parentId._id,
@@ -343,6 +343,20 @@ export async function getMemoryById(memoryId: string): Promise<Memory> {
   const response = await apiService.get(`/memories/${sanitizedMemoryId}`);
   const memory = response.data || response;
   
+  // Extract creator info from parentId object (same logic as getMemories)
+  let creator: { id: string; firstName: string; lastName?: string; avatar?: string } | undefined = undefined;
+  if (memory.parentId && typeof memory.parentId === 'object' && memory.parentId._id) {
+    creator = {
+      id: memory.parentId._id,
+      firstName: memory.parentId.firstName,
+      lastName: memory.parentId.lastName,
+      avatar: memory.parentId.avatar
+    };
+    conditionalLog.memoryApi('getMemoryById: Created creator object:', creator);
+  } else {
+    conditionalLog.memoryApi('getMemoryById: No creator extracted, parentId:', memory.parentId);
+  }
+  
   // Map API fields to frontend interface (same mapping as in getMemories)
   const mappedMemory: Memory = {
     id: memory._id || memory.id,
@@ -356,7 +370,8 @@ export async function getMemoryById(memoryId: string): Promise<Memory> {
     attachments: memory.attachments?.map((att: any) => mapAttachment(att)) || [],
     tags: memory.tags || [],
     createdAt: memory.createdAt,
-    updatedAt: memory.updatedAt
+    updatedAt: memory.updatedAt,
+    creator: creator
   };
   
   return mappedMemory;
@@ -709,6 +724,20 @@ export async function updateMemory(memoryId: string, data: UpdateMemoryData & { 
     const memory = responseData.memory || responseData;
     conditionalLog.memoryApi('updateMemory extracted memory data:', memory);
     
+    // Extract creator info from parentId object (same logic as getMemories)
+    let creator: { id: string; firstName: string; lastName?: string; avatar?: string } | undefined = undefined;
+    if (memory.parentId && typeof memory.parentId === 'object' && memory.parentId._id) {
+      creator = {
+        id: memory.parentId._id,
+        firstName: memory.parentId.firstName,
+        lastName: memory.parentId.lastName,
+        avatar: memory.parentId.avatar
+      };
+      conditionalLog.memoryApi('updateMemory: Created creator object:', creator);
+    } else {
+      conditionalLog.memoryApi('updateMemory: No creator extracted, parentId:', memory.parentId);
+    }
+    
     // Map API fields to frontend interface (same mapping as in getMemories)
     const mappedMemory: Memory = {
       id: memory._id || memory.id,
@@ -722,7 +751,8 @@ export async function updateMemory(memoryId: string, data: UpdateMemoryData & { 
       attachments: memory.attachments?.map((att: any) => mapAttachment(att)) || [],
       tags: memory.tags || [],
       createdAt: memory.createdAt,
-      updatedAt: memory.updatedAt
+      updatedAt: memory.updatedAt,
+      creator: creator
     };
     
     conditionalLog.memoryApi('updateMemory mapped memory:', mappedMemory);

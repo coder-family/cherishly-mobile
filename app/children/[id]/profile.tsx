@@ -39,6 +39,7 @@ import {
   fetchChild,
 } from "../../redux/slices/childSlice";
 import {
+  clearHealthData,
   deleteGrowthRecord,
   deleteHealthRecord,
   fetchGrowthRecord,
@@ -54,11 +55,12 @@ import {
   updateMemory,
 } from "../../redux/slices/memorySlice";
 import {
+  clearResponses,
   deleteResponse,
   fetchChildResponses,
   updateResponse,
 } from "../../redux/slices/promptResponseSlice";
-import { fetchPrompts } from "../../redux/slices/promptSlice";
+import { clearPrompts, fetchPrompts } from "../../redux/slices/promptSlice";
 import { Memory } from "../../services/memoryService";
 import { SearchResult, searchService } from "../../services/searchService";
 import { useFilteredContent } from "../../utils/contentPermissionUtils";
@@ -89,7 +91,7 @@ export default function ChildProfileScreen() {
     (state) => state.health
   );
   const { currentUser } = useAppSelector((state) => state.user);
-  const [activeTab, setActiveTab] = useState<TabType>("timeline");
+  const [activeTab, setActiveTab] = useState<TabType>("memories");
   const [hasProcessedFocusPost, setHasProcessedFocusPost] = useState(false);
   const [hasScrolledToFocusPost, setHasScrolledToFocusPost] = useState(false);
 
@@ -147,10 +149,16 @@ export default function ChildProfileScreen() {
 
   // State for storing creator information
   const [creators, setCreators] = useState<Record<string, any>>({});
+  
+
+
+
 
   // Create timeline items and filter them based on permissions
   const timelineItems = React.useMemo(() => {
     if (!id) return [];
+
+
 
     const items: any[] = [];
 
@@ -193,53 +201,67 @@ export default function ChildProfileScreen() {
 
     // Add Q&A responses
     const processedResponseIds = new Set();
-    responses
-      .filter((response) => response.childId === id)
-      .forEach((response) => {
-        if (!processedResponseIds.has(response.id)) {
-          processedResponseIds.add(response.id);
+    const filteredResponses = responses.filter((response) => response.childId === id);
+    
+        filteredResponses.forEach(async (response) => {
+      if (!processedResponseIds.has(response.id)) {
+        processedResponseIds.add(response.id);
 
-          let questionText = "Question not available";
-          if (typeof response.promptId === "object" && response.promptId) {
+        let questionText = "Question not available";
+        
+        if (typeof response.promptId === "object" && response.promptId) {
+          questionText =
+            (response.promptId as any).question ||
+            (response.promptId as any).title ||
+            "Question not available";
+        } else if (typeof response.promptId === "string") {
+          // First try to find in prompts array
+          const matchingPrompt = prompts.find(
+            (p: any) => p.id === response.promptId
+          );
+          
+                    if (matchingPrompt) {
             questionText =
-              (response.promptId as any).question ||
-              (response.promptId as any).title ||
+              matchingPrompt.content ||
+              matchingPrompt.title ||
               "Question not available";
-          } else if (typeof response.promptId === "string") {
-            const matchingPrompt = prompts.find(
-              (p: any) => p.id === response.promptId
-            );
-            if (matchingPrompt) {
-              questionText =
-                matchingPrompt.content ||
-                matchingPrompt.title ||
-                "Question not available";
-            }
+          } else {
+            // Fallback: show promptId if prompt not found
+            questionText = `Question ID: ${response.promptId}`;
           }
-
-          items.push({
-            id: response.id,
-            type: "qa",
-            title: "Q&A Response",
-            content: response.content,
-            date: new Date(response.createdAt).toISOString().split("T")[0],
-            createdAt: response.createdAt,
-            media: response.attachments,
-            visibility: response.visibility,
-            metadata: {
-              promptId: response.promptId,
-              feedback: response.feedback,
-              question: questionText,
-            },
-          });
         }
-      });
+
+        const qaItem = {
+          id: response.id,
+          type: "qa",
+          title: questionText.length > 50 ? questionText.substring(0, 50) + "..." : questionText,
+          content: response.content,
+          date: new Date(response.createdAt).toISOString().split("T")[0],
+          createdAt: response.createdAt,
+          media: response.attachments,
+          visibility: response.visibility,
+          creator: {
+            id: response.parentId || currentUser?.id,
+            firstName: currentUser?.firstName,
+            lastName: currentUser?.lastName,
+          },
+          parentId: response.parentId || currentUser?.id,
+          metadata: {
+            promptId: response.promptId,
+            feedback: response.feedback,
+            question: questionText,
+          },
+        };
+        
+        items.push(qaItem);
+      }
+    });
 
     // Add health records
     const processedHealthIds = new Set();
-    healthRecords
-      .filter((record) => record.childId === id)
-      .forEach((record) => {
+    const filteredHealthRecords = healthRecords.filter((record) => record.childId === id);
+    
+    filteredHealthRecords.forEach((record) => {
         if (!processedHealthIds.has(record.id)) {
           processedHealthIds.add(record.id);
           items.push({
@@ -263,9 +285,9 @@ export default function ChildProfileScreen() {
 
     // Add growth records
     const processedGrowthIds = new Set();
-    growthRecords
-      .filter((record) => record.childId === id)
-      .forEach((record) => {
+    const filteredGrowthRecords = growthRecords.filter((record) => record.childId === id);
+    
+    filteredGrowthRecords.forEach((record) => {
         if (!processedGrowthIds.has(record.id)) {
           processedGrowthIds.add(record.id);
           items.push({
@@ -288,10 +310,14 @@ export default function ChildProfileScreen() {
       });
 
     // Sort by date (newest first)
-    return items.sort(
+    const sortedItems = items.sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
+    
+
+    
+    return sortedItems;
   }, [
     id,
     memories,
@@ -304,34 +330,19 @@ export default function ChildProfileScreen() {
 
   // Filter timeline items based on user permissions
   const filteredTimelineItems = useFilteredContent(timelineItems);
-
-  // Handle focus post from notification
+  
+  // Handle focus post from notification - only when there's actually a focusPost
   useEffect(() => {
     if (focusPost && postType && !hasProcessedFocusPost) {
-      // Set active tab based on post type (only once when focusPost changes)
-      switch (postType) {
-        case "memory":
-          setActiveTab("timeline"); // Memory posts are shown in timeline
-          break;
-        case "prompt_response":
-          setActiveTab("timeline"); // Q&A responses are shown in timeline
-          break;
-        case "health_record":
-        case "growth_record":
-          setActiveTab("timeline"); // Health records are shown in timeline
-          break;
-        default:
-          setActiveTab("timeline");
-      }
-
+      // Active tab is already set to timeline in the focusPost change effect
       setHasProcessedFocusPost(true);
     }
-  }, [focusPost, postType, hasProcessedFocusPost]); // Added hasProcessedFocusPost dependency
+  }, [focusPost, postType, hasProcessedFocusPost]);
 
-  // Separate useEffect for scrolling when timeline items are loaded
+  // Separate useEffect for scrolling when timeline items are loaded - only when there's focusPost
   useEffect(() => {
     if (
-      focusPost &&
+      focusPost && // Only run when there's actually a focusPost
       filteredTimelineItems.length > 0 &&
       activeTab === "timeline" &&
       !hasScrolledToFocusPost
@@ -408,7 +419,6 @@ export default function ChildProfileScreen() {
 
         // Use setTimeout to ensure layout is complete
         setTimeout(attemptScroll, 100);
-      } else {
       }
     }
   }, [
@@ -420,7 +430,7 @@ export default function ChildProfileScreen() {
     responses,
     healthRecords,
     growthRecords,
-    // hasScrolledToFocusPost
+    hasScrolledToFocusPost
   ]);
 
   // Handle edit completion from HealthContent
@@ -481,13 +491,17 @@ export default function ChildProfileScreen() {
   // Fetch child data when component mounts
   useEffect(() => {
     // Reset focus post processing state when component mounts or id changes
-    setHasProcessedFocusPost(false);
-    setHasScrolledToFocusPost(false);
-    setHasLoadedTimelineData(false);
+    // Only reset if there's no focusPost or if focusPost has changed
+    if (!focusPost) {
+      setHasProcessedFocusPost(false);
+      setHasScrolledToFocusPost(false);
+    }
+
     itemPositionsRef.current.clear(); // Reset item positions
     setScrollRetryCount(0); // Reset retry count
 
     if (id) {
+
       dispatch(fetchChild(id));
       // Fetch memories for this child, newest first - increased limit to show more memories
       dispatch(
@@ -497,7 +511,12 @@ export default function ChildProfileScreen() {
           limit: 50, // Increased from 10 to 50 to show more memories initially
         })
       );
-      // Health data is fetched by HealthContent component
+      // Load Q&A responses for this child
+      dispatch(fetchChildResponses({ childId: id, page: 1, limit: 50 }));
+      // Load health and growth records for this child
+      dispatch(fetchHealthRecords({ childId: id }));
+      dispatch(fetchGrowthRecords({ childId: id }));
+      dispatch(fetchPrompts({ isActive: true, limit: 50 })); // Load prompts with reasonable limit
     }
 
     // Cleanup when component unmounts
@@ -507,24 +526,24 @@ export default function ChildProfileScreen() {
       }
       dispatch(clearCurrentChild());
       dispatch(clearMemories());
+      // Clear other data when component unmounts
+      dispatch(clearResponses());
+      dispatch(clearPrompts());
+      dispatch(clearHealthData());
     };
-  }, [id, dispatch]);
+  }, [id, dispatch, focusPost]);
 
-  // Load Q&A and health data when timeline tab is active (only once)
-  const [hasLoadedTimelineData, setHasLoadedTimelineData] = useState(false);
-
+  // Reset focus state when focusPost changes
   useEffect(() => {
-    if (id && activeTab === "timeline" && !hasLoadedTimelineData) {
-      // Load Q&A responses for this child
-      dispatch(fetchChildResponses({ childId: id, page: 1, limit: 50 }));
-      // Load health and growth records for this child
-      dispatch(fetchHealthRecords({ childId: id }));
-      dispatch(fetchGrowthRecords({ childId: id }));
-      dispatch(fetchPrompts({ isActive: true, limit: 50 })); // Load all active prompts
-
-      setHasLoadedTimelineData(true);
+    if (focusPost) {
+      setHasProcessedFocusPost(false);
+      setHasScrolledToFocusPost(false);
+      // Set active tab to timeline when there's a focusPost
+      setActiveTab("timeline");
     }
-  }, [id, activeTab, dispatch, hasLoadedTimelineData]);
+  }, [focusPost]);
+
+
 
   // Refresh memories when add memory modal closes
   useEffect(() => {
@@ -1118,6 +1137,499 @@ export default function ChildProfileScreen() {
       );
     }
 
+    // For Q&A tab, use collapsible header layout
+    if (activeTab === "qa") {
+      return (
+        <View style={styles.container}>
+          {/* Fixed App Header */}
+          <View style={styles.fixedAppHeader}>
+            <AppHeader
+              title={
+                currentChild
+                  ? `${getDisplayName(currentChild)}'s Profile`
+                  : "Child Profile"
+              }
+              onBack={handleBack}
+              onSearchChange={handleSearch}
+              searchPlaceholder={`Search for ${
+                currentChild ? getDisplayName(currentChild) : "child"
+              }'s memories, milestones, health records...`}
+              showBackButton={true}
+              canGoBack={true}
+              showLogoutButton={true}
+            />
+          </View>
+
+          {/* Collapsible Header */}
+          <Animated.View
+            style={[
+              styles.collapsibleHeader,
+              {
+                transform: [{ translateY: headerTranslateY }],
+                zIndex: 1000,
+              },
+            ]}
+          >
+            {/* Child Header */}
+            <View style={styles.childHeader}>
+              <View style={styles.childInfo}>
+                {currentChild.avatarUrl ? (
+                  <Image
+                    source={{ uri: currentChild.avatarUrl }}
+                    style={styles.childAvatar}
+                  />
+                ) : (
+                  <View style={styles.childAvatarPlaceholder}>
+                    <MaterialIcons name="person" size={60} color="#ccc" />
+                  </View>
+                )}
+                <View style={styles.childDetails}>
+                  <Text style={styles.childName}>
+                    {getDisplayName(currentChild)}
+                  </Text>
+                  <Text style={styles.childAge}>
+                    {getAge(currentChild.birthdate)}
+                  </Text>
+                  <Text style={styles.childBirthdate}>
+                    Born {formatDate(currentChild.birthdate)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Tab Navigation */}
+            <View style={styles.tabContainer}>
+              {[
+                { key: "timeline", label: "Timeline", icon: "timeline" },
+                { key: "health", label: "Health", icon: "medical-services" },
+                { key: "memories", label: "Memories", icon: "photo" },
+                { key: "qa", label: "Q&A", icon: "help" },
+                { key: "profile", label: "Profile", icon: "person" },
+              ].map((tab) => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tabButton,
+                    activeTab === tab.key && styles.activeTabButton,
+                  ]}
+                  onPress={() => {
+                    setActiveTab(tab.key as TabType);
+                  }}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                >
+                  <MaterialIcons
+                    name={tab.icon as any}
+                    size={20}
+                    color={activeTab === tab.key ? "#4f8cff" : "#666"}
+                  />
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === tab.key && styles.activeTabText,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
+
+          {/* Scrollable Content */}
+          <Animated.ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollableContent}
+            contentContainerStyle={[
+              styles.scrollableContentContainer,
+              { paddingTop: 80 + headerHeight + 20 }, // AppHeader height + collapsible header height + padding
+            ]}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Q&A Content */}
+            <QAContent
+              childId={id!}
+              useScrollView={true}
+              editingItem={editingQAItem}
+            />
+          </Animated.ScrollView>
+        </View>
+      );
+    }
+
+    // For Health tab, use collapsible header layout
+    if (activeTab === "health") {
+      return (
+        <View style={styles.container}>
+          {/* Fixed App Header */}
+          <View style={styles.fixedAppHeader}>
+            <AppHeader
+              title={
+                currentChild
+                  ? `${getDisplayName(currentChild)}'s Profile`
+                  : "Child Profile"
+              }
+              onBack={handleBack}
+              onSearchChange={handleSearch}
+              searchPlaceholder={`Search for ${
+                currentChild ? getDisplayName(currentChild) : "child"
+              }'s memories, milestones, health records...`}
+              showBackButton={true}
+              canGoBack={true}
+              showLogoutButton={true}
+            />
+          </View>
+
+          {/* Collapsible Header */}
+          <Animated.View
+            style={[
+              styles.collapsibleHeader,
+              {
+                transform: [{ translateY: headerTranslateY }],
+                zIndex: 1000,
+              },
+            ]}
+          >
+            {/* Child Header */}
+            <View style={styles.childHeader}>
+              <View style={styles.childInfo}>
+                {currentChild.avatarUrl ? (
+                  <Image
+                    source={{ uri: currentChild.avatarUrl }}
+                    style={styles.childAvatar}
+                  />
+                ) : (
+                  <View style={styles.childAvatarPlaceholder}>
+                    <MaterialIcons name="person" size={60} color="#ccc" />
+                  </View>
+                )}
+                <View style={styles.childDetails}>
+                  <Text style={styles.childName}>
+                    {getDisplayName(currentChild)}
+                  </Text>
+                  <Text style={styles.childAge}>
+                    {getAge(currentChild.birthdate)}
+                  </Text>
+                  <Text style={styles.childBirthdate}>
+                    Born {formatDate(currentChild.birthdate)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Tab Navigation */}
+            <View style={styles.tabContainer}>
+              {[
+                { key: "timeline", label: "Timeline", icon: "timeline" },
+                { key: "health", label: "Health", icon: "medical-services" },
+                { key: "memories", label: "Memories", icon: "photo" },
+                { key: "qa", label: "Q&A", icon: "help" },
+                { key: "profile", label: "Profile", icon: "person" },
+              ].map((tab) => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tabButton,
+                    activeTab === tab.key && styles.activeTabButton,
+                  ]}
+                  onPress={() => {
+                    setActiveTab(tab.key as TabType);
+                  }}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                >
+                  <MaterialIcons
+                    name={tab.icon as any}
+                    size={20}
+                    color={activeTab === tab.key ? "#4f8cff" : "#666"}
+                  />
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === tab.key && styles.activeTabText,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
+
+          {/* Scrollable Content */}
+          <Animated.ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollableContent}
+            contentContainerStyle={[
+              styles.scrollableContentContainer,
+              { paddingTop: 80 + headerHeight + 20 }, // AppHeader height + collapsible header height + padding
+            ]}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Health Content */}
+            <HealthContent
+              childId={id!}
+              editingHealthItem={editingHealthItem}
+              editingGrowthItem={editingGrowthItem}
+              onEditComplete={handleHealthEditComplete}
+            />
+          </Animated.ScrollView>
+        </View>
+      );
+    }
+
+    // For Profile tab, use collapsible header layout
+    if (activeTab === "profile") {
+      return (
+        <View style={styles.container}>
+          {/* Fixed App Header */}
+          <View style={styles.fixedAppHeader}>
+            <AppHeader
+              title={
+                currentChild
+                  ? `${getDisplayName(currentChild)}'s Profile`
+                  : "Child Profile"
+              }
+              onBack={handleBack}
+              onSearchChange={handleSearch}
+              searchPlaceholder={`Search for ${
+                currentChild ? getDisplayName(currentChild) : "child"
+              }'s memories, milestones, health records...`}
+              showBackButton={true}
+              canGoBack={true}
+              showLogoutButton={true}
+            />
+          </View>
+
+          {/* Collapsible Header */}
+          <Animated.View
+            style={[
+              styles.collapsibleHeader,
+              {
+                transform: [{ translateY: headerTranslateY }],
+                zIndex: 1000,
+              },
+            ]}
+          >
+            {/* Child Header */}
+            <View style={styles.childHeader}>
+              <View style={styles.childInfo}>
+                {currentChild.avatarUrl ? (
+                  <Image
+                    source={{ uri: currentChild.avatarUrl }}
+                    style={styles.childAvatar}
+                  />
+                ) : (
+                  <View style={styles.childAvatarPlaceholder}>
+                    <MaterialIcons name="person" size={60} color="#ccc" />
+                  </View>
+                )}
+                <View style={styles.childDetails}>
+                  <Text style={styles.childName}>
+                    {getDisplayName(currentChild)}
+                  </Text>
+                  <Text style={styles.childAge}>
+                    {getAge(currentChild.birthdate)}
+                  </Text>
+                  <Text style={styles.childBirthdate}>
+                    Born {formatDate(currentChild.birthdate)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Tab Navigation */}
+            <View style={styles.tabContainer}>
+              {[
+                { key: "timeline", label: "Timeline", icon: "timeline" },
+                { key: "health", label: "Health", icon: "medical-services" },
+                { key: "memories", label: "Memories", icon: "photo" },
+                { key: "qa", label: "Q&A", icon: "help" },
+                { key: "profile", label: "Profile", icon: "person" },
+              ].map((tab) => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tabButton,
+                    activeTab === tab.key && styles.activeTabButton,
+                  ]}
+                  onPress={() => {
+                    setActiveTab(tab.key as TabType);
+                  }}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                >
+                  <MaterialIcons
+                    name={tab.icon as any}
+                    size={20}
+                    color={activeTab === tab.key ? "#4f8cff" : "#666"}
+                  />
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === tab.key && styles.activeTabText,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
+
+          {/* Scrollable Content */}
+          <Animated.ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollableContent}
+            contentContainerStyle={[
+              styles.scrollableContentContainer,
+              { paddingTop: 80 + headerHeight + 20 }, // AppHeader height + collapsible header height + padding
+            ]}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Profile Content */}
+            {renderProfileContent()}
+          </Animated.ScrollView>
+        </View>
+      );
+    }
+
+    // For Timeline tab, use collapsible header layout
+    if (activeTab === "timeline") {
+      return (
+        <View style={styles.container}>
+          {/* Fixed App Header */}
+          <View style={styles.fixedAppHeader}>
+            <AppHeader
+              title={
+                currentChild
+                  ? `${getDisplayName(currentChild)}'s Profile`
+                  : "Child Profile"
+              }
+              onBack={handleBack}
+              onSearchChange={handleSearch}
+              searchPlaceholder={`Search for ${
+                currentChild ? getDisplayName(currentChild) : "child"
+              }'s memories, milestones, health records...`}
+              showBackButton={true}
+              canGoBack={true}
+              showLogoutButton={true}
+            />
+          </View>
+
+          {/* Collapsible Header */}
+          <Animated.View
+            style={[
+              styles.collapsibleHeader,
+              {
+                transform: [{ translateY: headerTranslateY }],
+                zIndex: 1000,
+              },
+            ]}
+          >
+            {/* Child Header */}
+            <View style={styles.childHeader}>
+              <View style={styles.childInfo}>
+                {currentChild.avatarUrl ? (
+                  <Image
+                    source={{ uri: currentChild.avatarUrl }}
+                    style={styles.childAvatar}
+                  />
+                ) : (
+                  <View style={styles.childAvatarPlaceholder}>
+                    <MaterialIcons name="person" size={60} color="#ccc" />
+                  </View>
+                )}
+                <View style={styles.childDetails}>
+                  <Text style={styles.childName}>
+                    {getDisplayName(currentChild)}
+                  </Text>
+                  <Text style={styles.childAge}>
+                    {getAge(currentChild.birthdate)}
+                  </Text>
+                  <Text style={styles.childBirthdate}>
+                    Born {formatDate(currentChild.birthdate)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Tab Navigation */}
+            <View style={styles.tabContainer}>
+              {[
+                { key: "timeline", label: "Timeline", icon: "timeline" },
+                { key: "health", label: "Health", icon: "medical-services" },
+                { key: "memories", label: "Memories", icon: "photo" },
+                { key: "qa", label: "Q&A", icon: "help" },
+                { key: "profile", label: "Profile", icon: "person" },
+              ].map((tab) => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tabButton,
+                    activeTab === tab.key && styles.activeTabButton,
+                  ]}
+                  onPress={() => {
+                    setActiveTab(tab.key as TabType);
+                  }}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                >
+                  <MaterialIcons
+                    name={tab.icon as any}
+                    size={20}
+                    color={activeTab === tab.key ? "#4f8cff" : "#666"}
+                  />
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === tab.key && styles.activeTabText,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
+
+          {/* Scrollable Content */}
+          <Animated.ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollableContent}
+            contentContainerStyle={[
+              styles.scrollableContentContainer,
+              { paddingTop: 80 + headerHeight + 20 }, // AppHeader height + collapsible header height + padding
+            ]}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Timeline Content */}
+            {renderTimelineContent()}
+          </Animated.ScrollView>
+        </View>
+      );
+    }
+
     // For other tabs, use ScrollView
     return (
       <ScrollView ref={scrollViewRef} style={styles.container}>
@@ -1341,7 +1853,7 @@ export default function ChildProfileScreen() {
                       <TimelineItem
                         item={item}
                         highlight={
-                          item._id === focusPost || item.id === focusPost
+                          !!focusPost && (item._id === focusPost || item.id === focusPost)
                         }
                         onPress={() => handleMemoryPress(item)}
                         onEdit={() => {
@@ -1372,7 +1884,7 @@ export default function ChildProfileScreen() {
                       <TimelineItem
                         item={item}
                         highlight={
-                          item._id === focusPost || item.id === focusPost
+                          !!focusPost && (item._id === focusPost || item.id === focusPost)
                         }
                         onEdit={() => handleQAEdit(item)}
                         onDelete={() => handleQADelete(item)}
@@ -1391,7 +1903,7 @@ export default function ChildProfileScreen() {
                       <TimelineItem
                         item={item}
                         highlight={
-                          item._id === focusPost || item.id === focusPost
+                          !!focusPost && (item._id === focusPost || item.id === focusPost)
                         }
                         onEdit={() => {
                           setEditingHealthItem(item);
@@ -1462,7 +1974,7 @@ export default function ChildProfileScreen() {
                       <TimelineItem
                         item={item}
                         highlight={
-                          item._id === focusPost || item.id === focusPost
+                          !!focusPost && (item._id === focusPost || item.id === focusPost)
                         }
                         onEdit={async () => {
                           // Fetch full record data before editing
@@ -1541,7 +2053,7 @@ export default function ChildProfileScreen() {
                       <TimelineItem
                         item={item}
                         highlight={
-                          item._id === focusPost || item.id === focusPost
+                          !!focusPost && (item._id === focusPost || item.id === focusPost)
                         }
                         isOwner={viewerIsOwner}
                       />
@@ -1633,9 +2145,22 @@ export default function ChildProfileScreen() {
 
         {/* Render memories as regular views instead of FlatList */}
         {getUniqueMemories().map((memory, index) => {
-          // Extract creator info from parentId (which can be string or object)
+          // Use creator info from memory object if available, otherwise extract from parentId
           let creator = undefined;
-          if (memory.parentId && typeof memory.parentId === "object") {
+          if (memory.creator) {
+            // Use creator info from memory object (preferred)
+            creator = {
+              id: memory.creator.id,
+              firstName: memory.creator.firstName,
+              lastName: memory.creator.lastName,
+              avatar: memory.creator.avatar,
+              email: "", // Required by User type
+              role: "",
+              createdAt: "",
+              updatedAt: "",
+            };
+          } else if (memory.parentId && typeof memory.parentId === "object") {
+            // Fallback: extract from parentId (legacy)
             creator = {
               id: memory.parentId._id || memory.parentId.id,
               firstName: memory.parentId.firstName,

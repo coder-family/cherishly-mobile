@@ -25,9 +25,17 @@ const transformGrowthRecord = (record: any): GrowthRecord => {
   // Handle nested response structure
   const growthRecord = record.growthRecord || record;
   
+  // Extract childId from child object or use direct childId
+  let childId = growthRecord.childId;
+  if (growthRecord.child && typeof growthRecord.child === 'object') {
+    childId = growthRecord.child._id || growthRecord.child.id;
+  } else if (growthRecord.child && typeof growthRecord.child === 'string') {
+    childId = growthRecord.child;
+  }
+  
   return {
     id: growthRecord._id || growthRecord.id,
-    childId: growthRecord.child || growthRecord.childId,
+    childId: childId,
     type: growthRecord.type,
     value: growthRecord.value,
     unit: growthRecord.unit,
@@ -85,9 +93,17 @@ const transformHealthRecord = (record: any): HealthRecord => {
   // Handle nested response structure
   const healthRecord = record.healthRecord || record;
   
+  // Extract childId from child object or use direct childId
+  let childId = healthRecord.childId;
+  if (healthRecord.child && typeof healthRecord.child === 'object') {
+    childId = healthRecord.child._id || healthRecord.child.id;
+  } else if (healthRecord.child && typeof healthRecord.child === 'string') {
+    childId = healthRecord.child;
+  }
+  
   return {
     id: healthRecord._id || healthRecord.id,
-    childId: healthRecord.child || healthRecord.childId,
+    childId: childId,
     type: healthRecord.type,
     title: healthRecord.title,
     description: healthRecord.description,

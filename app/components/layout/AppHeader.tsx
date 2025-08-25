@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useAppDispatch } from '../../redux/hooks';
 import { logoutUser } from '../../redux/slices/authSlice';
+import { StorageUtils } from '../../utils/storageUtils';
 import { NotificationBadge } from '../notification/NotificationBadge';
 
 interface AppHeaderProps {
@@ -88,11 +89,47 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           style: 'destructive',
           onPress: async () => {
             try {
-              await dispatch(logoutUser());
+              console.log('🔄 Starting logout process...');
+              
+              // Debug: Log storage before logout
+              console.log('📦 Storage before logout:');
+              await StorageUtils.debugStorage();
+              
+              // Dispatch logout action
+              const result = await dispatch(logoutUser());
+              console.log('✅ Logout dispatch completed:', result);
+              
+              // Clear any cached data
+              console.log('🧹 Clearing cached data...');
+              
+              // Debug: Log storage after logout
+              console.log('📦 Storage after logout:');
+              await StorageUtils.debugStorage();
+              
+              // Navigate to login page
+              console.log('🚀 Navigating to login page...');
               router.replace('/login');
+              
+              console.log('✅ Logout process completed successfully');
             } catch (error) {
-              console.error('Logout error:', error);
-              Alert.alert('Error', 'Failed to logout. Please try again.');
+              console.error('❌ Logout error:', error);
+              
+              // Even if logout fails, try to clear local state and navigate
+              try {
+                console.log('🔄 Attempting fallback logout...');
+                
+                // Clear storage manually
+                await StorageUtils.clear();
+                console.log('🧹 Storage cleared manually');
+                
+                // Navigate to login anyway
+                router.replace('/login');
+                
+                console.log('✅ Fallback logout completed');
+              } catch (fallbackError) {
+                console.error('❌ Fallback logout also failed:', fallbackError);
+                Alert.alert('Error', 'Failed to logout. Please refresh the page and try again.');
+              }
             }
           },
         },

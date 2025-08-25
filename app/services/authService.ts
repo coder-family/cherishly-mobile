@@ -1,5 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { conditionalLog } from "../utils/logUtils";
+import { StorageUtils } from "../utils/storageUtils";
 import apiService from "./apiService";
 
 // Storage keys for AsyncStorage - these are key names, not actual credentials
@@ -403,8 +403,17 @@ class AuthService {
       // This ensures user is logged out locally even if server is unreachable
     } finally {
       conditionalLog.auth("Clearing local tokens...");
+      
+      // Debug: Log storage before clearing
+      await StorageUtils.debugStorage();
+      
       await this.clearTokens();
       this.currentUser = null;
+      
+      // Debug: Log storage after clearing
+      conditionalLog.auth("Storage after clearing tokens:");
+      await StorageUtils.debugStorage();
+      
       conditionalLog.auth("Logout completed");
     }
   }
@@ -440,7 +449,7 @@ class AuthService {
    */
   async getAccessToken(): Promise<string | null> {
     try {
-      return await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      return await StorageUtils.getItem(STORAGE_KEYS.ACCESS_TOKEN);
     } catch (error) {
       conditionalLog.authError("Error getting access token:", sanitizeForLogging(error));
       return null;
@@ -452,7 +461,7 @@ class AuthService {
    */
   async getRefreshToken(): Promise<string | null> {
     try {
-      return await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+      return await StorageUtils.getItem(STORAGE_KEYS.REFRESH_TOKEN);
     } catch (error) {
       conditionalLog.authError("Error getting refresh token:", sanitizeForLogging(error));
       return null;
@@ -467,9 +476,9 @@ class AuthService {
       const expiryTime = Date.now() + tokens.expiresIn * 1000;
 
       await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, tokens.accessToken),
-        AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken),
-        AsyncStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, expiryTime.toString()),
+        StorageUtils.setItem(STORAGE_KEYS.ACCESS_TOKEN, tokens.accessToken),
+        StorageUtils.setItem(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken),
+        StorageUtils.setItem(STORAGE_KEYS.TOKEN_EXPIRY, expiryTime.toString()),
       ]);
     } catch (error) {
       conditionalLog.authError("Error storing tokens:", sanitizeForLogging(error));
@@ -482,7 +491,7 @@ class AuthService {
    */
   private async storeUserData(user: User): Promise<void> {
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+      await StorageUtils.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
     } catch (error) {
       conditionalLog.authError("Error storing user data:", sanitizeForLogging(error));
       throw new Error("Failed to store user data");
@@ -494,7 +503,7 @@ class AuthService {
    */
   private async getUserData(): Promise<User | null> {
     try {
-      const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+      const data = await StorageUtils.getItem(STORAGE_KEYS.USER_DATA);
       return data ? JSON.parse(data) : null;
     } catch (error) {
       conditionalLog.authError("Error getting user data:", sanitizeForLogging(error));
@@ -508,10 +517,10 @@ class AuthService {
   private async clearTokens(): Promise<void> {
     try {
       await Promise.all([
-        AsyncStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN),
-        AsyncStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN),
-        AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA),
-        AsyncStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRY),
+        StorageUtils.removeItem(STORAGE_KEYS.ACCESS_TOKEN),
+        StorageUtils.removeItem(STORAGE_KEYS.REFRESH_TOKEN),
+        StorageUtils.removeItem(STORAGE_KEYS.USER_DATA),
+        StorageUtils.removeItem(STORAGE_KEYS.TOKEN_EXPIRY),
       ]);
     } catch (error) {
       conditionalLog.authError("Error clearing tokens:", sanitizeForLogging(error));
@@ -525,7 +534,7 @@ class AuthService {
   private async isTokenValid(token: string): Promise<boolean> {
     try {
       // Check if token has expired
-      const expiryTime = await AsyncStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY);
+      const expiryTime = await StorageUtils.getItem(STORAGE_KEYS.TOKEN_EXPIRY);
       if (expiryTime && Date.now() > parseInt(expiryTime)) {
         return false;
       }

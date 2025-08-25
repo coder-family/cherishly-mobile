@@ -40,8 +40,12 @@ export default function MemoryItem({
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const dispatch = useAppDispatch();
-  const currentUser = useAppSelector((state) => state.auth.user);
+  const authUser = useAppSelector((state) => state.auth.user);
+  const userCurrentUser = useAppSelector((state) => state.user.currentUser);
   const { children } = useAppSelector((state) => state.children);
+  
+  // Combine user info from both auth and user slices
+  const currentUser = userCurrentUser || authUser;
   
   // Check if current user is the owner of the child (not just a member)
   // Only the owner can see visibility toggle and edit/delete buttons
@@ -139,21 +143,54 @@ export default function MemoryItem({
   };
 
   const getCreatorName = () => {
-    if (creator) {
-      return creator.firstName + (creator.lastName ? ` ${creator.lastName}` : '');
+    // First priority: Use creator object if available
+    if (creator && creator.firstName && creator.firstName.trim()) {
+      const firstName = creator.firstName.trim();
+      const lastName = creator.lastName && creator.lastName.trim() ? creator.lastName.trim() : '';
+      return lastName ? `${firstName} ${lastName}` : firstName;
     }
-    // If no creator info available, show creator ID or generic name
-    if (memory.parentId) {
-      if (typeof memory.parentId === 'string') {
-        return `User ${memory.parentId.slice(-4)}`; // Show last 4 characters of creator ID
-      } else if (typeof memory.parentId === 'object' && (memory.parentId as any)._id) {
-        return `User ${(memory.parentId as any)._id.slice(-4)}`; // Show last 4 characters of creator ID
+    
+    // Second priority: If no creator but we have current user and this is their memory
+    if (currentUser && memory.parentId) {
+      const parentId = typeof memory.parentId === 'string' ? memory.parentId : 
+                      (memory.parentId as any)?._id || (memory.parentId as any)?.id;
+      
+      if (parentId === currentUser.id) {
+        // Use currentUser name even if firstName is undefined
+        const firstName = currentUser.firstName || 'User';
+        const lastName = currentUser.lastName || '';
+        return lastName ? `${firstName} ${lastName}` : firstName;
       }
     }
-    // If no creator, show current user's name
+    
+    // Third priority: If we have current user info but no specific creator match
     if (currentUser) {
-      return currentUser.firstName + (currentUser.lastName ? ` ${currentUser.lastName}` : '');
+      // Use currentUser name even if firstName is undefined
+      const firstName = currentUser.firstName || 'User';
+      const lastName = currentUser.lastName || '';
+      return lastName ? `${firstName} ${lastName}` : firstName;
     }
+    
+    // Fourth priority: Try to use email or ID from currentUser
+    if (currentUser) {
+      const user = currentUser as any;
+      if (user.email) {
+        const emailName = user.email.split('@')[0];
+        return emailName;
+      } else if (user.id) {
+        const idName = `User ${user.id.slice(-4)}`;
+        return idName;
+      }
+    }
+    
+    // Fifth priority: Try to use memory.creator if available
+    if (memory.creator && memory.creator.firstName) {
+      const firstName = memory.creator.firstName.trim();
+      const lastName = memory.creator.lastName && memory.creator.lastName.trim() ? memory.creator.lastName.trim() : '';
+      return lastName ? `${firstName} ${lastName}` : firstName;
+    }
+    
+    // Last fallback: Generic name
     return 'Người dùng';
   };
 
