@@ -1,6 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -20,6 +20,7 @@ import PendingInvitationsModal from "../components/family/PendingInvitationsModa
 import RemoveMemberModal from "../components/family/RemoveMemberModal";
 import TimelinePost from "../components/family/TimelinePost";
 
+import { useFocusEffect } from '@react-navigation/native';
 import AppHeader from "../components/layout/AppHeader";
 import ScreenWithFooter from "../components/layout/ScreenWithFooter";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
@@ -39,6 +40,7 @@ export default function FamilyGroupDetailScreen() {
     (state) => state.family
   );
   const { user } = useAppSelector((state) => state.auth);
+  const { memories } = useAppSelector((state) => state.memories);
 
   // Use the group refresh hook
   const { refreshGroupData } = useGroupRefresh(id as string);
@@ -161,6 +163,16 @@ export default function FamilyGroupDetailScreen() {
     }
   };
 
+  // Refresh timeline posts (reset and fetch first page)
+  const refreshTimelinePosts = async () => {
+    if (!currentGroup?.id) return;
+    console.log('🔄 Refreshing timeline posts...');
+    setTimelinePage(1);
+    setHasMoreTimeline(true);
+    setTimelinePosts([]);
+    await fetchTimelinePosts();
+  };
+
   // Fetch children when tab is active
   useEffect(() => {
     if (activeTab === "children") {
@@ -176,14 +188,42 @@ export default function FamilyGroupDetailScreen() {
       timelinePostsLength: timelinePosts.length
     });
     
-    if (activeTab === "timeline") {
-      console.log('📱 Timeline tab is active, fetching posts...');
+    if (activeTab === "timeline" && timelinePosts.length === 0) {
+      console.log('📱 Timeline tab is active and no posts loaded, fetching posts...');
+      setTimelinePage(1);
+      setHasMoreTimeline(true);
+      fetchTimelinePosts();
+    }
+  }, [activeTab, currentGroup?.id]);
+
+  // Fetch timeline posts when group changes
+  useEffect(() => {
+    if (currentGroup?.id && activeTab === "timeline") {
+      console.log('🔄 Group changed, refreshing timeline posts...');
       setTimelinePage(1);
       setHasMoreTimeline(true);
       setTimelinePosts([]);
       fetchTimelinePosts();
     }
-  }, [activeTab, currentGroup?.id]);
+  }, [currentGroup?.id]);
+
+  // Refresh timeline when screen comes into focus (e.g., when returning from memory tab)
+  useFocusEffect(
+    useCallback(() => {
+      if (activeTab === "timeline" && currentGroup?.id) {
+        console.log('🔄 Screen focused, refreshing timeline posts...');
+        refreshTimelinePosts();
+      }
+    }, [activeTab, currentGroup?.id])
+  );
+
+  // Refresh timeline when memories change (e.g., when visibility is updated in memory tab)
+  useEffect(() => {
+    if (activeTab === "timeline" && currentGroup?.id && memories.length > 0) {
+      console.log('🔄 Memories changed, refreshing timeline posts...');
+      refreshTimelinePosts();
+    }
+  }, [memories, activeTab, currentGroup?.id]);
 
   // Fetch next pages when timelinePage changes (after initial load)
   useEffect(() => {
@@ -195,6 +235,32 @@ export default function FamilyGroupDetailScreen() {
   const handleLoadMoreTimeline = () => {
     if (loadingTimeline || !hasMoreTimeline) return;
     setTimelinePage((prev) => prev + 1);
+  };
+
+  // Handle visibility update for timeline posts
+  const handleTimelineVisibilityUpdate = (postId: string, visibility: 'private' | 'public') => {
+    if (visibility === 'private') {
+      // Remove the post from timeline if it becomes private
+      setTimelinePosts((prevPosts) =>
+        prevPosts.filter((post) => post._id !== postId && post.id !== postId)
+      );
+    } else {
+      // Update the post in local state to reflect the change immediately
+      setTimelinePosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post._id === postId || post.id === postId
+            ? { ...post, visibility }
+            : post
+        )
+      );
+    }
+    
+    // Refresh timeline after a short delay to ensure backend changes are reflected
+    setTimeout(() => {
+      if (activeTab === "timeline") {
+        refreshTimelinePosts();
+      }
+    }, 1000);
   };
 
   // Handle child press
@@ -418,6 +484,7 @@ export default function FamilyGroupDetailScreen() {
               post={post}
               onReactionPress={handleReactionPress}
               onCommentPress={handleCommentPress}
+              onVisibilityUpdate={handleTimelineVisibilityUpdate}
             />
           ))}
           {hasMoreTimeline && (
