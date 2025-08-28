@@ -116,6 +116,7 @@ export default function FamilyGroupDetailScreen() {
   // Fetch timeline posts
   const fetchTimelinePosts = async () => {
     if (!currentGroup?.id) return;
+    console.log('🔄 Starting to fetch timeline posts for group:', currentGroup.id);
     setLoadingTimeline(true);
     try {
       const response = await familyService.getFamilyGroupTimeline(
@@ -123,6 +124,25 @@ export default function FamilyGroupDetailScreen() {
         timelinePage,
         TIMELINE_LIMIT
       );
+      console.log('📊 Timeline response received:', {
+        hasTimeline: !!response.timeline,
+        timelineLength: response.timeline?.length || 0,
+        hasPagination: !!response.pagination,
+        hasMore: response.pagination?.hasMore,
+        page: timelinePage,
+        permissions: response.permissions || 'no permissions data'
+      });
+      
+      // Log permissions details for debugging
+      if (response.permissions) {
+        console.log('🔐 Timeline permissions:', {
+          userRole: response.permissions.userRole,
+          isOwner: response.permissions.isOwner,
+          ownedChildren: response.permissions.ownedChildren,
+          canSeeAllContent: response.permissions.canSeeAllContent
+        });
+      }
+      
       if (timelinePage === 1) {
         setTimelinePosts(response.timeline || []);
       } else {
@@ -133,7 +153,7 @@ export default function FamilyGroupDetailScreen() {
       }
       setHasMoreTimeline(response.pagination?.hasMore || false);
     } catch (error) {
-      console.error("Error fetching timeline posts:", error);
+      console.error("❌ Error fetching timeline posts:", error);
       setTimelinePosts([]);
       Alert.alert("Error", "Failed to fetch timeline posts. Please try again.");
     } finally {
@@ -150,7 +170,14 @@ export default function FamilyGroupDetailScreen() {
 
   // Fetch timeline when tab is active
   useEffect(() => {
+    console.log('🔄 Timeline useEffect triggered:', {
+      activeTab,
+      groupId: currentGroup?.id,
+      timelinePostsLength: timelinePosts.length
+    });
+    
     if (activeTab === "timeline") {
+      console.log('📱 Timeline tab is active, fetching posts...');
       setTimelinePage(1);
       setHasMoreTimeline(true);
       setTimelinePosts([]);
@@ -335,6 +362,13 @@ export default function FamilyGroupDetailScreen() {
 
   // Render timeline section
   const renderTimelineSection = () => {
+    console.log('🎨 Rendering timeline section:', {
+      loadingTimeline,
+      timelinePostsLength: timelinePosts?.length || 0,
+      hasMoreTimeline,
+      timelinePage
+    });
+    
     if (loadingTimeline) {
       return (
         <View style={styles.sectionPlaceholder}>
@@ -344,6 +378,7 @@ export default function FamilyGroupDetailScreen() {
     }
 
     if (!timelinePosts || timelinePosts.length === 0) {
+      console.log('📭 No timeline posts to display');
       return (
         <View style={styles.sectionPlaceholder}>
           <MaterialIcons name="timeline" size={48} color="#ccc" />
@@ -351,6 +386,19 @@ export default function FamilyGroupDetailScreen() {
           <Text style={styles.placeholderSubtext}>
             Public posts from children will appear here
           </Text>
+          {/* Debug info */}
+          <View style={{ marginTop: 16, padding: 12, backgroundColor: '#f0f0f0', borderRadius: 8 }}>
+            <Text style={{ fontSize: 12, color: '#666', fontWeight: 'bold' }}>Debug Info:</Text>
+            <Text style={{ fontSize: 11, color: '#666' }}>
+              Group Children: {groupChildren?.length || 0}
+            </Text>
+            <Text style={{ fontSize: 11, color: '#666' }}>
+              Current User: {user?.firstName} {user?.lastName}
+            </Text>
+            <Text style={{ fontSize: 11, color: '#666' }}>
+              User Role: {currentGroup?.members?.find((m: any) => m.userId === user?.id)?.role || 'unknown'}
+            </Text>
+          </View>
         </View>
       );
     }

@@ -19,7 +19,20 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress }: 
   const [showComments, setShowComments] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
-  const contentType = (post.contentType || 'memory');
+  
+  // Debug logging for post data
+  useEffect(() => {
+    console.log('📝 TimelinePost rendering:', {
+      postId: post?._id || post?.id,
+      contentType: post?.contentType || 'unknown',
+      childName: post?.child?.nickname || post?.child?.firstName,
+      visibility: post?.visibility || 'unknown',
+      hasChild: !!post?.child,
+      hasContent: !!post?.content || !!post?.text || !!post?.title
+    });
+  }, [post]);
+
+  const contentType = post?.contentType || 'memory';
   
   const safeText = (text: any) => {
     if (typeof text === 'string') return text;
