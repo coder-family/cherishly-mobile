@@ -20,6 +20,7 @@ import { createMemory } from '../../redux/slices/memorySlice';
 import authService from '../../services/authService';
 import { CreateMemoryData } from '../../services/memoryService';
 import { conditionalLog } from '../../utils/logUtils';
+import AddButton from '../ui/AddButton';
 import VisibilityToggle, { VisibilityType } from '../ui/VisibilityToggle';
 
 interface AddMemoryModalProps {
@@ -378,16 +379,14 @@ export default function AddMemoryModal({ visible, onClose, childId }: AddMemoryM
 
           <View style={styles.attachmentsSection}>
             <Text style={styles.label}>Attachments</Text>
-            <TouchableOpacity 
-              style={styles.addAttachmentButton}
+            <AddButton
+              title={selectedFiles.length >= 5 ? 'Max files reached' : 'Add Photos/Videos'}
               onPress={pickImages}
+              variant="primary"
+              iconSize={24}
               disabled={selectedFiles.length >= 5}
-            >
-              <MaterialIcons name="add-photo-alternate" size={24} color="#4f8cff" />
-              <Text style={styles.addAttachmentText}>
-                {selectedFiles.length >= 5 ? 'Max files reached' : 'Add Photos/Videos'}
-              </Text>
-            </TouchableOpacity>
+              iconName="add-photo-alternate"
+            />
             <Text style={styles.helpText}>
               You can add up to 5 photos or videos to your memory
             </Text>
@@ -477,22 +476,7 @@ const styles = StyleSheet.create({
   attachmentsSection: {
     marginTop: 20,
   },
-  addAttachmentButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#4f8cff',
-    borderStyle: 'dashed',
-    borderRadius: 8,
-    padding: 20,
-    marginTop: 8,
-  },
-  addAttachmentText: {
-    fontSize: 16,
-    color: '#4f8cff',
-    marginLeft: 8,
-    fontWeight: '500',
-  },
+
   selectedFilesContainer: {
     marginTop: 20,
     marginBottom: 20,

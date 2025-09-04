@@ -19,6 +19,7 @@ import LeaveGroupModal from "../components/family/LeaveGroupModal";
 import PendingInvitationsModal from "../components/family/PendingInvitationsModal";
 import RemoveMemberModal from "../components/family/RemoveMemberModal";
 import TimelinePost from "../components/family/TimelinePost";
+import AddButton from "../components/ui/AddButton";
 
 import { useFocusEffect } from '@react-navigation/native';
 import AppHeader from "../components/layout/AppHeader";
@@ -348,13 +349,12 @@ export default function FamilyGroupDetailScreen() {
 
           {/* Owner-only: Add Child Button */}
           {currentGroup?.ownerId === user?.id && (
-            <TouchableOpacity
-              style={styles.addChildButton}
-              onPress={() => setShowAddChildModal(true)}
-            >
-              <MaterialIcons name="add" size={24} color="#fff" />
-              <Text style={styles.addChildButtonText}>Add Child to Group</Text>
-            </TouchableOpacity>
+                      <AddButton
+            title="Add Child to Group"
+            onPress={() => setShowAddChildModal(true)}
+            variant="modal"
+            iconSize={24}
+          />
           )}
         </View>
       );
@@ -414,13 +414,12 @@ export default function FamilyGroupDetailScreen() {
         </ScrollView>
         {/* Owner-only: Add Child Button */}
         {currentGroup?.ownerId === user?.id && (
-          <TouchableOpacity
-            style={styles.addChildButton}
+          <AddButton
+            title="Add Child to Group"
             onPress={() => setShowAddChildModal(true)}
-          >
-            <MaterialIcons name="add" size={24} color="#fff" />
-            <Text style={styles.addChildButtonText}>Add Child to Group</Text>
-          </TouchableOpacity>
+            variant="modal"
+            iconSize={24}
+          />
         )}
       </View>
     );
@@ -1151,22 +1150,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontStyle: "italic",
   },
-  addChildButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#4f8cff",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginTop: 16,
-    alignSelf: "center",
-  },
-  addChildButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
-  },
+
   childCard: {
     backgroundColor: "#fff",
     borderRadius: 12,

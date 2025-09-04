@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import { addChildToFamilyGroup, fetchChildren } from "../../redux/slices/childSlice";
+import AddButton from "../ui/AddButton";
 import LoadingSpinner from "../ui/LoadingSpinner";
 
 interface AddChildToGroupModalProps {
@@ -279,22 +280,12 @@ export default function AddChildToGroupModal({
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.addButton,
-                selectedChildIds.length === 0 && styles.addButtonDisabled,
-              ]}
+            <AddButton
+              title={`Add ${selectedChildIds.length > 0 ? `(${selectedChildIds.length})` : ''} to Group`}
               onPress={handleAddChildToGroup}
+              variant="modal"
               disabled={selectedChildIds.length === 0 || updating}
-            >
-              {updating ? (
-                <LoadingSpinner message="Adding..." />
-              ) : (
-                <Text style={styles.addButtonText}>
-                  Add {selectedChildIds.length > 0 ? `(${selectedChildIds.length})` : ''} to Group
-                </Text>
-              )}
-            </TouchableOpacity>
+            />
           </View>
         </View>
       </View>
@@ -403,22 +394,7 @@ const styles = StyleSheet.create({
     color: "#666",
     fontWeight: "600",
   },
-  addButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: "#4f8cff",
-    alignItems: "center",
-  },
-  addButtonDisabled: {
-    backgroundColor: "#ccc",
-  },
-  addButtonText: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "600",
-  },
+
 
   simpleChildItem: {
     flexDirection: "row",

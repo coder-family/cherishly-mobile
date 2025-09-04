@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { deleteGrowthRecord, deleteHealthRecord, fetchGrowthRecords, fetchHealthRecords, updateGrowthRecord } from '../../redux/slices/healthSlice';
@@ -11,6 +11,7 @@ import EditGrowthRecordModal from '../health/EditGrowthRecordModal';
 import EditHealthRecordModal from '../health/EditHealthRecordModal';
 import GrowthChart from '../health/GrowthChart';
 import HealthRecordItem from '../health/HealthRecordItem';
+import AddButton from '../ui/AddButton';
 import { DeleteButton, EditButton } from '../ui/EditDeleteButtons';
 import ErrorView from '../ui/ErrorView';
 import SectionCard from '../ui/SectionCard';
@@ -349,13 +350,12 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionSubtitle}>Height & Weight</Text>
           {isOwner && (
-            <TouchableOpacity
-              style={styles.addButton}
+            <AddButton
+              title="Add Record"
               onPress={() => setShowAddGrowthModal(true)}
-            >
-              <MaterialIcons name="add" size={18} color={Colors.light.primary} />
-              <Text style={styles.addButtonText}>Add Record</Text>
-            </TouchableOpacity>
+              variant="primary"
+              iconSize={18}
+            />
           )}
         </View>
 
@@ -466,13 +466,12 @@ const HealthContent: React.FC<HealthContentProps> = ({ childId, editingHealthIte
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionSubtitle}>Medical History</Text>
           {isOwner && (
-            <TouchableOpacity
-              style={styles.addButton}
+            <AddButton
+              title="Add Record"
               onPress={() => setShowAddHealthModal(true)}
-            >
-              <MaterialIcons name="add" size={18} color={Colors.light.primary} />
-              <Text style={styles.addButtonText}>Add Record</Text>
-            </TouchableOpacity>
+              variant="primary"
+              iconSize={18}
+            />
           )}
         </View>
 
@@ -563,21 +562,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.light.textSecondary,
   },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.light.card,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.light.primary,
-  },
-  addButtonText: {
-    marginLeft: 4,
-    color: Colors.light.primary,
-    fontWeight: '600',
-  },
+
   emptyState: {
     alignItems: 'center',
     paddingVertical: 32,

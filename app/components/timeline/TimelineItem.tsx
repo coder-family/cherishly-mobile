@@ -45,8 +45,10 @@ const TimelineItem = React.memo(({
   const highlightAnimation = useRef(new Animated.Value(0)).current;
   const borderAnimation = useRef(new Animated.Value(0)).current;
 
+
+
   const getItemType = () => {
-    switch (item.type) {
+    switch (item?.type) {
       case "memory":
         return "Memory";
       case "qa":
@@ -61,7 +63,7 @@ const TimelineItem = React.memo(({
   };
 
   const getItemTypeForComment = () => {
-    switch (item.type) {
+    switch (item?.type) {
       case "memory":
         return "memory";
       case "qa":
@@ -76,7 +78,7 @@ const TimelineItem = React.memo(({
   };
 
   const getItemIcon = () => {
-    switch (item.type) {
+    switch (item?.type) {
       case "memory":
         return "photo";
       case "qa":
@@ -91,7 +93,7 @@ const TimelineItem = React.memo(({
   };
 
   const getItemColor = () => {
-    switch (item.type) {
+    switch (item?.type) {
       case "memory":
         return "#4f8cff";
       case "qa":
@@ -119,13 +121,22 @@ const TimelineItem = React.memo(({
     }
   };
 
-  const handleCommentPress = () => {
-    setShowCommentModal(true);
-    onComment?.();
-  };
-
   // Fetch comment count - memoized to prevent unnecessary API calls
-  const targetType = useMemo(() => getItemTypeForComment(), [item?.type]);
+  const targetType = useMemo(() => {
+    if (!item) return "memory";
+    switch (item.type) {
+      case "memory":
+        return "memory";
+      case "qa":
+        return "promptResponse";
+      case "health":
+        return "healthRecord";
+      case "growth":
+        return "growthRecord";
+      default:
+        return "memory";
+    }
+  }, [item]);
   
   useEffect(() => {
     if (!item?.id) return;
@@ -197,7 +208,17 @@ const TimelineItem = React.memo(({
         }),
       ]).start();
     }
-  }, [highlight]); // Remove highlightAnimation and borderAnimation from dependencies
+  }, [highlight, highlightAnimation, borderAnimation]);
+
+  const handleCommentPress = () => {
+    setShowCommentModal(true);
+    onComment?.();
+  };
+
+  // Early return if item is not provided
+  if (!item) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>
@@ -226,7 +247,7 @@ const TimelineItem = React.memo(({
       <View style={styles.header}>
         <View style={styles.typeBadge}>
           <MaterialIcons name={getItemIcon() as any} size={16} color="#fff" />
-          <Text style={styles.typeText}>{item.type.toUpperCase()}</Text>
+          <Text style={styles.typeText}>{item.type?.toUpperCase() || 'UNKNOWN'}</Text>
         </View>
         <Text style={styles.date}>{formatDate(item.createdAt)}</Text>
       </View>
@@ -241,10 +262,10 @@ const TimelineItem = React.memo(({
         {item.content && <Text style={styles.description}>{item.content}</Text>}
 
         {/* Media */}
-        {item.media && item.media.length > 0 && (
+        {(item.media || item.attachments) && (item.media?.length > 0 || item.attachments?.length > 0) && (
           <View style={styles.mediaContainer}>
             <MediaViewerBase
-              attachments={item.media}
+              attachments={item.media || item.attachments || []}
               maxPreviewCount={3}
               onAttachmentPress={(attachment: any, index: number) => {
                 // console.log(
