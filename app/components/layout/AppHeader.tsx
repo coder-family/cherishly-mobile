@@ -2,15 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
-  Alert,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
-import { useAppDispatch } from "../../redux/hooks";
-import { logoutUser } from "../../redux/slices/authSlice";
-import { StorageUtils } from "../../utils/storageUtils";
 import { NotificationBadge } from "../notification/NotificationBadge";
 
 interface AppHeaderProps {
@@ -25,7 +21,6 @@ interface AppHeaderProps {
   showBackButton?: boolean;
   showForwardButton?: boolean;
   showTitle?: boolean;
-  showLogoutButton?: boolean;
   showNotificationBadge?: boolean;
   rightComponent?: React.ReactNode;
 }
@@ -42,12 +37,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   showBackButton = true,
   showForwardButton = false,
   showTitle = true,
-  showLogoutButton = false,
   showNotificationBadge = false,
   rightComponent,
 }) => {
   const router = useRouter();
-  const dispatch = useAppDispatch();
   const [searchText, setSearchText] = useState("");
 
   const handleSearchChange = (text: string) => {
@@ -75,57 +68,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     }
   }, [onBack, canGoBack, router]);
 
-  const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            // Debug: Log storage before logout
-
-            await StorageUtils.debugStorage();
-
-            // Dispatch logout action
-            const result = await dispatch(logoutUser());
-
-            // Clear any cached data
-            // Debug: Log storage after logout
-
-            await StorageUtils.debugStorage();
-
-            // Navigate to login page
-
-            router.replace("/login");
-          } catch (error) {
-            console.error("❌ Logout error:", error);
-
-            // Even if logout fails, try to clear local state and navigate
-            try {
-              // Clear storage manually
-              await StorageUtils.clear();
-
-
-              // Navigate to login anyway
-              router.replace("/login");
-
-
-            } catch (fallbackError) {
-              console.error("❌ Fallback logout also failed:", fallbackError);
-              Alert.alert(
-                "Error",
-                "Failed to logout. Please refresh the page and try again."
-              );
-            }
-          }
-        },
-      },
-    ]);
-  };
 
   return (
     <View style={styles.headerContainer}>
@@ -192,17 +134,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           <View style={styles.rightContainer}>
             {showNotificationBadge && <NotificationBadge size="medium" />}
             {rightComponent}
-            {showLogoutButton && (
-              <TouchableOpacity
-                onPress={handleLogout}
-                style={styles.logoutButton}
-                activeOpacity={0.7}
-                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                testID="logout-button"
-              >
-                <Ionicons name="log-out-outline" size={24} color="#dc2626" />
-              </TouchableOpacity>
-            )}
           </View>
         </View>
       )}
@@ -240,16 +171,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-  },
-  logoutButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 20,
-    backgroundColor: "#fef2f2",
-    borderWidth: 1,
-    borderColor: "#fecaca",
   },
   title: {
     fontSize: 18,

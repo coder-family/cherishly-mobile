@@ -712,7 +712,6 @@ export default function FamilyGroupDetailScreen() {
           showBackButton={true}
           showForwardButton={false}
           showTitle={false}
-          showLogoutButton={true}
         />
         <LoadingSpinner message="Loading family group..." />
       </View>
@@ -729,7 +728,6 @@ export default function FamilyGroupDetailScreen() {
           showBackButton={true}
           showForwardButton={false}
           showTitle={false}
-          showLogoutButton={true}
         />
         <View style={styles.errorContainer}>
           <MaterialIcons name="error" size={48} color="#e74c3c" />
@@ -750,7 +748,6 @@ export default function FamilyGroupDetailScreen() {
           showBackButton={true}
           showForwardButton={false}
           showTitle={false}
-          showLogoutButton={true}
         />
         <View style={styles.errorContainer}>
           <MaterialIcons name="group" size={48} color="#ccc" />
@@ -797,7 +794,6 @@ export default function FamilyGroupDetailScreen() {
         showBackButton={true}
         showForwardButton={false}
         showTitle={false}
-        showLogoutButton={true}
       />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Tab Navigation */}

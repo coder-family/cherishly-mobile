@@ -455,7 +455,6 @@ export default function HomeScreen() {
           showBackButton={false}
           showForwardButton={false}
           showTitle={false}
-          showLogoutButton={true}
           showNotificationBadge={true}
         />
 

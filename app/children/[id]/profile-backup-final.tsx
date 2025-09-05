@@ -984,7 +984,6 @@ export default function ChildProfileScreen() {
           searchPlaceholder="Search for memories, milestones, health records..."
           showBackButton={true}
           canGoBack={true}
-          showLogoutButton={true}
         />
         <LoadingSpinner message="Loading child profile..." />
       </ScreenWithFooter>
@@ -1002,7 +1001,6 @@ export default function ChildProfileScreen() {
           searchPlaceholder="Search for memories, milestones, health records..."
           showBackButton={true}
           canGoBack={true}
-          showLogoutButton={true}
         />
         <ErrorView
           message={error}
@@ -1023,7 +1021,6 @@ export default function ChildProfileScreen() {
           searchPlaceholder="Search for memories, milestones, health records..."
           showBackButton={true}
           canGoBack={true}
-          showLogoutButton={true}
         />
         <ErrorView
           message="Child not found"
@@ -1064,7 +1061,6 @@ export default function ChildProfileScreen() {
               }'s memories, milestones, health records...`}
               showBackButton={true}
               canGoBack={true}
-              showLogoutButton={true}
             />
           </View>
 
@@ -1193,7 +1189,6 @@ export default function ChildProfileScreen() {
               }'s memories, milestones, health records...`}
               showBackButton={true}
               canGoBack={true}
-              showLogoutButton={true}
             />
           </View>
 
@@ -1318,7 +1313,6 @@ export default function ChildProfileScreen() {
               }'s memories, milestones, health records...`}
               showBackButton={true}
               canGoBack={true}
-              showLogoutButton={true}
             />
           </View>
 
@@ -1444,7 +1438,6 @@ export default function ChildProfileScreen() {
               }'s memories, milestones, health records...`}
               showBackButton={true}
               canGoBack={true}
-              showLogoutButton={true}
             />
           </View>
 
@@ -1565,7 +1558,6 @@ export default function ChildProfileScreen() {
               }'s memories, milestones, health records...`}
               showBackButton={true}
               canGoBack={true}
-              showLogoutButton={true}
             />
           </View>
 
@@ -1684,7 +1676,6 @@ export default function ChildProfileScreen() {
           }'s memories, milestones, health records...`}
           showBackButton={true}
           canGoBack={true}
-          showLogoutButton={true}
         />
 
         {/* Child Header */}
