@@ -92,6 +92,24 @@ export const useTimelineItems = (
           }
         }
 
+        // Extract creator info from parentId object (similar to memory)
+        let creator = null;
+        if (response.parentId && typeof response.parentId === "object") {
+          creator = {
+            id: response.parentId._id || response.parentId.id,
+            firstName: response.parentId.firstName,
+            lastName: response.parentId.lastName,
+            avatar: response.parentId.avatar,
+          };
+        } else {
+          // Fallback to current user if parentId is string or null
+          creator = {
+            id: response.parentId || currentUser?.id,
+            firstName: currentUser?.firstName,
+            lastName: currentUser?.lastName,
+          };
+        }
+
         const qaItem = {
           id: response.id,
           type: "qa",
@@ -101,11 +119,7 @@ export const useTimelineItems = (
           createdAt: response.createdAt,
           media: response.attachments,
           visibility: response.visibility,
-          creator: {
-            id: response.parentId || currentUser?.id,
-            firstName: currentUser?.firstName,
-            lastName: currentUser?.lastName,
-          },
+          creator: creator,
           parentId: response.parentId || currentUser?.id,
           metadata: {
             promptId: response.promptId,
@@ -126,6 +140,24 @@ export const useTimelineItems = (
       if (!processedHealthIds.has(record.id)) {
         processedHealthIds.add(record.id);
 
+        // Extract creator info from parentId object (similar to memory)
+        let creator = null;
+        if (record.parentId && typeof record.parentId === "object") {
+          creator = {
+            id: record.parentId._id || record.parentId.id,
+            firstName: record.parentId.firstName,
+            lastName: record.parentId.lastName,
+            avatar: record.parentId.avatar,
+          };
+        } else {
+          // Fallback to current user if parentId is string or null
+          creator = {
+            id: record.parentId || currentUser?.id,
+            firstName: currentUser?.firstName,
+            lastName: currentUser?.lastName,
+          };
+        }
+
         items.push({
           id: record.id,
           type: "health",
@@ -135,11 +167,7 @@ export const useTimelineItems = (
           createdAt: record.createdAt,
           media: record.attachments || [],
           visibility: record.visibility,
-          creator: {
-            id: record.parentId || currentUser?.id,
-            firstName: currentUser?.firstName,
-            lastName: currentUser?.lastName,
-          },
+          creator: creator,
           metadata: {
             recordType: record.recordType,
             date: record.date,
@@ -157,6 +185,24 @@ export const useTimelineItems = (
       if (!processedGrowthIds.has(record.id)) {
         processedGrowthIds.add(record.id);
 
+        // Extract creator info from parentId object (similar to memory)
+        let creator = null;
+        if (record.parentId && typeof record.parentId === "object") {
+          creator = {
+            id: record.parentId._id || record.parentId.id,
+            firstName: record.parentId.firstName,
+            lastName: record.parentId.lastName,
+            avatar: record.parentId.avatar,
+          };
+        } else {
+          // Fallback to current user if parentId is string or null
+          creator = {
+            id: record.parentId || currentUser?.id,
+            firstName: currentUser?.firstName,
+            lastName: currentUser?.lastName,
+          };
+        }
+
         items.push({
           id: record.id,
           type: "growth",
@@ -166,11 +212,7 @@ export const useTimelineItems = (
           createdAt: record.createdAt,
           media: record.attachments || [],
           visibility: record.visibility,
-          creator: {
-            id: record.parentId || currentUser?.id,
-            firstName: currentUser?.firstName,
-            lastName: currentUser?.lastName,
-          },
+          creator: creator,
           metadata: {
             measurementType: record.measurementType,
             value: record.value,
