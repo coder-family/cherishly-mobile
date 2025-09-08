@@ -1,14 +1,13 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import CommentSystem from '../CommentSystem';
+import CommentSystem, { CommentModal } from '../CommentSystem';
 import MediaViewerBase from '../media/MediaViewerBase';
 // import ReactionSystem from './ReactionSystem';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { updateMemory } from '../../redux/slices/memorySlice';
 import { commentService } from '../../services/commentService';
 import type { TargetType } from '../../services/reactionService';
-import CommentModal from '../CommentModal';
 import ReactionBar from '../ui/ReactionBar';
 import VisibilityToggle from '../ui/VisibilityToggle';
 
@@ -357,18 +356,22 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress, on
         )}
       </View>
       
-      {/* Comments Section */}
+      {/* Comments Section - Inline mode with better keyboard handling */}
       {showComments && (
         <View style={styles.commentsSection}>
           <CommentSystem
             targetType={mapContentTypeToCommentTargetType(contentType)}
             targetId={post._id || post.id}
+            mode="inline"
+            maxHeight={500} // Increased height for better keyboard handling
             useScrollView={true}
             onCommentAdded={(comment) => {
               // Comment added successfully
+              setCommentCount(prev => prev + 1);
             }}
             onCommentDeleted={(commentId) => {
               // Comment deleted successfully
+              setCommentCount(prev => Math.max(0, prev - 1));
             }}
             onCommentEdited={(comment) => {
               // Comment edited successfully
@@ -377,7 +380,7 @@ export default function TimelinePost({ post, onReactionPress, onCommentPress, on
         </View>
       )}
 
-      {/* Comment Modal */}
+      {/* Comment Modal - Full screen mode */}
       {(post._id || post.id) && (
         <CommentModal
           visible={showCommentModal}
@@ -563,7 +566,7 @@ const styles = StyleSheet.create({
   commentsSection: {
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
-    maxHeight: 400,
+    // Remove maxHeight constraint - let CommentSystem handle it
   },
   visibilityContainer: {
     marginTop: 12,

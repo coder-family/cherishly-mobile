@@ -2,8 +2,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { commentService } from "../../services/commentService";
-import CommentModal from "../CommentModal";
-import CommentSystem from "../CommentSystem";
+import CommentSystem, { CommentModal } from "../CommentSystem";
 import MediaViewerBase from "../media/MediaViewerBase";
 import { DeleteButton, EditButton } from "../ui/EditDeleteButtons";
 import ReactionBar from "../ui/ReactionBar";
@@ -335,18 +334,22 @@ const TimelineItem = React.memo(({
         </View>
       </View>
 
-      {/* Comments Section */}
+      {/* Comments Section - Inline mode with better keyboard handling */}
       {showComments && (
         <View style={styles.commentsSection}>
           <CommentSystem
             targetType={getItemTypeForComment()}
             targetId={item.id}
+            mode="inline"
+            maxHeight={500} // Increased from 400 to give more space
             useScrollView={true}
             onCommentAdded={(comment) => {
               // Comment added successfully
+              setCommentCount(prev => prev + 1);
             }}
             onCommentDeleted={(commentId) => {
               // Comment deleted successfully
+              setCommentCount(prev => Math.max(0, prev - 1));
             }}
             onCommentEdited={(comment) => {
               // Comment edited successfully
@@ -355,7 +358,7 @@ const TimelineItem = React.memo(({
         </View>
       )}
 
-      {/* Comment Modal */}
+      {/* Comment Modal - Full screen mode */}
       {item?.id && (
         <CommentModal
           visible={showCommentModal}
@@ -499,7 +502,7 @@ const styles = StyleSheet.create({
   commentsSection: {
     borderTopWidth: 1,
     borderTopColor: "#f0f0f0",
-    maxHeight: 400,
+    // Remove maxHeight constraint - let CommentSystem handle it
   },
 });
 

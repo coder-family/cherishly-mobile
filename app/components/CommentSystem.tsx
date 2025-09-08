@@ -5,6 +5,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Modal,
   Platform,
   RefreshControl,
   ScrollView,
@@ -58,6 +59,11 @@ interface CommentSystemProps {
   onCommentAdded?: (comment: Comment) => void;
   onCommentDeleted?: (commentId: string) => void;
   onCommentEdited?: (comment: Comment) => void;
+  // New props for unified behavior
+  mode?: 'modal' | 'inline'; // 'modal' for full-screen, 'inline' for embedded
+  maxHeight?: number; // Custom max height for inline mode
+  showHeader?: boolean; // Show/hide header
+  onClose?: () => void; // Close callback for modal mode
 }
 
 // Comment Input Component
@@ -131,25 +137,22 @@ const CommentInput: React.FC<{
           </TouchableOpacity>
         </View>
       )}
-      <TextInput
-        style={styles.input}
-        value={content}
-        onChangeText={setContent}
-        placeholder={
-          placeholder ||
-          (parentCommentId ? "Viết reply..." : "Viết bình luận...")
-        }
-        placeholderTextColor="#999"
-        multiline
-        maxLength={1000}
-        editable={true}
-      />
-      <View style={styles.inputActions}>
-        {onCancel && (
-          <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-            <Text style={styles.cancelButtonText}>Hủy</Text>
-          </TouchableOpacity>
-        )}
+      
+      <View style={styles.inputRow}>
+        <TextInput
+          style={styles.input}
+          value={content}
+          onChangeText={setContent}
+          placeholder={
+            placeholder ||
+            (parentCommentId ? "Viết reply..." : "Viết bình luận...")
+          }
+          placeholderTextColor="#999"
+          multiline
+          maxLength={1000}
+          editable={true}
+        />
+        
         <TouchableOpacity
           style={[
             styles.submitButton,
@@ -161,10 +164,18 @@ const CommentInput: React.FC<{
           {loading ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={styles.submitButtonText}>Gửi</Text>
+            <Ionicons name="send" size={16} color="#fff" />
           )}
         </TouchableOpacity>
       </View>
+      
+      {onCancel && (
+        <View style={styles.inputActions}>
+          <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+            <Text style={styles.cancelButtonText}>Hủy</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -305,7 +316,7 @@ const CommentItem: React.FC<{
               {loading ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={styles.submitButtonText}>Cập nhật</Text>
+                <Ionicons name="checkmark" size={16} color="#fff" />
               )}
             </TouchableOpacity>
           </View>
@@ -368,6 +379,10 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
   onCommentAdded,
   onCommentDeleted,
   onCommentEdited,
+  mode = 'inline',
+  maxHeight = 400,
+  showHeader = false,
+  onClose,
 }) => {
   const [comments, setComments] = useState<Comment[]>([]);
 
@@ -411,6 +426,8 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
         // Fallback
         newComments = responseData;
       }
+      
+      console.log('Comments parsed successfully:', newComments.length, 'comments');
 
       if (refresh) {
         setComments(newComments);
@@ -503,13 +520,39 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
     return null;
   };
 
+  // Dynamic styles based on mode
+  const containerStyle = mode === 'modal' 
+    ? [styles.container, styles.modalContainer]
+    : [styles.container, styles.inlineContainer, { maxHeight }];
+
+  const commentsListStyle = mode === 'modal'
+    ? [styles.commentsList, styles.modalCommentsList]
+    : [styles.commentsList, styles.inlineCommentsList];
+
+  // Keyboard offset based on mode
+  const keyboardOffset = mode === 'modal' 
+    ? (Platform.OS === 'ios' ? 0 : 20)
+    : (Platform.OS === 'ios' ? -120 : -100); // Balanced offset - not too high, not too low
+
   return (
     <KeyboardAwareView 
-      style={styles.container}
+      style={containerStyle}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      keyboardVerticalOffset={keyboardOffset}
     >
-      <View style={styles.commentsList}>
+      {/* Header for modal mode */}
+      {showHeader && mode === 'modal' && (
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <Ionicons name="close" size={24} color="#666" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>
+            Bình luận ({safeComments.length})
+          </Text>
+        </View>
+      )}
+
+      <View style={commentsListStyle}>
         {useScrollView ? (
           <ScrollView
             showsVerticalScrollIndicator={false}
@@ -617,9 +660,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
+  modalContainer: {
+    flex: 1,
+  },
+  inlineContainer: {
+    flex: 0, // Don't expand in inline mode
+  },
   commentsList: {
-    maxHeight: 300,
     backgroundColor: "#f8f9fa",
+  },
+  modalCommentsList: {
+    flex: 1, // Take full available space in modal
+  },
+  inlineCommentsList: {
+    maxHeight: 300, // Keep original maxHeight for inline
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#fff',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
   },
   scrollViewContent: {
     paddingBottom: 20,
@@ -629,9 +701,16 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     padding: 15,
+    paddingBottom: Platform.OS === 'ios' ? 18 : 15, // Slightly more padding at bottom
     borderTopWidth: 1,
     borderTopColor: "#e0e0e0",
     backgroundColor: "#fff",
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 10,
+    flexWrap: "nowrap",
   },
   replyHeader: {
     flexDirection: "row",
@@ -655,11 +734,11 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   input: {
+    flex: 1,
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 8,
     padding: 12,
-    marginBottom: 10,
     minHeight: 40,
     maxHeight: 100,
     backgroundColor: "#fff",
@@ -669,6 +748,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     gap: 10,
+    flexWrap: "nowrap", // Prevent wrapping
   },
   cancelButton: {
     paddingVertical: 8,
@@ -681,15 +761,20 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: Colors.light.tint,
     paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0, // Prevent shrinking
   },
   submitButtonDisabled: {
     backgroundColor: "#ccc",
   },
   submitButtonText: {
     color: "#fff",
-    fontWeight: "600",
+    fontWeight: "700",
     fontSize: 14,
   },
   commentContainer: {
@@ -792,5 +877,37 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 });
+
+// Modal wrapper for CommentSystem
+export const CommentModal: React.FC<{
+  visible: boolean;
+  onClose: () => void;
+  targetType: 'promptResponse' | 'memory' | 'healthRecord' | 'growthRecord' | 'comment';
+  targetId: string;
+  onCommentAdded?: (comment: Comment) => void;
+  onCommentDeleted?: (commentId: string) => void;
+  onCommentEdited?: (comment: Comment) => void;
+}> = ({ visible, onClose, targetType, targetId, onCommentAdded, onCommentDeleted, onCommentEdited }) => {
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <CommentSystem
+        targetType={targetType}
+        targetId={targetId}
+        mode="modal"
+        showHeader={true}
+        onClose={onClose}
+        onCommentAdded={onCommentAdded}
+        onCommentDeleted={onCommentDeleted}
+        onCommentEdited={onCommentEdited}
+        useScrollView={true}
+      />
+    </Modal>
+  );
+};
 
 export default CommentSystem;
