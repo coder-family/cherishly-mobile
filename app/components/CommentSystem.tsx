@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import { useHeaderHeight } from '@react-navigation/elements';
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Image,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   RefreshControl,
@@ -15,12 +17,12 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from "react-redux";
 import { Colors } from "../constants/Colors";
 import { useThemeColor } from "../hooks/useThemeColor";
 import { RootState } from "../redux/store";
 import { commentService } from "../services/commentService";
-import KeyboardAwareView from "./ui/KeyboardAwareView";
 
 // Types
 interface User {
@@ -74,6 +76,7 @@ const CommentInput: React.FC<{
   onCommentAdded: (comment: Comment) => void;
   onCancel?: () => void;
   placeholder?: string;
+  onFocus?: () => void;
 }> = ({
   targetType,
   targetId,
@@ -81,6 +84,7 @@ const CommentInput: React.FC<{
   onCommentAdded,
   onCancel,
   placeholder,
+  onFocus,
 }) => {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
@@ -149,8 +153,11 @@ const CommentInput: React.FC<{
           }
           placeholderTextColor="#999"
           multiline
+          textAlignVertical="top"
+          blurOnSubmit={false}
           maxLength={1000}
           editable={true}
+          onFocus={onFocus}
         />
         
         <TouchableOpacity
@@ -398,10 +405,16 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const backgroundColor = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
+  
+  // Safe area and header height hooks
+  const insets = useSafeAreaInsets();
+  const listRef = useRef<FlatList<Comment>>(null);
+  const fetchingRef = useRef(false);
 
-  const fetchComments = async (pageNum = 1, refresh = false) => {
-    if (loading) return;
-
+  const fetchComments = useCallback(async (pageNum = 1, refresh = false) => {
+    if (fetchingRef.current && !refresh) return; // Prevent multiple simultaneous requests
+    
+    fetchingRef.current = true;
     setLoading(true);
     try {
       const response = await commentService.getComments(
@@ -444,14 +457,15 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
         setComments([]);
       }
     } finally {
+      fetchingRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [targetType, targetId]); // Remove 'loading' from dependencies to prevent infinite loop
 
   useEffect(() => {
     fetchComments(1, true);
-  }, [fetchComments]);
+  }, [targetType, targetId]); // Only run when target changes, not when fetchComments changes
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -529,129 +543,150 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
     ? [styles.commentsList, styles.modalCommentsList]
     : [styles.commentsList, styles.inlineCommentsList];
 
-  // Keyboard offset based on mode
-  const keyboardOffset = mode === 'modal' 
-    ? (Platform.OS === 'ios' ? 0 : 20)
-    : (Platform.OS === 'ios' ? -120 : -100); // Balanced offset - not too high, not too low
+  const headerHeight = useHeaderHeight?.() ?? 0;
+
+  // Keyboard offset based on mode and safe area
+  const keyboardOffset =
+  Platform.OS === 'ios'
+    ? (mode === 'modal' ? 12 : headerHeight + insets.top) 
+    : 0;
 
   return (
-    <KeyboardAwareView 
-      style={containerStyle}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={keyboardOffset}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? keyboardOffset : 0}
     >
-      {/* Header for modal mode */}
-      {showHeader && mode === 'modal' && (
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color="#666" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            Bình luận ({safeComments.length})
-          </Text>
-        </View>
-      )}
+      <View style={containerStyle}>
+        {/* Header for modal mode */}
+        {showHeader && mode === 'modal' && (
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Ionicons name="close" size={24} color="#666" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>
+              Bình luận ({safeComments.length})
+            </Text>
+          </View>
+        )}
 
-      <View style={commentsListStyle}>
-        {useScrollView ? (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-              />
-            }
-            onScroll={({ nativeEvent }: any) => {
-              const { layoutMeasurement, contentOffset, contentSize } =
-                nativeEvent;
-              const paddingToBottom = 20;
-              if (
-                layoutMeasurement.height + contentOffset.y >=
-                contentSize.height - paddingToBottom
-              ) {
-                handleLoadMore();
+        <View style={commentsListStyle}>
+          {useScrollView ? (
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              keyboardShouldPersistTaps="handled"
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                />
               }
+              onScroll={({ nativeEvent }: any) => {
+                const { layoutMeasurement, contentOffset, contentSize } =
+                  nativeEvent;
+                const paddingToBottom = 20;
+                if (
+                  layoutMeasurement.height + contentOffset.y >=
+                  contentSize.height - paddingToBottom
+                ) {
+                  handleLoadMore();
+                }
+              }}
+              scrollEventThrottle={400}
+              style={{ flex: 1 }}
+              contentContainerStyle={[styles.scrollViewContent, { paddingBottom: 120 }]}
+            >
+              {safeComments.length === 0 ? (
+                renderEmptyState()
+              ) : (
+                <>
+                  {safeComments.map((comment) => (
+                    <View key={comment._id}>
+                      {renderComment({ item: comment })}
+                    </View>
+                  ))}
+                  {renderFooter()}
+                </>
+              )}
+            </ScrollView>
+          ) : (
+            <FlatList
+              ref={listRef}
+              data={safeComments}
+              renderItem={renderComment}
+              keyExtractor={(item) => item._id}
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              keyboardShouldPersistTaps="handled"
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                />
+              }
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.1}
+              ListEmptyComponent={renderEmptyState}
+              ListFooterComponent={renderFooter}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled={true}
+              contentContainerStyle={[styles.flatListContent, { paddingBottom: 120 }]}
+            />
+          )}
+        </View>
+
+        {showReplyInput && replyingTo && (
+          <CommentInput
+            targetType={targetType}
+            targetId={targetId}
+            parentCommentId={replyingTo}
+            onCommentAdded={(newReply) => {
+              console.log('Reply added in CommentSystem:', newReply);
+              // Add the reply to the parent comment
+              setComments(prev => prev.map(comment => {
+                if (comment._id === replyingTo) {
+                  const updatedComment = {
+                    ...comment,
+                    replies: [...(comment.replies || []), newReply]
+                  };
+                  console.log('Updated comment with reply in CommentSystem:', updatedComment);
+                  return updatedComment;
+                }
+                return comment;
+              }));
+              setShowReplyInput(false);
+              setReplyingTo(null);
+              onCommentAdded?.(newReply);
             }}
-            scrollEventThrottle={400}
-            style={{ flex: 1 }}
-            contentContainerStyle={styles.scrollViewContent}
-          >
-            {safeComments.length === 0 ? (
-              renderEmptyState()
-            ) : (
-              <>
-                {safeComments.map((comment) => (
-                  <View key={comment._id}>
-                    {renderComment({ item: comment })}
-                  </View>
-                ))}
-                {renderFooter()}
-              </>
-            )}
-          </ScrollView>
-        ) : (
-          <FlatList
-            data={safeComments}
-            renderItem={renderComment}
-            keyExtractor={(item) => item._id}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-              />
-            }
-            onEndReached={handleLoadMore}
-            onEndReachedThreshold={0.1}
-            ListEmptyComponent={renderEmptyState}
-            ListFooterComponent={renderFooter}
-            showsVerticalScrollIndicator={false}
-            nestedScrollEnabled={true}
-            contentContainerStyle={styles.flatListContent}
+            onCancel={() => {
+              setShowReplyInput(false);
+              setReplyingTo(null);
+            }}
+            placeholder="Viết reply..."
           />
         )}
+
+        {/* Main Comment Input - Only show when not replying */}
+        {!showReplyInput && (
+          <CommentInput
+            targetType={targetType}
+            targetId={targetId}
+            onCommentAdded={handleCommentAdded}
+            onFocus={() => {
+              requestAnimationFrame(() => {
+                // Scroll to end when input is focused
+                if (listRef.current) {
+                  listRef.current.scrollToEnd({ animated: true });
+                }
+              });
+            }}
+          />
+        )}
+        
+        {/* Safe area spacer for iOS home indicator */}
+        <View style={{ height: insets.bottom }} />
       </View>
-
-      {showReplyInput && replyingTo && (
-        <CommentInput
-          targetType={targetType}
-          targetId={targetId}
-          parentCommentId={replyingTo}
-          onCommentAdded={(newReply) => {
-            console.log('Reply added in CommentSystem:', newReply);
-            // Add the reply to the parent comment
-            setComments(prev => prev.map(comment => {
-              if (comment._id === replyingTo) {
-                const updatedComment = {
-                  ...comment,
-                  replies: [...(comment.replies || []), newReply]
-                };
-                console.log('Updated comment with reply in CommentSystem:', updatedComment);
-                return updatedComment;
-              }
-              return comment;
-            }));
-            setShowReplyInput(false);
-            setReplyingTo(null);
-            onCommentAdded?.(newReply);
-          }}
-          onCancel={() => {
-            setShowReplyInput(false);
-            setReplyingTo(null);
-          }}
-          placeholder="Viết reply..."
-        />
-      )}
-
-      {/* Main Comment Input - Only show when not replying */}
-      {!showReplyInput && (
-        <CommentInput
-          targetType={targetType}
-          targetId={targetId}
-          onCommentAdded={handleCommentAdded}
-        />
-      )}
-    </KeyboardAwareView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -701,7 +736,6 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     padding: 15,
-    paddingBottom: Platform.OS === 'ios' ? 18 : 15, // Slightly more padding at bottom
     borderTopWidth: 1,
     borderTopColor: "#e0e0e0",
     backgroundColor: "#fff",
