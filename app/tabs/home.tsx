@@ -58,6 +58,7 @@ export default function HomeScreen() {
       dispatch(fetchCurrentUser(user.id));
       dispatch(fetchMyOwnChildren());
       dispatch(fetchFamilyGroups());
+      // fetchUnreadCount is handled by NotificationBadge polling
     }
   }, [dispatch, user]);
 
@@ -66,6 +67,7 @@ export default function HomeScreen() {
     useCallback(() => {
       if (user) {
         dispatch(fetchFamilyGroups());
+        // fetchUnreadCount is handled by NotificationBadge polling
       }
     }, [dispatch, user])
   );
