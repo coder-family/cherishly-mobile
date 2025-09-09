@@ -111,7 +111,6 @@ const CommentInput: React.FC<{
         parentCommentId,
       });
 
-      console.log('Comment/reply created successfully:', newComment);
       setContent("");
       onCommentAdded(newComment);
       onCancel?.();
@@ -199,9 +198,21 @@ const CommentItem: React.FC<{
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const [loading, setLoading] = useState(false);
+  const [showReplies, setShowReplies] = useState(level === 0);
   const backgroundColor = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
   const borderColor = "#e0e0e0";
+
+  // Auto-expand when new replies are added
+  useEffect(() => {
+    if (comment.replies && comment.replies.length > 0 && level === 0) {
+      setShowReplies(true);
+    }
+  }, [comment.replies?.length, level]);
+
+  const toggleReplies = () => {
+    setShowReplies(!showReplies);
+  };
 
   const handleReply = () => {
     onReply(comment._id);
@@ -360,18 +371,35 @@ const CommentItem: React.FC<{
       </View>
 
       {comment.replies && comment.replies.length > 0 && (
-        <View style={styles.repliesContainer}>
-          {comment.replies.map((reply) => (
-            <CommentItem
-              key={reply._id}
-              comment={reply}
-              currentUserId={currentUserId}
-              onReply={onReply}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              level={level + 1}
+        <View style={styles.repliesSection}>
+          {/* View Replies Button */}
+          <TouchableOpacity style={styles.viewRepliesButton} onPress={toggleReplies}>
+            <Ionicons
+              name={showReplies ? "chevron-up" : "chevron-down"}
+              size={16}
+              color="#1877f2"
             />
-          ))}
+            <Text style={styles.viewRepliesText}>
+              {showReplies ? "Ẩn" : "Xem"} {comment.replies.length} trả lời
+            </Text>
+          </TouchableOpacity>
+
+          {/* Replies Container */}
+          {showReplies && (
+            <View style={[styles.repliesContainer, { maxWidth: "100%" }]}>
+              {comment.replies.map((reply, index) => (
+                <CommentItem
+                  key={`${reply._id}-${index}`}
+                  comment={reply}
+                  currentUserId={currentUserId}
+                  onReply={onReply}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  level={level + 1}
+                />
+              ))}
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -886,6 +914,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     gap: 10,
+  },
+  repliesSection: {
+    marginTop: 8,
+  },
+  viewRepliesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    marginBottom: 4,
+    borderRadius: 4,
+    backgroundColor: '#f8f9fa',
+  },
+  viewRepliesText: {
+    fontSize: 12,
+    color: '#1877f2',
+    fontWeight: '500',
+    marginLeft: 4,
   },
   repliesContainer: {
     marginTop: 8,
