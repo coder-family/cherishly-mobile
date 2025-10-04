@@ -1,6 +1,6 @@
 import authService from '../app/services/authService';
 import apiService from '../app/services/apiService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StorageUtils } from '../app/utils/storageUtils';
 
 // Mock apiService
 jest.mock('../app/services/apiService', () => ({
@@ -11,13 +11,6 @@ jest.mock('../app/services/apiService', () => ({
     patch: jest.fn(),
     delete: jest.fn(),
   },
-}));
-
-// Mock AsyncStorage
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  setItem: jest.fn(),
-  getItem: jest.fn(),
-  removeItem: jest.fn(),
 }));
 
 // Mock conditionalLog
@@ -48,13 +41,10 @@ describe('AuthService Logout', () => {
       const error = new Error('Network error');
       apiService.post.mockRejectedValue(error);
 
-      // Mock AsyncStorage methods
-      (AsyncStorage.removeItem as jest.Mock).mockResolvedValue(undefined);
-
       await authService.logout();
 
       // Should still clear tokens even if API fails
-      expect(AsyncStorage.removeItem).toHaveBeenCalled();
+      expect(StorageUtils.removeItem).toHaveBeenCalled();
     });
 
     it('should handle network errors gracefully', async () => {

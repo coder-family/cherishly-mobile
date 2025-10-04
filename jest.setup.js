@@ -269,10 +269,35 @@ jest.mock('react-native', () => ({
 }));
 
 // ===== THIRD-PARTY LIBRARY MOCKS =====
-// Mock AsyncStorage
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
-);
+// Mock AsyncStorage with comprehensive method support
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn().mockResolvedValue(null),
+    setItem: jest.fn().mockResolvedValue(undefined),
+    removeItem: jest.fn().mockResolvedValue(undefined),
+    getAllKeys: jest.fn().mockResolvedValue([]),
+    multiGet: jest.fn().mockResolvedValue([]),
+    multiSet: jest.fn().mockResolvedValue(undefined),
+    multiRemove: jest.fn().mockResolvedValue(undefined),
+    clear: jest.fn().mockResolvedValue(undefined),
+    mergeItem: jest.fn().mockResolvedValue(undefined),
+    multiMerge: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
+// Mock StorageUtils to prevent AsyncStorage issues in tests
+jest.mock('./app/utils/storageUtils', () => ({
+  StorageUtils: {
+    setItem: jest.fn().mockResolvedValue(undefined),
+    getItem: jest.fn().mockResolvedValue(null),
+    removeItem: jest.fn().mockResolvedValue(undefined),
+    clear: jest.fn().mockResolvedValue(undefined),
+    getAllKeys: jest.fn().mockResolvedValue([]),
+    isAvailable: jest.fn().mockResolvedValue(true),
+    debugStorage: jest.fn().mockResolvedValue(undefined),
+  },
+}));
 
 // Mock react-native-chart-kit
 jest.mock('react-native-chart-kit', () => {
