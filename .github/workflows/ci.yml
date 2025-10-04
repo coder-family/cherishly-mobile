@@ -28,7 +28,7 @@ jobs:
           node-version: 18
 
       - name: 📦 Cài các gói npm
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: 📏 Chạy eslint kiểm tra code
         run: npx eslint . --ext .js,.jsx,.ts,.tsx
