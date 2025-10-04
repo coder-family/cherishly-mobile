@@ -36,8 +36,9 @@ jest.mock('../app/redux/hooks', () => ({
 
 // Mock the MultiMediaPicker component
 jest.mock('../app/components/media/MultiMediaPicker', () => {
-  const React = require('react');
-  const { View, Text, TouchableOpacity } = require('react-native');
+  // Using jest.requireActual to get the actual React and React Native components for mocking
+  const React = jest.requireActual('react');
+  const { View, Text, TouchableOpacity } = jest.requireActual('react-native');
   
   return function MockMultiMediaPicker({ onMediaPicked }: any) {
     return React.createElement(View, { testID: "multi-media-picker" },
@@ -51,16 +52,14 @@ jest.mock('../app/components/media/MultiMediaPicker', () => {
 jest.mock('../app/components/child/ChildProfileCard', () => ({ 
   __esModule: true, 
   default: ({ name }: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const React = require('react');
+    const React = jest.requireActual('react');
     return React.createElement('Text', { testID: `child-profile-card-${name}` }, `ChildProfileCard-${name}`);
   }
 }));
 jest.mock('../app/components/child/AddChildModal', () => ({
   __esModule: true,
   default: ({ visible, onClose }: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const React = require('react');
+    const React = jest.requireActual('react');
     return visible ? React.createElement('Text', { testID: 'add-child-modal' }, 'AddChildModal') : null;
   }
 }));

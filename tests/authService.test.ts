@@ -1,4 +1,6 @@
 import authService from '../app/services/authService';
+import apiService from '../app/services/apiService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Mock apiService
 jest.mock('../app/services/apiService', () => ({
@@ -27,11 +29,8 @@ jest.mock('../app/utils/logUtils', () => ({
 }));
 
 describe('AuthService Logout', () => {
-  let apiService: any;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    apiService = require('../app/services/apiService').default;
   });
 
   describe('logout', () => {
@@ -50,8 +49,7 @@ describe('AuthService Logout', () => {
       apiService.post.mockRejectedValue(error);
 
       // Mock AsyncStorage methods
-      const AsyncStorage = require('@react-native-async-storage/async-storage');
-      AsyncStorage.removeItem.mockResolvedValue(undefined);
+      (AsyncStorage.removeItem as jest.Mock).mockResolvedValue(undefined);
 
       await authService.logout();
 

@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -51,9 +51,9 @@ export default function JoinFromInvitationScreen() {
       setIsValidatingToken(false);
       setTokenValid(false);
     }
-  }, [token]);
+  }, [token, validateToken]);
 
-  const validateToken = async () => {
+  const validateToken = useCallback(async () => {
     if (!token || !/^[a-fA-F0-9]{32}$/.test(token)) {
       setIsValidatingToken(false);
       setTokenValid(false);
@@ -74,7 +74,7 @@ export default function JoinFromInvitationScreen() {
     } finally {
       setIsValidatingToken(false);
     }
-  };
+  }, [token]);
 
   const validateForm = () => {
     const errors: Record<string, string> = {};

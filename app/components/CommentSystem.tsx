@@ -208,7 +208,7 @@ const CommentItem: React.FC<{
     if (comment.replies && comment.replies.length > 0 && level === 0) {
       setShowReplies(true);
     }
-  }, [comment.replies?.length, level]);
+  }, [comment.replies, level]);
 
   const toggleReplies = () => {
     setShowReplies(!showReplies);
@@ -493,7 +493,7 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
 
   useEffect(() => {
     fetchComments(1, true);
-  }, [targetType, targetId]); // Only run when target changes, not when fetchComments changes
+  }, [targetType, targetId, fetchComments]); // Only run when target changes
 
   const handleRefresh = () => {
     setRefreshing(true);

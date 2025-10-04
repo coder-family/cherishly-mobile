@@ -137,7 +137,9 @@ export const useChildProfile = () => {
     // Cleanup when component unmounts
     return () => {
       if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
+        const timeout = updateTimeoutRef.current;
+        clearTimeout(timeout);
+        updateTimeoutRef.current = null;
       }
       dispatch(clearCurrentChild());
       dispatch(clearMemories());
@@ -186,7 +188,7 @@ export const useChildProfile = () => {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [activeTab, memoriesError, id]);
+  }, [activeTab, memoriesError, id, retryLoadMemories]);
 
   // Handle focus post from notification - only when there's actually a focusPost
   useEffect(() => {

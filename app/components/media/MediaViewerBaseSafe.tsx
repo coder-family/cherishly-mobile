@@ -155,7 +155,7 @@ export default function MediaViewerBaseSafe<T extends BaseAttachment>({
       const newKey = prev + 1;
       return newKey;
     });
-  }, [modalKey]);
+  }, []);
 
   // Reset video player when modal opens
   const handleModalOpen = useCallback((attachment: T) => {

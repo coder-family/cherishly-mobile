@@ -1,5 +1,8 @@
 // jest.globals.js - Global mocks that need to be set up before anything else
 
+// Import Buffer for Node.js compatibility
+const { Buffer } = require('buffer');
+
 // Mock Metro runtime before it can be loaded
 global.__ExpoImportMetaRegistry = {
   TextDecoder: function() { return new TextDecoder(); }

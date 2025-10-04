@@ -1,5 +1,8 @@
 // jest.setup.js - Fixed version without circular dependencies
 
+// Import Buffer for Node.js compatibility
+const { Buffer } = require('buffer');
+
 // ===== EXPO MOCKS =====
 // Mock the Expo runtime registry and Metro runtime
 jest.mock('expo/src/winter/runtime.native', () => ({

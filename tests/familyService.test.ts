@@ -13,6 +13,7 @@ import {
     resendInvitation,
     updateFamilyGroup
 } from '../app/services/familyService';
+import apiService from '../app/services/apiService';
 
 // Mock apiService
 jest.mock('../app/services/apiService', () => ({
@@ -43,11 +44,8 @@ jest.mock('../app/utils/logUtils', () => ({
 }));
 
 describe('FamilyService Error Handling', () => {
-  let apiService: any;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    apiService = require('../app/services/apiService').default;
   });
 
   describe('cancelInvitation', () => {
