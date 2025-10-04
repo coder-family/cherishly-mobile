@@ -341,11 +341,11 @@ export default function ChildProfileScreen() {
     return sortedItems;
   }, [
     id,
-    memories || [],
-    responses || [],
-    healthRecords || [],
-    growthRecords || [],
-    prompts || [],
+    memories,
+    responses,
+    healthRecords,
+    growthRecords,
+    prompts,
     currentUser,
   ]);
 

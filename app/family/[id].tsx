@@ -94,7 +94,7 @@ export default function FamilyGroupDetailScreen() {
   }, [id, dispatch]);
 
   // Fetch children in the group
-  const fetchGroupChildren = async (showLoading = true) => {
+  const fetchGroupChildren = useCallback(async (showLoading = true) => {
     if (!currentGroup?.id) return;
     if (showLoading) {
       setLoadingChildren(true);
@@ -114,10 +114,10 @@ export default function FamilyGroupDetailScreen() {
         setLoadingChildren(false);
       }
     }
-  };
+  }, [currentGroup?.id]);
 
   // Fetch timeline posts
-  const fetchTimelinePosts = async () => {
+  const fetchTimelinePosts = useCallback(async () => {
     if (!currentGroup?.id) return;
     console.log('🔄 Starting to fetch timeline posts for group:', currentGroup.id);
     setLoadingTimeline(true);
@@ -162,24 +162,24 @@ export default function FamilyGroupDetailScreen() {
     } finally {
       setLoadingTimeline(false);
     }
-  };
+  }, [currentGroup?.id, timelinePage]);
 
   // Refresh timeline posts (reset and fetch first page)
-  const refreshTimelinePosts = async () => {
+  const refreshTimelinePosts = useCallback(async () => {
     if (!currentGroup?.id) return;
     console.log('🔄 Refreshing timeline posts...');
     setTimelinePage(1);
     setHasMoreTimeline(true);
     setTimelinePosts([]);
     await fetchTimelinePosts();
-  };
+  }, [currentGroup?.id, fetchTimelinePosts]);
 
   // Fetch children when tab is active
   useEffect(() => {
     if (activeTab === "children") {
       fetchGroupChildren(true); // Show loading for initial load
     }
-  }, [activeTab, currentGroup?.id]);
+  }, [activeTab, currentGroup?.id, fetchGroupChildren]);
 
   // Fetch timeline when tab is active
   useEffect(() => {
@@ -195,7 +195,7 @@ export default function FamilyGroupDetailScreen() {
       setHasMoreTimeline(true);
       fetchTimelinePosts();
     }
-  }, [activeTab, currentGroup?.id]);
+  }, [activeTab, currentGroup?.id, fetchTimelinePosts, timelinePosts.length]);
 
   // Fetch timeline posts when group changes
   useEffect(() => {
@@ -206,7 +206,7 @@ export default function FamilyGroupDetailScreen() {
       setTimelinePosts([]);
       fetchTimelinePosts();
     }
-  }, [currentGroup?.id]);
+  }, [currentGroup?.id, activeTab, fetchTimelinePosts]);
 
   // Refresh timeline when screen comes into focus (e.g., when returning from memory tab)
   useFocusEffect(
@@ -215,7 +215,7 @@ export default function FamilyGroupDetailScreen() {
         console.log('🔄 Screen focused, refreshing timeline posts...');
         refreshTimelinePosts();
       }
-    }, [activeTab, currentGroup?.id])
+    }, [activeTab, currentGroup?.id, refreshTimelinePosts])
   );
 
   // Refresh timeline when memories change (e.g., when visibility is updated in memory tab)
@@ -224,14 +224,14 @@ export default function FamilyGroupDetailScreen() {
       console.log('🔄 Memories changed, refreshing timeline posts...');
       refreshTimelinePosts();
     }
-  }, [memories, activeTab, currentGroup?.id]);
+  }, [memories, activeTab, currentGroup?.id, refreshTimelinePosts]);
 
   // Fetch next pages when timelinePage changes (after initial load)
   useEffect(() => {
     if (activeTab === "timeline" && timelinePage > 1) {
       fetchTimelinePosts();
     }
-  }, [timelinePage]);
+  }, [timelinePage, activeTab, fetchTimelinePosts]);
 
   const handleLoadMoreTimeline = () => {
     if (loadingTimeline || !hasMoreTimeline) return;

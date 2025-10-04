@@ -1,5 +1,18 @@
 import authService from '../app/services/authService';
 
+// Mock StorageUtils
+jest.mock('../app/utils/storageUtils', () => ({
+  StorageUtils: {
+    setItem: jest.fn().mockResolvedValue(undefined),
+    getItem: jest.fn().mockResolvedValue(null),
+    removeItem: jest.fn().mockResolvedValue(undefined),
+    clear: jest.fn().mockResolvedValue(undefined),
+    getAllKeys: jest.fn().mockResolvedValue([]),
+    isAvailable: jest.fn().mockResolvedValue(true),
+    debugStorage: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
 // Mock apiService
 jest.mock('../app/services/apiService', () => ({
   __esModule: true,

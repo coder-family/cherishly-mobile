@@ -1,5 +1,9 @@
 import NotificationNavigationService from '../app/services/notificationNavigationService';
 import { notificationService } from '../app/services/notificationService';
+import apiService from '../app/services/apiService';
+import { router } from 'expo-router';
+import { Alert } from 'react-native';
+import { linkingUtils } from '../app/utils/linkingUtils';
 
 // Mock apiService
 jest.mock('../app/services/apiService', () => ({
@@ -75,8 +79,7 @@ describe('NotificationService', () => {
         },
       };
 
-      const apiService = require('../app/services/apiService').default;
-      apiService.get.mockResolvedValue({ data: mockResponse });
+      (apiService.get as jest.Mock).mockResolvedValue({ data: mockResponse });
 
       const result = await notificationService.getNotifications(1, 20);
 
@@ -85,9 +88,8 @@ describe('NotificationService', () => {
     });
 
     it('should handle error when fetching notifications', async () => {
-      const apiService = require('../app/services/apiService').default;
       const error = new Error('Network error');
-      apiService.get.mockRejectedValue(error);
+      (apiService.get as jest.Mock).mockRejectedValue(error);
 
       await expect(notificationService.getNotifications()).rejects.toThrow('Network error');
     });
@@ -102,8 +104,7 @@ describe('NotificationService', () => {
         },
       };
 
-      const apiService = require('../app/services/apiService').default;
-      apiService.get.mockResolvedValue({ data: mockResponse });
+      (apiService.get as jest.Mock).mockResolvedValue({ data: mockResponse });
 
       const result = await notificationService.getUnreadCount();
 
@@ -123,8 +124,7 @@ describe('NotificationService', () => {
         },
       };
 
-      const apiService = require('../app/services/apiService').default;
-      apiService.post.mockResolvedValue({ data: mockResponse });
+      (apiService.post as jest.Mock).mockResolvedValue({ data: mockResponse });
 
       const result = await notificationService.markAsRead('507f1f77bcf86cd799439011');
 
@@ -143,8 +143,7 @@ describe('NotificationService', () => {
         },
       };
 
-      const apiService = require('../app/services/apiService').default;
-      apiService.post.mockResolvedValue({ data: mockResponse });
+      (apiService.post as jest.Mock).mockResolvedValue({ data: mockResponse });
 
       const result = await notificationService.markAllAsRead();
 
@@ -164,8 +163,7 @@ describe('NotificationService', () => {
         },
       };
 
-      const apiService = require('../app/services/apiService').default;
-      apiService.delete.mockResolvedValue({ data: mockResponse });
+      (apiService.delete as jest.Mock).mockResolvedValue({ data: mockResponse });
 
       const result = await notificationService.deleteNotification('507f1f77bcf86cd799439011');
 
@@ -201,8 +199,7 @@ describe('NotificationService', () => {
         },
       };
 
-      const apiService = require('../app/services/apiService').default;
-      apiService.get.mockResolvedValue({ data: mockResponse });
+      (apiService.get as jest.Mock).mockResolvedValue({ data: mockResponse });
 
       const result = await notificationService.getNotificationById('507f1f77bcf86cd799439011');
 
@@ -239,8 +236,6 @@ describe('NotificationNavigationService', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
       };
-
-      const router = require('expo-router').router;
 
       await navigationService.handleNotificationClick(notification, mockNavigation, 'token');
 
@@ -280,8 +275,6 @@ describe('NotificationNavigationService', () => {
         })
       });
 
-      const router = require('expo-router').router;
-
       await navigationService.handleNotificationClick(notification, mockNavigation, 'token');
 
       expect(router.push).toHaveBeenCalledWith('/children/child1/profile?focusPost=memory1&postType=memory');
@@ -307,9 +300,6 @@ describe('NotificationNavigationService', () => {
       // Mock fetch to throw error
       global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
 
-      const router = require('expo-router').router;
-      const Alert = require('react-native').Alert;
-
       await navigationService.handleNotificationClick(notification, mockNavigation, 'token');
 
       // Should show alert and fallback to home
@@ -323,32 +313,24 @@ describe('NotificationNavigationService', () => {
 
   describe('navigateToChildProfile', () => {
     it('should navigate to correct child profile with memory post', async () => {
-      const router = require('expo-router').router;
-
       await navigationService['navigateToChildProfile']('memory', 'memory1', 'child1', mockNavigation);
 
       expect(router.push).toHaveBeenCalledWith('/children/child1/profile?focusPost=memory1&postType=memory');
     });
 
     it('should navigate to correct child profile with prompt response', async () => {
-      const router = require('expo-router').router;
-
       await navigationService['navigateToChildProfile']('prompt_response', 'response1', 'child1', mockNavigation);
 
       expect(router.push).toHaveBeenCalledWith('/children/child1/profile?focusPost=response1&postType=prompt_response');
     });
 
     it('should navigate to correct child profile with health record', async () => {
-      const router = require('expo-router').router;
-
       await navigationService['navigateToChildProfile']('health_record', 'health1', 'child1', mockNavigation);
 
       expect(router.push).toHaveBeenCalledWith('/children/child1/profile?focusPost=health1&postType=health_record');
     });
 
     it('should navigate to correct child profile with growth record', async () => {
-      const router = require('expo-router').router;
-
       await navigationService['navigateToChildProfile']('growth_record', 'growth1', 'child1', mockNavigation);
 
       expect(router.push).toHaveBeenCalledWith('/children/child1/profile?focusPost=growth1&postType=growth_record');
@@ -357,8 +339,7 @@ describe('NotificationNavigationService', () => {
 
   describe('generateDeepLink', () => {
     it('should generate correct deep link for memory', () => {
-      const linkingUtils = require('../app/utils/linkingUtils').linkingUtils;
-      linkingUtils.generateDeepLink.mockReturnValue('growing-together://memories/memory1?id=memory1');
+      (linkingUtils.generateDeepLink as jest.Mock).mockReturnValue('growing-together://memories/memory1?id=memory1');
 
       const result = navigationService.generateDeepLink('memory', 'memory1');
 
@@ -367,8 +348,7 @@ describe('NotificationNavigationService', () => {
     });
 
     it('should generate correct deep link with additional params', () => {
-      const linkingUtils = require('../app/utils/linkingUtils').linkingUtils;
-      linkingUtils.generateDeepLink.mockReturnValue('growing-together://memories/memory1?id=memory1&title=Test');
+      (linkingUtils.generateDeepLink as jest.Mock).mockReturnValue('growing-together://memories/memory1?id=memory1&title=Test');
 
       const result = navigationService.generateDeepLink('memory', 'memory1', { title: 'Test' });
 
@@ -379,8 +359,7 @@ describe('NotificationNavigationService', () => {
 
   describe('generateWebLink', () => {
     it('should generate correct web link for memory', () => {
-      const linkingUtils = require('../app/utils/linkingUtils').linkingUtils;
-      linkingUtils.generateWebLink.mockReturnValue('https://growing-together.com/memories/memory1?id=memory1');
+      (linkingUtils.generateWebLink as jest.Mock).mockReturnValue('https://growing-together.com/memories/memory1?id=memory1');
 
       const result = navigationService.generateWebLink('memory', 'memory1');
 

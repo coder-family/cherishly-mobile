@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -42,9 +42,9 @@ export default function InvitationsScreen() {
     if (currentGroup?.id) {
       fetchInvitationStats();
     }
-  }, [currentGroup?.id]);
+  }, [currentGroup?.id, fetchInvitationStats]);
 
-  const fetchInvitationStats = async () => {
+  const fetchInvitationStats = useCallback(async () => {
     if (!currentGroup?.id) return;
     
     setLoading(true);
@@ -61,7 +61,7 @@ export default function InvitationsScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentGroup?.id]);
 
   const handleCreateInvitation = () => {
     if (!currentGroup) {

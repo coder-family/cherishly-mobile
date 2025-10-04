@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAppSelector } from '../../redux/hooks';
 import authService from '../../services/authService';
@@ -59,7 +59,7 @@ export default function ReactionBar({ targetType, targetId, onReactionChange }: 
   const [reactionsByType, setReactionsByType] = useState<ReactionsByType>({});
   const [reactions, setReactions] = useState<ReactionEntry[]>([]);
 
-  const findUserInfoById = (id: string | undefined | null) => {
+  const findUserInfoById = useCallback((id: string | undefined | null) => {
     if (!id) return null;
     // Try user.currentUser first
     const cu: any = userState.currentUser;
@@ -89,9 +89,9 @@ export default function ReactionBar({ targetType, targetId, onReactionChange }: 
       }
     }
     return null;
-  };
+  }, [userState]);
 
-  const getCurrentUserInfo = () => {
+  const getCurrentUserInfo = useCallback(() => {
     const fromStore = authUser as any;
     if (fromStore && fromStore.id) {
       // Enrich from group/users slice if missing avatar/name
@@ -118,9 +118,9 @@ export default function ReactionBar({ targetType, targetId, onReactionChange }: 
       };
     }
     return null;
-  };
+  }, [authUser, findUserInfoById]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       // Validate parameters before making API call
       if (!targetType || !targetId) {
@@ -160,11 +160,11 @@ export default function ReactionBar({ targetType, targetId, onReactionChange }: 
       console.warn('ReactionBar: Error fetching reactions:', e);
       // Keep existing state on error
     }
-  };
+  }, [targetType, targetId, getCurrentUserInfo]);
 
   useEffect(() => {
     fetchData();
-  }, [targetType, targetId]);
+  }, [targetType, targetId, fetchData]);
 
   const total = useMemo(() => Object.values(counts).reduce((a, b) => a + b, 0), [counts]);
 
