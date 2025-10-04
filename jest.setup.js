@@ -1,11 +1,47 @@
 // jest.setup.js - Fixed version without circular dependencies
 
 // ===== EXPO MOCKS =====
+// Mock the Expo runtime registry and Metro runtime
 jest.mock('expo/src/winter/runtime.native', () => ({
+  __ExpoImportMetaRegistry: {},
+  importMetaRegistry: {},
+}));
+
+// Mock @expo/metro-runtime
+jest.mock('@expo/metro-runtime', () => ({
   __ExpoImportMetaRegistry: {},
 }));
 
-jest.mock('expo', () => ({}));
+// Mock Expo module entirely
+jest.mock('expo', () => ({
+  // Add any expo exports that might be needed
+  registerRootComponent: jest.fn(),
+}));
+
+// Add global Metro runtime mock
+global.__ExpoImportMetaRegistry = global.__ExpoImportMetaRegistry || {};
+
+// Add global polyfills
+global.TextDecoder = global.TextDecoder || class TextDecoder {
+  decode(input) {
+    return input.toString();
+  }
+};
+
+global.TextEncoder = global.TextEncoder || class TextEncoder {
+  encode(input) {
+    return new Uint8Array(Buffer.from(input));
+  }
+};
+
+// Mock global fetch if not available
+if (typeof global.fetch === 'undefined') {
+  global.fetch = jest.fn(() => Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve(''),
+  }));
+}
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({
@@ -22,6 +58,13 @@ jest.mock("expo-splash-screen", () => ({}));
 jest.mock("expo-status-bar", () => ({}));
 jest.mock("expo-av", () => ({}));
 jest.mock("expo-haptics", () => ({}));
+
+// Mock environment variables
+jest.mock('@env', () => ({
+  API_BASE_URL: 'https://api.test.com',
+  CLOUDINARY_UPLOAD_URL: 'https://api.cloudinary.com/v1_1/test/upload',
+  CLOUDINARY_UPLOAD_PRESET: 'test_preset',
+}));
 
 // ===== ICON MOCKS =====
 jest.mock('@expo/vector-icons', () => {

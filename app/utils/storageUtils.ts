@@ -102,7 +102,7 @@ export class StorageUtils {
    */
   static async getAllKeys(): Promise<string[]> {
     try {
-      return await AsyncStorage.getAllKeys();
+      return [...await AsyncStorage.getAllKeys()];
     } catch (error) {
       console.error('Failed to get AsyncStorage keys:', error);
       return [];

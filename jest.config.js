@@ -1,16 +1,19 @@
 module.exports = {
   preset: 'jest-expo',
+  setupFiles: ['<rootDir>/jest.globals.js'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   transformIgnorePatterns: [
-    'node_modules/(?!(react-redux|@react-redux|expo|expo-modules-core|react-native-reanimated|@react-native|react-native|@expo|react-native-chart-kit|react-native-svg)/)',
+    'node_modules/(?!(react-redux|@react-redux|expo|expo-modules-core|react-native-reanimated|@react-native|react-native|@expo|react-native-chart-kit|react-native-svg|@expo/metro-runtime)/)/',
   ],
   moduleNameMapper: {
     '^react-native/Libraries/Modal/Modal$': '<rootDir>/mocks/ModalMock.js',
     '^react-native/Libraries/Animated/NativeAnimatedHelper$': '<rootDir>/mocks/NativeAnimatedHelper.js',
     '^react-native-svg$': '<rootDir>/mocks/react-native-svg.js',
+    '^expo/src/winter/runtime.native$': '<rootDir>/mocks/ExpoRuntimeMock.js',
+    '^@env$': '<rootDir>/mocks/EnvMock.js',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  testEnvironment: 'jsdom',
+  testEnvironment: 'node',
   collectCoverageFrom: [
     'app/**/*.{ts,tsx}',
     '!app/**/*.d.ts',
