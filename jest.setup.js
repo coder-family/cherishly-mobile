@@ -269,22 +269,8 @@ jest.mock('react-native', () => ({
 }));
 
 // ===== THIRD-PARTY LIBRARY MOCKS =====
-// Mock AsyncStorage with comprehensive method support
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  __esModule: true,
-  default: {
-    getItem: jest.fn().mockResolvedValue(null),
-    setItem: jest.fn().mockResolvedValue(undefined),
-    removeItem: jest.fn().mockResolvedValue(undefined),
-    getAllKeys: jest.fn().mockResolvedValue([]),
-    multiGet: jest.fn().mockResolvedValue([]),
-    multiSet: jest.fn().mockResolvedValue(undefined),
-    multiRemove: jest.fn().mockResolvedValue(undefined),
-    clear: jest.fn().mockResolvedValue(undefined),
-    mergeItem: jest.fn().mockResolvedValue(undefined),
-    multiMerge: jest.fn().mockResolvedValue(undefined),
-  },
-}));
+// Note: AsyncStorage is now mocked via jest.config.js moduleNameMapping
+// StorageUtils is mocked here as backup for CI compatibility
 
 // Mock StorageUtils to prevent AsyncStorage issues in tests
 jest.mock('./app/utils/storageUtils', () => ({
